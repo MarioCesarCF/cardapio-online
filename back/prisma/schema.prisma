@@ -1,0 +1,248 @@
+// Prisma schema — modelo de dados da plataforma.
+// Após mudanças, rode: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lanchonete {
+  id           String   @id @default(cuid()) @db.VarChar(30)
+  donoId       String   @db.Uuid // id do usuário no schema neon_auth
+  nome         String
+  slug         String   @unique
+  logoUrl      String?
+  fonte        String?
+  corPrincipal String?
+  tipo         String? // lanches | pizzaria | sorvetes | acai
+  chavePix     String?
+  nomePix      String?
+  whatsapp     String?
+  emailContato String?
+  enderecoLoja String?
+  notifPainel  Boolean  @default(true)
+  notifWhatsapp Boolean @default(false)
+  notifEmail   Boolean  @default(false)
+  situacao     String   @default("pendente") // pendente | ativa | pausada
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  categorias   Categoria[]
+  gruposOpcoes GrupoOpcoes[]
+  pedidos      Pedido[]
+
+  @@index([donoId])
+  @@map("lanchonetes")
+}
+
+model Categoria {
+  id           String     @id @default(cuid()) @db.VarChar(30)
+  lanchoneteId String
+  lanchonete   Lanchonete @relation(fields: [lanchoneteId], references: [id], onDelete: Cascade)
+  nome         String
+  posicao      Int        @default(0)
+  imagemUrl    String?
+  ativa        Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  produtos     Produto[]
+
+  @@index([lanchoneteId])
+  @@map("categorias")
+}
+
+model Produto {
+  id         String    @id @default(cuid()) @db.VarChar(30)
+  categoriaId String
+  categoria  Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  nome       String
+  descricao  String?
+  preco      Decimal   @db.Decimal(10, 2)
+  imagemUrl  String?
+  destaque   Boolean   @default(false)
+  ativo      Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  grupos     ProdutoGrupo[]
+  pedidoItens PedidoItem[]
+
+  @@index([categoriaId])
+  @@map("produtos")
+}
+
+model GrupoOpcoes {
+  id           String      @id @default(cuid()) @db.VarChar(30)
+  lanchoneteId String
+  lanchonete   Lanchonete  @relation(fields: [lanchoneteId], references: [id], onDelete: Cascade)
+  nome         String
+  tipo         String      @default("multipla") // unica | multipla
+  obrigatorio  Boolean     @default(false)
+  minSelecoes  Int         @default(0)
+  maxSelecoes  Int?
+  createdAt    DateTime    @default(now())
+
+  opcoes       Opcao[]
+  produtos     ProdutoGrupo[]
+
+  @@index([lanchoneteId])
+  @@map("grupos_opcoes")
+}
+
+model Opcao {
+  id             String      @id @default(cuid()) @db.VarChar(30)
+  grupoId        String
+  grupo          GrupoOpcoes @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  nome           String
+  precoAdicional Decimal     @default(0) @db.Decimal(10, 2)
+  remove         Boolean     @default(false)
+  ativa          Boolean     @default(true)
+
+  pedidoItemOpcoes PedidoItemOpcao[]
+
+  @@index([grupoId])
+  @@map("opcoes")
+}
+
+model ProdutoGrupo {
+  produtoId String
+  grupoId   String
+  ordem     Int    @default(0)
+
+  produto   Produto     @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  grupo     GrupoOpcoes @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+
+  @@id([produtoId, grupoId])
+  @@map("produto_grupos")
+}
+
+model Cliente {
+  id        String   @id @db.Uuid // id do usuário no schema neon_auth
+  nome      String?
+  telefone  String?
+  email     String?  @unique
+  createdAt DateTime @default(now())
+
+  enderecos Endereco[]
+  pedidos   Pedido[]
+
+  @@map("clientes")
+}
+
+model Endereco {
+  id         String   @id @default(cuid()) @db.VarChar(30)
+  clienteId  String   @db.Uuid
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  rua        String
+  numero     String
+  complemento String?
+  bairro     String
+  cidade     String
+  uf         String   @db.VarChar(2)
+  cep        String?
+  lat        Float?
+  lng        Float?
+  apelido    String?
+  padrao     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([clienteId])
+  @@map("enderecos")
+}
+
+model Pedido {
+  id              String   @id @default(cuid()) @db.VarChar(30)
+  numero          Int
+  lanchoneteId    String
+  lanchonete      Lanchonete @relation(fields: [lanchoneteId], references: [id])
+  clienteId       String?  @db.Uuid
+  cliente         Cliente?  @relation(fields: [clienteId], references: [id])
+  status          String   @default("recebido")
+  subtotal        Decimal  @db.Decimal(10, 2)
+  total           Decimal  @db.Decimal(10, 2)
+  formaPagamento  String   @default("pix")
+  brCodePix       String?
+  clienteTelefone String?
+  enderecoEntrega Json?
+  observacao      String?
+  createdAt       DateTime @default(now())
+
+  itens           PedidoItem[]
+
+  @@unique([lanchoneteId, numero])
+  @@map("pedidos")
+}
+
+model PedidoItem {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  pedidoId    String
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produtoId   String?
+  produto     Produto? @relation(fields: [produtoId], references: [id])
+  nomeSnapshot String
+  precoUnit   Decimal  @db.Decimal(10, 2)
+  qtd         Int
+
+  opcoes      PedidoItemOpcao[]
+
+  @@index([pedidoId])
+  @@map("pedido_itens")
+}
+
+model GaleriaImagem {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  categoria String // slug da categoria (hamburguer, pizza, batata, bebidas, ...)
+  keywords  String[]
+  url       String   @unique @db.VarChar(500)
+  autor     String?
+  fonte     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  @@index([categoria])
+  @@map("galeria_imagens")
+}
+
+model PedidoItemOpcao {
+  id             String    @id @default(cuid()) @db.VarChar(30)
+  pedidoItemId   String
+  pedidoItem     PedidoItem @relation(fields: [pedidoItemId], references: [id], onDelete: Cascade)
+  opcaoId        String?
+  opcao          Opcao?    @relation(fields: [opcaoId], references: [id])
+  nomeSnapshot   String
+  precoAdicional Decimal   @default(0) @db.Decimal(10, 2)
+  remove         Boolean   @default(false)
+
+  @@index([pedidoItemId])
+  @@map("pedido_item_opcoes")
+}
+
+// Usuários com acesso ao painel administrativo da plataforma (admin-sistema).
+// id = id do usuário no schema neon_auth (uuid). funcao: "super" (raiz, criado
+// pelo script criar-admin ou env ADMIN_SISTEMA_EMAIL) | "admin" (humano).
+model AdminSistema {
+  id        String   @id @db.Uuid
+  nome      String?
+  email     String   @unique
+  funcao    String   @default("admin") // admin | super
+  createdAt DateTime @default(now())
+
+  @@map("admin_sistema")
+}
+
+// Registro de eventos relevantes da plataforma (ações de administradores e
+// erros internos). nivel: info | erro. categoria: acao | erro.
+model LogSistema {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  nivel     String   @default("info") // info | erro
+  categoria String   // acao | erro
+  mensagem  String
+  detalhes  Json?
+  usuarioId String?  @db.Uuid // quem executou a ação (id no schema neon_auth)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("logs_sistema")
+}

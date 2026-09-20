@@ -1,0 +1,116 @@
+/* Estilos globais — tokens de superfície (claro/escuro) + base do PrimeNG. */
+
+:root {
+  --app-bg: var(--p-surface-100);
+  --app-bg-elevada: var(--p-surface-50);
+  --app-superficie: var(--p-content-background);
+  --app-superficie-2: var(--p-surface-100);
+  --app-borda: var(--p-content-border-color);
+  --app-texto: var(--p-text-color);
+  --app-texto-suave: var(--p-text-muted-color);
+  --app-raio: 16px;
+  --app-raio-sm: 10px;
+  --app-sombra: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px -22px rgba(15, 23, 42, 0.4);
+}
+
+.app-dark {
+  --app-bg: var(--p-surface-950);
+  --app-bg-elevada: var(--p-surface-900);
+  --app-superficie: var(--p-content-background);
+  --app-superficie-2: var(--p-surface-800);
+  --app-borda: var(--p-content-border-color);
+  --app-sombra: 0 1px 2px rgba(0, 0, 0, 0.55), 0 18px 44px -24px rgba(0, 0, 0, 0.9);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--app-bg);
+  color: var(--app-texto);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+}
+
+a {
+  color: var(--p-primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Cartão/superfície reutilizável para manter padrão entre as telas. */
+.superficie {
+  background: var(--app-superficie);
+  border: 1px solid var(--app-borda);
+  border-radius: var(--app-raio);
+  box-shadow: var(--app-sombra);
+}
+
+.app-chrome {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1200;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--p-primary-color);
+}
+
+.bloco {
+  display: block;
+  width: 100%;
+
+  .p-button,
+  .p-selectbutton,
+  .p-message {
+    width: 100%;
+  }
+
+  .p-selectbutton .p-togglebutton {
+    flex: 1;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--p-surface-300);
+  border-radius: 999px;
+}
+
+.app-dark ::-webkit-scrollbar-thumb {
+  background: var(--p-surface-700);
+}

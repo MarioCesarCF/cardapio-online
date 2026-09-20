@@ -1,0 +1,123 @@
+<div class="auth">
+  <header class="marca">
+    <span class="marca__selo"><i class="pi pi-shop"></i> cardápio online grátis</span>
+    <h1>Cardápio Online</h1>
+    <p class="marca__apoio">
+      Monte seu cardápio, receba pedidos pelo WhatsApp ou no painel e pague com PIX —
+      sem aplicativo e sem taxa.
+    </p>
+  </header>
+
+  @if (me(); as dados) {
+    <section class="cartao superficie dados">
+      <span class="selo"><i class="pi pi-user"></i> sua conta</span>
+      <h2>Olá, {{ dados.user.name ?? dados.user.email }}</h2>
+      <p class="suave">{{ dados.user.email }}</p>
+
+      @if (dados.cliente) {
+        <p class="suave">Cliente: {{ dados.cliente.nome ?? dados.cliente.id }}</p>
+      }
+
+      <h3>Lanches cadastrados</h3>
+      @if (dados.lanchonetes.length === 0) {
+        <p class="suave">Nenhuma lanchonete vinculada a esta conta ainda.</p>
+      } @else {
+        <ul class="lista">
+          @for (lanchonete of dados.lanchonetes; track lanchonete.id) {
+            <li>
+              <a routerLink="/{{ lanchonete.slug }}">
+                <i class="pi pi-shop"></i> {{ lanchonete.nome }}
+              </a>
+              <span class="suave">/{{ lanchonete.slug }}</span>
+            </li>
+          }
+        </ul>
+      }
+
+      <p-button
+        label="Sair"
+        icon="pi pi-sign-out"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="sair()"
+      />
+    </section>
+  } @else {
+    <form class="cartao superficie form" (ngSubmit)="submit()">
+      <span class="selo"><i class="pi pi-store"></i> área da lanchonete</span>
+      <h2>{{ titulo }}</h2>
+
+      @if (error(); as erro) {
+        <p-message severity="error" [text]="erro" class="bloco" />
+      }
+
+      <p-selectbutton
+        [options]="modos"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="mode"
+        name="modo"
+        class="bloco"
+      />
+
+      @if (mode() === 'cadastro') {
+        <label class="campo">
+          <span>Nome</span>
+          <input
+            pInputText
+            type="text"
+            autocomplete="name"
+            [(ngModel)]="name"
+            name="name"
+            required
+          />
+        </label>
+      }
+
+      <label class="campo">
+        <span>Email</span>
+        <input
+          pInputText
+          type="email"
+          autocomplete="email"
+          [(ngModel)]="email"
+          name="email"
+          required
+        />
+      </label>
+
+      <label class="campo">
+        <span>Senha</span>
+        <input
+          pInputText
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          name="password"
+          required
+          minlength="8"
+        />
+      </label>
+
+      <p-button
+        type="submit"
+        [label]="submitting() ? 'Aguarde…' : botao"
+        [loading]="submitting()"
+        class="bloco"
+      />
+
+      <div class="divisor"><span>ou</span></div>
+
+      <p-button
+        type="button"
+        label="Continuar com Google"
+        icon="pi pi-google"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="submitting()"
+        (onClick)="entrarComGoogle()"
+        class="bloco"
+      />
+    </form>
+  }
+</div>

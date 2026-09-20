@@ -1,0 +1,105 @@
+<div class="pedidos">
+  <header>
+    <h1>Meus pedidos</h1>
+    <a routerLink="/">Voltar ao início</a>
+  </header>
+
+  @if (loading()) {
+    <p class="status">Carregando…</p>
+  } @else if (error(); as erro) {
+    <p class="status">{{ erro }}</p>
+  } @else if (pedidos().length === 0) {
+    <p class="status">Você ainda não fez pedidos.</p>
+  } @else {
+    @for (pedido of pedidos(); track pedido.id) {
+      <article class="pedido">
+        <header class="topo">
+          <h2>
+            <a routerLink="/{{ pedido.lanchonete.slug }}">{{ pedido.lanchonete.nome }}</a>
+            · pedido #{{ pedido.numero }}
+          </h2>
+          <span class="status-badge status-{{ pedido.status }}">{{
+            labelStatus(pedido.status)
+          }}</span>
+        </header>
+        <p class="data">{{ pedido.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
+
+        <ul class="itens">
+          @for (item of pedido.itens; track item.id) {
+            <li>
+              <div>
+                <strong>{{ item.qtd }}× {{ item.nome }}</strong>
+                @for (opcao of item.opcoes; track opcao.id) {
+                  <span class="opcao">
+                    {{ opcao.nome }}
+                    @if (opcao.remove) {
+                      (remover)
+                    } @else if (opcao.precoAdicional > 0) {
+                      +{{ opcao.precoAdicional | currency: 'BRL' }}
+                    }
+                  </span>
+                }
+              </div>
+              <span class="preco">{{ item.qtd * item.precoUnit | currency: 'BRL' }}</span>
+            </li>
+          }
+        </ul>
+
+        @if (pedido.enderecoEntrega; as end) {
+          <p class="endereco">
+            Entrega: {{ end.rua }}, {{ end.numero }}
+            @if (end.complemento) {
+              - {{ end.complemento }}
+            }
+            · {{ end.bairro }}, {{ end.cidade }}/{{ end.uf }}
+          </p>
+        }
+        @if (pedido.observacao) {
+          <p class="obs">Obs.: {{ pedido.observacao }}</p>
+        }
+
+        @if (mostraPix(pedido)) {
+          <section class="pix">
+            <p class="pix-dica">
+              Pedido aguardando confirmação — faça o PIX de
+              <strong>{{ pedido.total | currency: 'BRL' }}</strong> abaixo.
+            </p>
+            @if (qrUrls()[pedido.id]; as url) {
+              <img [src]="url" alt="QR Code PIX" />
+            }
+            <textarea
+              class="pix-br"
+              readonly
+              rows="3"
+              pTextarea
+              [value]="pedido.brCodePix"
+            ></textarea>
+            <p-button
+              label="Copiar código PIX"
+              icon="pi pi-copy"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="copiarPix(pedido)"
+            />
+          </section>
+        }
+
+        <div class="rodape">
+          <div class="pagamento">
+            <span>PIX</span>
+            <strong>{{ pedido.total | currency: 'BRL' }}</strong>
+          </div>
+          @if (podeRepetir(pedido)) {
+            <p-button
+              label="Pedir de novo"
+              icon="pi pi-shopping-bag"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="repetirPedido(pedido)"
+            />
+          }
+        </div>
+      </article>
+    }
+  }
+</div>

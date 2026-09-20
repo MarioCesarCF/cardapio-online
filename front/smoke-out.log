@@ -1,0 +1,47 @@
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +22ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +11ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +5ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLojasModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMeModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPedidosModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:36 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAppController {/}:[39m[38;5;3m +8ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/, GET} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/health}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLojasController {/l/:slug}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/l/:slug/config, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/l/:slug/cardapio, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mMeController {/me}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me/enderecos, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me/enderecos, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me/enderecos/:enderecoId, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me/enderecos/:enderecoId, DELETE} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/me/pedidos, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/admin}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug, DELETE} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug/cardapio, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug/categorias, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/categorias/:idCat, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/categorias/:idCat, DELETE} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/categorias/:idCat/produtos, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/produtos/:idProd, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/produtos/:idProd, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/produtos/:idProd/grupos, PUT} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/lanchonetes/:slug/grupos, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/grupos/:idGrupo, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/grupos/:idGrupo, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/grupos/:idGrupo/opcoes, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/opcoes/:idOpcao, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/opcoes/:idOpcao, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPedidosController {/l}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/l/:slug/pedidos, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 14836  - [39m10/09/2026, 10:56:37 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +337ms[39m

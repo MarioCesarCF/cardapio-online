@@ -1,0 +1,447 @@
+:host {
+  --cardapio-cor: var(--p-primary-color);
+  --cardapio-fonte: inherit;
+  display: block;
+  min-height: 100%;
+}
+
+.cardapio {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 6rem;
+  font-family: var(--cardapio-fonte);
+}
+
+.status {
+  text-align: center;
+  color: var(--app-texto-suave);
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.cabecalho {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.categoria {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.35rem;
+    color: var(--cardapio-cor);
+    border-bottom: 2px solid color-mix(in srgb, var(--cardapio-cor) 25%, transparent);
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.produtos {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.produto {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--app-superficie);
+  border: 1px solid var(--app-borda);
+  border-radius: var(--app-raio);
+  box-shadow: var(--app-sombra);
+
+  .produto-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+  }
+
+  .destaque {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cardapio-cor);
+    background: color-mix(in srgb, var(--cardapio-cor) 14%, transparent);
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .descricao {
+    margin: 0.35rem 0 0;
+    color: var(--app-texto-suave);
+    font-size: 0.9rem;
+  }
+
+  .grupo {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .obrigatorio {
+      font-weight: 400;
+      color: var(--app-texto-suave);
+      font-size: 0.75rem;
+      margin-left: 0.35rem;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0.5rem;
+      margin: 0.35rem 0 0;
+      display: grid;
+      gap: 0.2rem;
+      color: var(--app-texto-suave);
+    }
+  }
+
+  .produto-preco {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+
+    img {
+      width: 4.5rem;
+      height: 4.5rem;
+      object-fit: cover;
+      border-radius: var(--app-raio-sm);
+    }
+
+    strong {
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.barra-sacola {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--cardapio-cor);
+  color: var(--p-primary-contrast-color, #fff);
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  padding: 0.9rem 1.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--cardapio-cor) 70%, transparent);
+  z-index: 40;
+}
+
+.barra-pedido {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--cardapio-cor);
+  color: var(--p-primary-contrast-color, #fff);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem 0.4rem 1.25rem;
+  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--cardapio-cor) 70%, transparent);
+  z-index: 40;
+  max-width: min(94vw, 32rem);
+
+  .barra-pedido-principal {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    padding: 0.45rem 0;
+    cursor: pointer;
+    min-width: 0;
+    flex: 1;
+
+    .barra-pedido-texto {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.2;
+      min-width: 0;
+
+      strong {
+        font-size: 0.95rem;
+      }
+
+      small {
+        font-weight: 400;
+        opacity: 0.85;
+        font-size: 0.78rem;
+      }
+    }
+
+    .barra-pedido-acao {
+      font-weight: 700;
+      font-size: 0.8rem;
+      background: color-mix(in srgb, #fff 18%, transparent);
+      border-radius: 999px;
+      padding: 0.35rem 0.8rem;
+      white-space: nowrap;
+    }
+  }
+
+  .barra-pedido-acompanhar {
+    color: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-left: 1px solid color-mix(in srgb, #fff 30%, transparent);
+    padding: 0.45rem 0.25rem 0.45rem 0.85rem;
+    white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.dialog-produto {
+  .descricao {
+    margin: 0 0 1rem;
+    color: var(--app-texto-suave);
+    font-size: 0.9rem;
+  }
+}
+
+.grupo-opcoes {
+  border: 1px solid var(--app-borda);
+  border-radius: var(--app-raio-sm);
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.35rem;
+
+  legend {
+    padding: 0 0.35rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .tag {
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: var(--app-texto-suave);
+    margin-left: 0.3rem;
+  }
+}
+
+.opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  padding: 0.25rem 0;
+
+  input {
+    margin-top: 0.2rem;
+  }
+
+  span {
+    flex: 1;
+  }
+}
+
+.endereco-opcao.selecionada {
+  background: color-mix(in srgb, var(--cardapio-cor) 12%, transparent);
+  border-radius: var(--app-raio-sm);
+  padding: 0.35rem 0.5rem;
+}
+
+.sacola-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--app-borda);
+  display: grid;
+  gap: 0.45rem;
+
+  .sacola-info {
+    display: flex;
+    flex-direction: column;
+
+    .opcao-resumo {
+      font-size: 0.8rem;
+      color: var(--app-texto-suave);
+    }
+  }
+
+  .sacola-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .qtd {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      span {
+        min-width: 1.5rem;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
+  .preco {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.sacola-footer {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-borda);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.25rem;
+
+  span {
+    color: var(--app-texto-suave);
+    font-weight: 600;
+  }
+}
+
+.dica {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--app-texto-suave);
+}
+
+.grid-endereco {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+
+  .campo--full {
+    grid-column: span 2;
+  }
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  margin: 1rem 0;
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.erro {
+  margin: 0 0 0.75rem;
+  color: var(--p-red-500, #ef4444);
+  font-size: 0.88rem;
+}
+
+.pix-corpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+
+  > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+.pix-status {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.pix-pill {
+  display: inline-block;
+  background: color-mix(in srgb, var(--cardapio-cor) 14%, transparent);
+  color: var(--cardapio-cor);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pix-qr {
+  display: block;
+  width: 13rem;
+  height: 13rem;
+  border-radius: var(--app-raio-sm);
+  background: #fff;
+  padding: 8px;
+}
+
+.pix-codigo {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1rem;
+  border: 1px dashed var(--app-borda);
+  border-radius: var(--app-raio-sm);
+  background: var(--app-superficie-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  user-select: all;
+}
+
+.pix-link {
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+::ng-deep .dialog-pix {
+  width: min(94vw, 30rem);
+  max-width: 94vw;
+
+  .p-dialog-content {
+    padding: 0.5rem 1.25rem 1.25rem;
+    overflow-x: hidden;
+  }
+}

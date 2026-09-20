@@ -1,0 +1,184 @@
+:host {
+  display: block;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-right: 7.5rem;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  a {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+}
+
+.status {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--app-texto-suave);
+}
+
+.pedido {
+  background: var(--app-superficie);
+  border: 1px solid var(--app-borda);
+  border-radius: var(--app-raio);
+  box-shadow: var(--app-sombra);
+  padding: 1.1rem 1.15rem;
+  margin-bottom: 1rem;
+
+  .topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+
+      a {
+        color: inherit;
+      }
+    }
+  }
+
+  .status-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--cor) 16%, transparent);
+    color: var(--cor);
+    border: 1px solid color-mix(in srgb, var(--cor) 32%, transparent);
+  }
+
+  .status-recebido {
+    --cor: #2563eb;
+  }
+  .status-em_preparo {
+    --cor: #d97706;
+  }
+  .status-saiu_para_entrega {
+    --cor: #7c3aed;
+  }
+  .status-entregue {
+    --cor: #059669;
+  }
+  .status-cancelado {
+    --cor: #dc2626;
+  }
+
+  .data {
+    margin: 0.3rem 0 0.85rem;
+    font-size: 0.8rem;
+    color: var(--app-texto-suave);
+  }
+
+  .itens {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+
+      .opcao {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--app-texto-suave);
+      }
+
+      .preco {
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
+  .endereco,
+  .obs {
+    font-size: 0.85rem;
+    color: var(--app-texto-suave);
+    margin: 0.65rem 0 0;
+  }
+
+  .rodape {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--app-borda);
+    font-size: 1.05rem;
+
+    strong {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pagamento {
+      display: grid;
+      gap: 0.1rem;
+
+      span {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--app-texto-suave);
+      }
+    }
+  }
+
+  .pix {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+    padding: 0.9rem;
+    border: 1px dashed var(--app-borda);
+    border-radius: var(--app-raio-sm);
+    background: var(--app-superficie-2);
+
+    img {
+      width: 180px;
+      height: 180px;
+      border-radius: var(--app-raio-sm);
+    }
+
+    .pix-dica {
+      margin: 0;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .pix-br {
+      width: 100%;
+      font-size: 0.8rem;
+      text-align: center;
+      height: auto;
+    }
+
+    p-button {
+      width: 100%;
+    }
+  }
+}
