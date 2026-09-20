@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -31,26 +32,44 @@ type EnderecoDados = CriaEnderecoInput & {
 
 @Injectable()
 export class MeService {
+  private readonly logger = new Logger(MeService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getMe(user: AuthenticatedUser) {
     await this.ensureCliente(user);
-    const [lanchonetes, cliente, enderecos, adminSistema] = await Promise.all([
-      this.prisma.lanchonete.findMany({
-        where: { donoId: user.id },
-        select: { id: true, nome: true, slug: true, logoUrl: true },
-        orderBy: { createdAt: 'asc' },
-      }),
-      this.prisma.cliente.findUnique({ where: { id: user.id } }),
-      this.prisma.endereco.findMany({
-        where: { clienteId: user.id },
-        orderBy: [{ padrao: 'desc' }, { createdAt: 'desc' }],
-      }),
-      this.prisma.adminSistema.findUnique({ where: { id: user.id } }),
-    ]);
+    const [lanchonetes, cliente, enderecos, adminSistema, conta] =
+      await Promise.all([
+        this.prisma.lanchonete.findMany({
+          where: { donoId: user.id },
+          select: { id: true, nome: true, slug: true, logoUrl: true },
+          orderBy: { createdAt: 'asc' },
+        }),
+        this.prisma.cliente.findUnique({ where: { id: user.id } }),
+        this.prisma.endereco.findMany({
+          where: { clienteId: user.id },
+          orderBy: [{ padrao: 'desc' }, { createdAt: 'desc' }],
+        }),
+        this.prisma.adminSistema.findUnique({ where: { id: user.id } }),
+        // O JWT da aplicação não carrega nome/e-mail; busca a fonte viva na Neon.
+        this.prisma.$queryRaw<{ nome: string | null; email: string | null }[]>`
+          SELECT name AS nome, email
+          FROM neon_auth."user"
+          WHERE id = ${user.id}::uuid
+          LIMIT 1
+        `,
+      ]);
+    const dadosConta = conta[0];
 
     return {
-      user,
+      user: {
+        id: user.id,
+        name: cliente?.nome ?? dadosConta?.nome ?? user.name ?? null,
+        email: dadosConta?.email ?? user.email ?? null,
+        image: user.image,
+        emailVerified: user.emailVerified,
+        role: user.role,
+      },
       lanchonetes,
       cliente,
       enderecos,
@@ -89,7 +108,28 @@ export class MeService {
       throw new BadRequestException('Nenhum campo para atualizar.');
     }
 
-    return this.prisma.cliente.update({ where: { id: user.id }, data: dados });
+    const perfil = await this.prisma.cliente.update({
+      where: { id: user.id },
+      data: dados,
+    });
+
+    if (dados.nome) {
+      try {
+        await this.prisma.$executeRaw`
+          UPDATE neon_auth."user" SET name = ${dados.nome} WHERE id = ${user.id}::uuid
+        `;
+        await this.prisma.adminSistema.updateMany({
+          where: { id: user.id },
+          data: { nome: dados.nome },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Não foi possível sincronizar o nome na Neon: ${error instanceof Error ? error.message : 'erro desconhecido'}`,
+        );
+      }
+    }
+
+    return perfil;
   }
 
   async listarEnderecos(user: AuthenticatedUser) {
@@ -182,6 +222,7 @@ export class MeService {
       id: p.id,
       numero: p.numero,
       status: p.status,
+      justificativaCancelamento: p.justificativaCancelamento ?? null,
       subtotal: Number(p.subtotal),
       total: Number(p.total),
       formaPagamento: p.formaPagamento,

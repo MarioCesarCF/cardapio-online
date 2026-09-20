@@ -17,6 +17,21 @@
   color: var(--app-texto-suave);
 }
 
+.topo-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--app-texto-suave);
+  margin-bottom: 0.75rem;
+
+  &:hover {
+    color: var(--cardapio-cor);
+    text-decoration: none;
+  }
+}
+
 .center {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
@@ -47,6 +48,8 @@ export interface CriaPedidoInput {
 
 @Injectable()
 export class PedidosService {
+  private readonly logger = new Logger(PedidosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: PedidosGateway,
@@ -122,6 +125,26 @@ export class PedidosService {
         cliente: { id: user.id, nome: user.name, telefone },
       }),
     );
+
+    // A 1ª lanchonete cujo pedido o cliente finaliza vira favorita (silencioso).
+    try {
+      await this.prisma.lanchoneteFavorita.upsert({
+        where: {
+          clienteId_lanchoneteId: {
+            clienteId: user.id,
+            lanchoneteId: lanchonete.id,
+          },
+        },
+        create: { clienteId: user.id, lanchoneteId: lanchonete.id },
+        update: {},
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Não foi possível favoritar ${lanchonete.id} para ${user.id}: ${
+          error instanceof Error ? error.message : 'erro desconhecido'
+        }`,
+      );
+    }
 
     return {
       id: pedido.id,

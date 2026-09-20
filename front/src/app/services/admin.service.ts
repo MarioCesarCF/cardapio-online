@@ -171,9 +171,16 @@ export class AdminService {
     );
   }
 
-  updatePedidoStatus(idPedido: string, status: string): Promise<PedidoPainel> {
+  updatePedidoStatus(
+    idPedido: string,
+    status: string,
+    justificativa?: string,
+  ): Promise<PedidoPainel> {
     return firstValueFrom(
-      this.api.patch<PedidoPainel>(`/admin/pedidos/${idPedido}/status`, { status }),
+      this.api.patch<PedidoPainel>(`/admin/pedidos/${idPedido}/status`, {
+        status,
+        justificativa,
+      }),
     );
   }
 }

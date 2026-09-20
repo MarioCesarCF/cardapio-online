@@ -16,11 +16,27 @@ const NOME_MAX = 50;
 const TIPOS_LANCHONETE = ['lanches', 'pizzaria', 'sorvetes', 'acai'] as const;
 const PEDIDO_STATUSES = [
   'recebido',
+  'aceito',
   'em_preparo',
-  'saiu_para_entrega',
+  'concluido',
+  'enviado',
   'entregue',
+  'finalizado',
   'cancelado',
 ] as const;
+// Transições permitidas: o dono avança uma etapa por vez; cancelamento é
+// permitido antes de o pedido sair para entrega (com justificativa obrigatória).
+const TRANSICOES_STATUS: Record<string, readonly string[]> = {
+  recebido: ['aceito', 'cancelado'],
+  aceito: ['em_preparo', 'cancelado'],
+  em_preparo: ['concluido', 'cancelado'],
+  concluido: ['enviado', 'cancelado'],
+  enviado: ['entregue'],
+  entregue: ['finalizado'],
+  finalizado: [],
+  cancelado: [],
+};
+const JUSTIFICATIVA_MAX = 300;
 const CONFIG_FIELDS = [
   'nome',
   'slug',
@@ -447,9 +463,40 @@ export class AdminService {
     ) {
       throw new BadRequestException('Status inválido');
     }
+    if (status === pedido.status) {
+      throw new BadRequestException(
+        `O pedido #${pedido.numero} já está ${this.rotulaStatus(status)}.`,
+      );
+    }
+    const permitidos = TRANSICOES_STATUS[pedido.status] ?? [];
+    if (!permitidos.includes(status)) {
+      throw new BadRequestException(
+        `Transição inválida de "${pedido.status}" para "${status}".`,
+      );
+    }
+    let justificativaCancelamento: string | null = null;
+    if (status === 'cancelado') {
+      const raw = body.justificativa;
+      if (typeof raw !== 'string' || raw.trim().length < 2) {
+        throw new BadRequestException(
+          'Informe o motivo do cancelamento (mínimo de 2 caracteres).',
+        );
+      }
+      justificativaCancelamento = raw.trim();
+      if (justificativaCancelamento.length > JUSTIFICATIVA_MAX) {
+        throw new BadRequestException(
+          `O motivo do cancelamento deve ter no máximo ${JUSTIFICATIVA_MAX} caracteres.`,
+        );
+      }
+    }
     const atualizado = await this.prisma.pedido.update({
       where: { id: pedido.id },
-      data: { status },
+      data: {
+        status,
+        ...(justificativaCancelamento != null
+          ? { justificativaCancelamento }
+          : {}),
+      },
       include: {
         itens: { include: { opcoes: true } },
         cliente: { select: { id: true, nome: true, telefone: true } },
@@ -695,6 +742,20 @@ export class AdminService {
   }
 
   // ---------- Validação ----------
+
+  private rotulaStatus(status: string): string {
+    const rotulos: Record<string, string> = {
+      recebido: 'recebido',
+      aceito: 'aceito',
+      em_preparo: 'em preparo',
+      concluido: 'concluído',
+      enviado: 'enviado',
+      entregue: 'entregue',
+      finalizado: 'finalizado',
+      cancelado: 'cancelado',
+    };
+    return rotulos[status] ?? status;
+  }
 
   private requiredString(
     body: Record<string, unknown>,

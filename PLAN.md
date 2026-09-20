@@ -1,6 +1,6 @@
 # Cardápio Online — Plano do Projeto
 
-## 0. Andamento (atualizado em 2026-09-19)
+## 0. Andamento (atualizado em 2026-09-20)
 
 > O app foi reconstruído por papel (plataforma → dono → cliente). Docs técnicos dos módulos em `AGENTS.md`; contas de teste em `CREDENCIAIS-TESTE.md`.
 
@@ -10,10 +10,12 @@
   - app do dono SEM o "meu cadastro" da seção Loja (dono não gerencia situação).
 - **Etapa 2 — Dono pendente + diretório**: lanchonete nova nasce `pendente`; dono prepara config/cardápio mas a aba Pedidos mostra "Loja indisponível"; diretório (`GET /l`) = só lojas **ativas**, mas **sem página pública** — a **home (`/`) virou a tela de login** e só o link `/{slug}` é aberto sem conta; `slug` editável + botão copiar link.
 - **Etapa 3 — Fluxo do cliente**: WhatsApp no checkout (obrigatório na 1ª compra, salvo em `PATCH /me` + snapshot `pedido.clienteTelefone`), login Google, sessão ~7 dias, `/me` perfil+endereços, `meus-pedidos` com QR PIX, link da loja e "Pedir de novo".
-- **Bases**: M1 (core), `m4*` (admin_sistema), `m5` (situacao+logs, backfill), `m6` (cliente_telefone). Seed `npm run seed:teste` e galeria `npm run seed:galeria` (Pexels → URL, R2 só com env).
+- **Etapa 4 — Cadeia nova de status dos pedidos (concluída)**: status agora `recebido→aceito→em_preparo→concluido→enviado→entregue→finalizado`, com `cancelado` (só antes de sair pra entrega) e **justificativa obrigatória** em `pedido.justificativaCancelamento`. Dono avança uma etapa por vez no painel (`admin-pedidos` tem fluxo "próximo status" + botão "Cancelar pedido" com textarea de motivo); `PATCH /admin/pedidos/:idPedido/status` valida transições/justificativa e o realtime segue com `pedido:status`. Cliente vê o motivo do cancelamento e o PIX fica disponível de `recebido` até `enviado` (`STATUS_COM_PIX`).
+- **Etapa 5 — Identidade da home + contato para lojistas (concluída)**: tabela `config_plataforma` (`m9_plataforma_email_lojista`, linha única) guarda o **e-mail de contato** que aparece na página principal do cliente para quem quer abrir loja; editável pelo admin no painel (aba Configurações) via `GET/PATCH /admin-sistema/plataforma` e exposto publicamente em `GET /plataforma/email-lojista`. A home passou a se chamar **"Página principal"**, ganhou "Lanchonetes favoritas" como subtítulo antes do filtro e uma seção `mailto` "Quer vender pelo Cardápio Online?"; o link do cardápio virou "Página principal". Default do e-mail no boot = e-mail do admin raiz.
+- **Etapa 6 — Login: olhinho, lembrar de mim e recuperação de senha (concluída)**: tela de auth ganhou botão de **mostrar/ocultar senha**, checkbox **"Lembrar de mim"** (persiste e-mail + `rememberMe` no sign-in) e **"Esqueci senha"** que pede o e-mail, confirma cadastro via novo `POST /auth/verificar-email` e dispara o link de redefinição do Neon Auth (`requestPasswordReset`). O link cai em `/auth?esqueci=1&token=…` com tela própria de **nova senha + confirmação** → `resetPassword` sobrescreve a senha. Fluxo de link+reset 100% validado em smoke (senha do `cliente.teste` trocada e revertida); entrega real do e-mail depende da config de e-mail da Neon (infra em aberto).
+- **Bases**: M1 (core), `m4*` (admin_sistema), `m5` (situacao+logs, backfill), `m6` (cliente_telefone), `m7` (lanchonetes_favoritas), `m8` (pedido_status_justificativa), `m9` (plataforma_email_lojista). Seed `npm run seed:teste` e galeria `npm run seed:galeria` (Pexels → URL, R2 só com env).
 
 ### Falta fazer
-- **Etapa 4 — Cadeia nova de status dos pedidos**: hoje segue a antiga (`recebido→em_preparo→saiu_para_entrega→entregue|cancelado`). Trocar para `recebido→aceito→em_preparo→concluido→enviado→entregue→finalizado` + `cancelado` com **justificativa obrigatória**. Ajustar painel do dono (`admin-pedidos`), realtime (`PedidosGateway`) e o bloco PIX/labels do cliente.
 - **Infra/higiene**: configurar OAuth Google no console Neon (hoje dev usa usuários compartilhados); ativar R2 real (galeria evolui de URL Pexels → upload do `R2Service`); notificações WhatsApp (Evolution API a validar) e e-mail (Resend); deploy Vercel (front) + Render (back); correr testes karma do front (precisam de Chrome).
 
 ---
@@ -42,7 +44,7 @@ Plataforma para lanchonetes pequenas criarem e operarem seu próprio cardápio o
 - Pagamento **PIX estático**: QR Code + código copia-e-cola.
 
 ### Módulo lanchonete (painel `/admin`)
-- **Pedidos em tempo real** (WebSocket + fallback de polling) com gestão de status (recebido → em preparo → a caminho → entregue → cancelado).
+- **Pedidos em tempo real** (WebSocket + fallback de polling) com gestão de status (recebido → aceito → em preparo → concluído → enviado → entregue → finalizado; cancelado com justificativa).
 - CRUD de categorias, produtos e grupos de opções.
 - Configurações visuais: **logo (tamanho padrão)**, **nome**, **fonte estilizada**, cores.
 - Informações de contato: WhatsApp, e-mail, endereço da loja.

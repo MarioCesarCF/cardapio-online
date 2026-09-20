@@ -39,9 +39,7 @@ const SITUACAO_LABELS: Record<string, string> = {
         <p class="pa__erro">Você não tem acesso ao painel administrativo desta plataforma.</p>
       } @else {
         <header class="pa__topo">
-          <a class="pa__voltar" routerLink="/admin"
-            ><i class="pi pi-arrow-left"></i> Meus painéis</a
-          >
+          <a class="pa__voltar" routerLink="/"><i class="pi pi-arrow-left"></i> Início</a>
           <h1>Painel administrativo da plataforma</h1>
           @if (eSuper()) {
             <p-tag value="raiz" severity="warn" />
@@ -72,6 +70,14 @@ const SITUACAO_LABELS: Record<string, string> = {
             (click)="trocarAba('logs')"
           >
             Logs
+          </button>
+          <button
+            type="button"
+            class="pa__aba"
+            [class.pa__aba--ativa]="aba() === 'config'"
+            (click)="aba.set('config')"
+          >
+            Configurações
           </button>
         </nav>
 
@@ -429,6 +435,43 @@ const SITUACAO_LABELS: Record<string, string> = {
             }
           }
 
+          @if (aba() === 'config') {
+            <section class="pa__bloco">
+              <h2>E-mail de contato para lojistas</h2>
+              <div class="pa__config">
+                <p class="pa__config-dica">
+                  Esse e-mail aparece na página principal dos clientes para quem quiser anunciar
+                  como lojista.
+                </p>
+                <label class="pa__campo pa__campo--contato">
+                  <span>E-mail</span>
+                  <input
+                    pInputText
+                    type="email"
+                    [value]="novoEmailLojista()"
+                    (input)="novoEmailLojista.set($any($event.target).value)"
+                    placeholder="contato@cardapio.com.br"
+                  />
+                </label>
+                <div class="pa__config-acoes">
+                  <p-button
+                    label="Salvar"
+                    icon="pi pi-check"
+                    [loading]="salvandoEmail()"
+                    [disabled]="salvandoEmail() || !emailValido()"
+                    (onClick)="salvarEmailLojista()"
+                  />
+                  @if (emailOk() === 'ok') {
+                    <span class="pa__ok"><i class="pi pi-check-circle"></i> Salvo!</span>
+                  }
+                </div>
+                @if (erroEmail()) {
+                  <p class="pa__erro">{{ erroEmail() }}</p>
+                }
+              </div>
+            </section>
+          }
+
           @if (aba() === 'admins') {
             <section class="pa__bloco">
               <h2>Novo administrador</h2>
@@ -660,6 +703,32 @@ const SITUACAO_LABELS: Record<string, string> = {
       gap: 12px;
       align-items: end;
     }
+    .pa__config {
+      display: grid;
+      gap: 12px;
+      max-width: 34rem;
+    }
+    .pa__config-dica {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--app-texto-suave);
+    }
+    .pa__config-acoes {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pa__campo--contato {
+      max-width: 22rem;
+    }
+    .pa__ok {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--p-green-500, #22c55e);
+    }
     .pa__admin {
       display: flex;
       align-items: center;
@@ -890,7 +959,7 @@ export class PainelAdminComponent {
   private readonly api = inject(ApiService);
   private readonly painel = inject(PainelAdminService);
 
-  readonly aba = signal<'lanchonetes' | 'admins' | 'logs'>('lanchonetes');
+  readonly aba = signal<'lanchonetes' | 'admins' | 'logs' | 'config'>('lanchonetes');
   readonly lanchonetes = signal<LanchonetePainel[]>([]);
   readonly admins = signal<AdminPainel[]>([]);
   readonly carregando = signal(true);
@@ -924,6 +993,17 @@ export class PainelAdminComponent {
   readonly salvandoAdmin = signal(false);
   readonly erroAdmin = signal<string | null>(null);
 
+  readonly novoEmailLojista = signal('');
+  readonly salvandoEmail = signal(false);
+  readonly erroEmail = signal<string | null>(null);
+  readonly emailOk = signal<'idle' | 'ok'>('idle');
+
+  readonly emailValido = computed(
+    () =>
+      this.novoEmailLojista().trim() === '' ||
+      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.novoEmailLojista().trim()),
+  );
+
   readonly adminFormValido = computed(
     () =>
       this.novoAdminNome().trim().length >= 2 &&
@@ -948,7 +1028,11 @@ export class PainelAdminComponent {
       this.semAcesso.set(!me.adminSistema);
       if (me.adminSistema) {
         this.funcao.set(me.adminSistemaFuncao ?? 'admin');
-        await Promise.all([this.carregarLanchonetes(), this.carregarAdmins()]);
+        await Promise.all([
+          this.carregarLanchonetes(),
+          this.carregarAdmins(),
+          this.carregarPlataforma(),
+        ]);
       }
     } catch {
       this.semAcesso.set(true);
@@ -965,7 +1049,29 @@ export class PainelAdminComponent {
     this.admins.set(await this.painel.listarAdmins());
   }
 
-  trocarAba(aba: 'lanchonetes' | 'admins' | 'logs') {
+  private async carregarPlataforma(): Promise<void> {
+    const config = await this.painel.getPlataforma();
+    this.novoEmailLojista.set(config.emailLojista ?? '');
+  }
+
+  async salvarEmailLojista(): Promise<void> {
+    if (this.salvandoEmail() || !this.emailValido()) return;
+    this.salvandoEmail.set(true);
+    this.erroEmail.set(null);
+    this.emailOk.set('idle');
+    try {
+      const valor = this.novoEmailLojista().trim() || null;
+      const resultado = await this.painel.atualizarPlataforma(valor);
+      this.novoEmailLojista.set(resultado.emailLojista ?? '');
+      this.emailOk.set('ok');
+    } catch (error) {
+      this.erroEmail.set(this.mensagemDe(error));
+    } finally {
+      this.salvandoEmail.set(false);
+    }
+  }
+
+  trocarAba(aba: 'lanchonetes' | 'admins' | 'logs' | 'config') {
     this.aba.set(aba);
     if (aba === 'logs') {
       void this.carregarLogs();

@@ -1,15 +1,19 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Tag } from 'primeng/tag';
+import { Textarea } from 'primeng/textarea';
 import { AdminService } from '../../services/admin.service';
 import { PedidosRealtimeService } from '../../services/pedidos-realtime.service';
 import {
   labelStatus as rotularStatus,
   PEDIDO_STATUSES,
+  PEDIDO_STATUS_SEVERIDADE,
   PedidoPainel,
+  podeCancelar as podeCancelarStatus,
   proximoStatus as proximo,
 } from '../../services/pedido-painel';
 
@@ -17,7 +21,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'app-admin-pedidos',
-  imports: [CurrencyPipe, DatePipe, Button, Tag],
+  imports: [CurrencyPipe, DatePipe, FormsModule, Button, Tag, Textarea],
   template: `
     <div class="pedidos">
       @if (indisponivel(); as msg) {
@@ -94,16 +98,29 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   [severity]="severidade(pedido.status)"
                 />
                 <span class="data">{{ pedido.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-                @if (proximoStatus(pedido.status); as prox) {
-                  <p-button
-                    [label]="labelStatus(prox)"
-                    icon="pi pi-arrow-right"
-                    iconPos="right"
-                    size="small"
-                    [outlined]="true"
-                    (onClick)="avancarStatus(pedido)"
-                  />
-                }
+                <div class="acoes">
+                  @if (proximoStatus(pedido.status); as prox) {
+                    <p-button
+                      [label]="labelStatus(prox)"
+                      icon="pi pi-arrow-right"
+                      iconPos="right"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="avancarStatus(pedido)"
+                    />
+                  }
+                  @if (podeCancelar(pedido.status) && cancelandoId() !== pedido.id) {
+                    <p-button
+                      label="Cancelar pedido"
+                      icon="pi pi-times"
+                      severity="danger"
+                      size="small"
+                      [outlined]="true"
+                      [text]="true"
+                      (onClick)="iniciarCancelamento(pedido)"
+                    />
+                  }
+                </div>
               </header>
               <p class="cliente">
                 <strong>{{ pedido.cliente?.nome ?? 'Cliente' }}</strong>
@@ -139,6 +156,45 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               }
               @if (pedido.observacao) {
                 <p class="obs">Obs.: {{ pedido.observacao }}</p>
+              }
+              @if (pedido.justificativaCancelamento) {
+                <p class="obs obs--cancel">
+                  <i class="pi pi-times-circle"></i> Motivo do cancelamento:
+                  {{ pedido.justificativaCancelamento }}
+                </p>
+              }
+              @if (cancelandoId() === pedido.id) {
+                <div class="cancel">
+                  <p class="cancel__titulo">
+                    <i class="pi pi-times-circle"></i> Cancelar pedido #{{ pedido.numero }}
+                  </p>
+                  <textarea
+                    pTextarea
+                    rows="2"
+                    placeholder="Motivo do cancelamento (obrigatório)"
+                    [(ngModel)]="justificativa"
+                    [maxlength]="300"
+                  ></textarea>
+                  @if (erroCancelamento(); as msg) {
+                    <p class="aviso">{{ msg }}</p>
+                  }
+                  <div class="cancel__acoes">
+                    <p-button
+                      label="Confirmar cancelamento"
+                      severity="danger"
+                      size="small"
+                      [loading]="salvandoCancelamento()"
+                      (onClick)="confirmarCancelamento()"
+                    />
+                    <p-button
+                      label="Voltar"
+                      severity="secondary"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="fecharCancelamento()"
+                    />
+                  </div>
+                </div>
               }
               <footer>
                 <span>Total</span>
@@ -249,18 +305,64 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     .pedido.status-recebido {
       border-left-color: #1976d2;
     }
+    .pedido.status-aceito {
+      border-left-color: #00838f;
+    }
     .pedido.status-em_preparo {
       border-left-color: #ed6c02;
     }
-    .pedido.status-saiu_para_entrega {
+    .pedido.status-concluido {
+      border-left-color: #5e35b1;
+    }
+    .pedido.status-enviado {
       border-left-color: #9c27b0;
     }
     .pedido.status-entregue {
       border-left-color: var(--p-green-500, #22c55e);
     }
+    .pedido.status-finalizado {
+      border-left-color: #455a64;
+      opacity: 0.85;
+    }
     .pedido.status-cancelado {
       border-left-color: var(--p-red-500, #ef4444);
       opacity: 0.7;
+    }
+    .acoes {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .obs.obs--cancel {
+      color: var(--p-red-500, #ef4444);
+      font-weight: 600;
+    }
+    .cancel {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--p-red-300, #fca5a5);
+      border-radius: var(--app-raio);
+      background: color-mix(in srgb, var(--p-red-500) 8%, var(--app-superficie));
+    }
+    .cancel__titulo {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--p-red-600, #dc2626);
+    }
+    .cancel textarea {
+      width: 100%;
+    }
+    .cancel__acoes {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     header {
       display: flex;
@@ -334,6 +436,10 @@ export class AdminPedidosComponent implements OnDestroy {
   readonly erro = signal<string | null>(null);
   readonly novoPedido = signal<PedidoPainel | null>(null);
   readonly indisponivel = signal<string | null>(null);
+  readonly cancelandoId = signal<string | null>(null);
+  readonly justificativa = signal('');
+  readonly salvandoCancelamento = signal(false);
+  readonly erroCancelamento = signal<string | null>(null);
 
   readonly statuses = PEDIDO_STATUSES;
   readonly filtrados = computed(() => {
@@ -366,20 +472,8 @@ export class AdminPedidosComponent implements OnDestroy {
   }
 
   severidade(status: string): TagSeverity {
-    switch (status) {
-      case 'recebido':
-        return 'info';
-      case 'em_preparo':
-        return 'warn';
-      case 'saiu_para_entrega':
-        return 'contrast';
-      case 'entregue':
-        return 'success';
-      case 'cancelado':
-        return 'danger';
-      default:
-        return 'secondary';
-    }
+    return (PEDIDO_STATUS_SEVERIDADE[status as keyof typeof PEDIDO_STATUS_SEVERIDADE] ??
+      'secondary') as TagSeverity;
   }
 
   private async iniciar(slug: string) {
@@ -452,6 +546,45 @@ export class AdminPedidosComponent implements OnDestroy {
       this.erro.set(
         (error as { error?: { message?: string } }).error?.message ?? 'Falha ao atualizar status.',
       );
+    }
+  }
+
+  podeCancelar(status: string): boolean {
+    return podeCancelarStatus(status);
+  }
+
+  iniciarCancelamento(pedido: PedidoPainel) {
+    this.cancelandoId.set(pedido.id);
+    this.justificativa.set('');
+    this.erroCancelamento.set(null);
+  }
+
+  fecharCancelamento() {
+    this.cancelandoId.set(null);
+    this.justificativa.set('');
+    this.erroCancelamento.set(null);
+  }
+
+  async confirmarCancelamento() {
+    const id = this.cancelandoId();
+    if (!id) return;
+    const motivo = this.justificativa().trim();
+    if (motivo.length < 2) {
+      this.erroCancelamento.set('Informe o motivo do cancelamento.');
+      return;
+    }
+    this.salvandoCancelamento.set(true);
+    this.erroCancelamento.set(null);
+    try {
+      const atualizado = await this.admin.updatePedidoStatus(id, 'cancelado', motivo);
+      this.pedidos.update((lista) => lista.map((p) => (p.id === atualizado.id ? atualizado : p)));
+      this.fecharCancelamento();
+    } catch (error) {
+      this.erroCancelamento.set(
+        (error as { error?: { message?: string } }).error?.message ?? 'Falha ao cancelar o pedido.',
+      );
+    } finally {
+      this.salvandoCancelamento.set(false);
     }
   }
 }

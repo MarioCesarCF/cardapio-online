@@ -61,6 +61,30 @@ export class AdminSistemaService implements OnModuleInit {
       update: { funcao: 'super', nome: row.name ?? undefined },
     });
     this.logger.log(`Administrador raiz promovido: ${email}`);
+    await this.configurarEmailPadrao();
+  }
+
+  private async configurarEmailPadrao(): Promise<void> {
+    const existente = await this.prisma.configPlataforma.findUnique({
+      where: { id: 'global' },
+    });
+    if (existente?.emailLojista) return;
+
+    const raiz = await this.prisma.adminSistema.findFirst({
+      where: { funcao: 'super' },
+      select: { email: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!raiz) return;
+
+    await this.prisma.configPlataforma.upsert({
+      where: { id: 'global' },
+      create: { id: 'global', emailLojista: raiz.email },
+      update: { emailLojista: raiz.email },
+    });
+    this.logger.log(
+      `E-mail de contato para lojistas definido como padrão: ${raiz.email}`,
+    );
   }
 
   // ---------- Lanchonetes ----------
@@ -460,6 +484,40 @@ export class AdminSistemaService implements OnModuleInit {
     return { ok: true };
   }
 
+  // ---------- Configurações da plataforma ----------
+
+  async getPlataforma(): Promise<{ emailLojista: string | null }> {
+    const config = await this.prisma.configPlataforma.findUnique({
+      where: { id: 'global' },
+    });
+    return { emailLojista: config?.emailLojista ?? null };
+  }
+
+  async updatePlataforma(
+    user: AuthenticatedUser,
+    body: Record<string, unknown>,
+  ): Promise<{ emailLojista: string | null }> {
+    const emailLojista = this.emailContatoValido(body.emailLojista);
+
+    await this.prisma.configPlataforma.upsert({
+      where: { id: 'global' },
+      create: { id: 'global', emailLojista },
+      update: { emailLojista },
+    });
+
+    await this.registrarLog(
+      user,
+      'info',
+      'acao',
+      'E-mail de contato atualizado',
+      {
+        emailLojista,
+      },
+    );
+
+    return { emailLojista };
+  }
+
   async registrarErro(
     usuarioId: string | null,
     mensagem: string,
@@ -510,9 +568,12 @@ export class AdminSistemaService implements OnModuleInit {
   private statusPedidoValido(value: string): boolean {
     return [
       'recebido',
+      'aceito',
       'em_preparo',
-      'saiu_para_entrega',
+      'concluido',
+      'enviado',
       'entregue',
+      'finalizado',
       'cancelado',
     ].includes(value);
   }
@@ -573,6 +634,11 @@ export class AdminSistemaService implements OnModuleInit {
       throw new BadRequestException('E-mail inválido.');
     }
     return email;
+  }
+
+  private emailContatoValido(value: unknown): string | null {
+    if (value === null || value === undefined || value === '') return null;
+    return this.emailValido(value);
   }
 
   private senhaValida(value: unknown): string {

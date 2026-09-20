@@ -1,0 +1,271 @@
+<div class="home">
+  <header class="home__topo">
+    <h1>Página principal</h1>
+    <div class="home__links">
+      <a routerLink="/minhas-pedidos"><i class="pi pi-receipt"></i> Meus pedidos</a>
+      @if (emailLojista(); as email) {
+      <a [href]="mailtoLojista()" title="Enviar e-mail para {{ email }}">
+        <i class="pi pi-envelope"></i> Quero vender
+      </a>
+      } @else {
+      <a routerLink="/admin"><i class="pi pi-briefcase"></i> Sou lojista</a>
+      }
+      <button type="button" class="home__sair" (click)="sair()">
+        <i class="pi pi-sign-out"></i> Sair
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+  <p class="home__status">Carregando…</p>
+  } @else { @if (erro(); as erro) {
+  <p class="home__erro"><i class="pi pi-exclamation-circle"></i> {{ erro }}</p>
+  }
+
+  <section class="card superficie">
+    <h2>Meus dados</h2>
+    <div class="card__linha">
+      <label class="campo">
+        <span>Nome</span>
+        <input
+          pInputText
+          type="text"
+          maxlength="80"
+          [value]="meNome()"
+          (input)="meNome.set($any($event.target).value)"
+          placeholder="Seu nome"
+        />
+      </label>
+      <label class="campo">
+        <span>WhatsApp</span>
+        <input
+          pInputText
+          autocomplete="tel"
+          maxlength="15"
+          [value]="meTelefone()"
+          (input)="meTelefone.set($any($event.target).value)"
+          placeholder="(11) 99999-9999"
+        />
+      </label>
+      <p-button
+        label="Salvar"
+        icon="pi pi-check"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="salvandoPerfil()"
+        (onClick)="salvarPerfil()"
+      />
+    </div>
+    @if (perfilErro(); as msg) {
+    <p class="home__erro"><i class="pi pi-exclamation-circle"></i> {{ msg }}</p>
+    } @if (perfilOk() === 'ok') {
+    <p class="home__ok"><i class="pi pi-check-circle"></i> Dados salvos!</p>
+    }
+  </section>
+
+  <section class="card superficie">
+    <div class="card__titulo-linha">
+      <h2>Meus endereços</h2>
+      @if (!novoEnderecoAberto()) {
+      <p-button
+        label="Novo endereço"
+        icon="pi pi-plus"
+        size="small"
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="abrirNovoEndereco()"
+      />
+      }
+    </div>
+
+    @if (enderecos().length === 0 && !novoEnderecoAberto()) {
+    <p class="home__status">Você ainda não tem endereços salvos.</p>
+    } @if (novoEnderecoAberto()) {
+    <div class="grid-endereco">
+      <label class="campo campo--full">
+        <span>Apelido (opcional)</span>
+        <input
+          pInputText
+          [value]="valorEndereco('apelido')"
+          (input)="setCampoEndereco('apelido', $any($event.target).value)"
+          placeholder="Ex.: casa"
+        />
+      </label>
+      <label class="campo">
+        <span>Rua *</span>
+        <input
+          pInputText
+          [value]="valorEndereco('rua')"
+          (input)="setCampoEndereco('rua', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>Número *</span>
+        <input
+          pInputText
+          [value]="valorEndereco('numero')"
+          (input)="setCampoEndereco('numero', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>Complemento</span>
+        <input
+          pInputText
+          [value]="valorEndereco('complemento')"
+          (input)="setCampoEndereco('complemento', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>Bairro *</span>
+        <input
+          pInputText
+          [value]="valorEndereco('bairro')"
+          (input)="setCampoEndereco('bairro', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>Cidade *</span>
+        <input
+          pInputText
+          [value]="valorEndereco('cidade')"
+          (input)="setCampoEndereco('cidade', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>UF *</span>
+        <input
+          pInputText
+          maxlength="2"
+          [value]="valorEndereco('uf')"
+          (input)="setCampoEndereco('uf', $any($event.target).value)"
+        />
+      </label>
+      <label class="campo">
+        <span>CEP</span>
+        <input
+          pInputText
+          maxlength="9"
+          [value]="valorEndereco('cep')"
+          (input)="setCampoEndereco('cep', $any($event.target).value)"
+          placeholder="00000-000"
+        />
+      </label>
+    </div>
+    <label class="opcao">
+      <input type="checkbox" [checked]="padraoNovo()" (change)="alternarPadraoNovo()" />
+      <span>Usar como meu endereço padrão</span>
+    </label>
+    @if (enderecoErro(); as msg) {
+    <p class="home__erro"><i class="pi pi-exclamation-circle"></i> {{ msg }}</p>
+    }
+    <div class="acoes">
+      <p-button
+        label="Salvar endereço"
+        icon="pi pi-check"
+        [loading]="salvandoEndereco()"
+        (onClick)="salvarEndereco()"
+      />
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [text]="true"
+        (onClick)="novoEnderecoAberto.set(false)"
+      />
+    </div>
+    } @for (e of enderecos(); track e.id) {
+    <div class="endereco">
+      <div class="endereco__info">
+        <strong> {{ e.apelido ? e.apelido + ' — ' : '' }}{{ e.rua }}, {{ e.numero }} </strong>
+        @if (e.complemento) {
+        <span>{{ e.complemento }}</span>
+        }
+        <span> {{ e.bairro }}, {{ e.cidade }}/{{ e.uf }} @if (e.cep) { · CEP {{ e.cep }} } </span>
+        @if (e.padrao) {
+        <em>(padrão)</em>
+        }
+      </div>
+      <div class="endereco__acoes">
+        @if (!e.padrao) {
+        <button type="button" class="link" (click)="definirPadrao(e.id)">Usar como padrão</button>
+        }
+        <button type="button" class="link link--perigo" (click)="removerEndereco(e.id)">
+          Remover
+        </button>
+      </div>
+    </div>
+    }
+  </section>
+
+  <section class="lista">
+    <h2 class="lista__titulo">Lanchonetes favoritas</h2>
+    <div class="busca">
+      <i class="pi pi-search"></i>
+      <input
+        pInputText
+        type="search"
+        [value]="filtro()"
+        (input)="filtro.set($any($event.target).value)"
+        placeholder="Buscar por nome, endereço ou tipo"
+      />
+    </div>
+
+    @if (visiveis().length === 0) { @if (filtroVazio() && !temFavoritas()) {
+    <div class="vazio superficie">
+      <i class="pi pi-heart"></i>
+      <p>
+        Você ainda não tem lanchonetes favoritas. Finalize um pedido numa lanchonete para ela
+        aparecer aqui, ou busque pelo nome, endereço ou tipo acima.
+      </p>
+    </div>
+    } @else if (!filtroVazio()) {
+    <p class="home__status">Nenhuma lanchonete encontrada para “{{ filtro() }}”.</p>
+    } } @for (linha of visiveis(); track linha.id) {
+    <article class="lanchonete superficie">
+      @if (logoDa(linha); as logo) {
+      <img class="lanchonete__logo" [src]="logo" alt="" />
+      }
+      <div class="lanchonete__info">
+        <strong class="lanchonete__nome">{{ linha.nome }}</strong>
+        <span class="lanchonete__detalhe">
+          @if (rotuloTipo(linha.tipo); as tipo) { {{ tipo }} @if (linha.enderecoLoja) { · } } {{
+          linha.enderecoLoja }}
+        </span>
+        @if (linha.itensSacola > 0) {
+        <span class="lanchonete__sacola">
+          <i class="pi pi-shopping-bag"></i>
+          {{ linha.itensSacola }} {{ linha.itensSacola === 1 ? 'item' : 'itens' }} na sacola
+        </span>
+        }
+      </div>
+      <button
+        type="button"
+        class="lanchonete__fav"
+        [class.lanchonete__fav--ativa]="linha.favorita"
+        [disabled]="ocupada()[linha.id]"
+        [title]="linha.favorita ? 'Remover das favoritas' : 'Adicionar às favoritas'"
+        (click)="alternarFavorita(linha)"
+      >
+        <i class="pi" [class]="linha.favorita ? 'pi-heart-fill' : 'pi-heart'"></i>
+      </button>
+      <a class="lanchonete__abrir" [routerLink]="'/' + linha.slug">
+        Ver cardápio <i class="pi pi-arrow-right"></i>
+      </a>
+    </article>
+    } @if (emailLojista(); as email) {
+    <section class="lojista superficie">
+      <div>
+        <strong>Quer vender pelo Cardápio Online?</strong>
+        <span>
+          Envie um e-mail para
+          <a [href]="mailtoLojista()">{{ email }}</a>
+          e conheça as condições para lojistas.
+        </span>
+      </div>
+      <a class="lojista__cta" [href]="mailtoLojista()">
+        <i class="pi pi-envelope"></i> Enviar e-mail
+      </a>
+    </section>
+    }
+  </section>
+  }
+</div>

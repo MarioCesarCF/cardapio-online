@@ -38,6 +38,17 @@ export class CartService {
     }
   }
 
+  totalItensNoSlug(slug: string): number {
+    try {
+      const raw = localStorage.getItem(`cart.${slug}`);
+      if (!raw) return 0;
+      const itens = JSON.parse(raw) as CartItem[];
+      return itens.reduce((acc, item) => acc + item.qtd, 0);
+    } catch {
+      return 0;
+    }
+  }
+
   adicionar(item: Omit<CartItem, 'chave' | 'qtd'> & { qtd?: number }): void {
     const chave = chaveItem(item);
     const atuais = this.itens();

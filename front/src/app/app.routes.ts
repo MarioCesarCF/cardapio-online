@@ -9,12 +9,14 @@ import { AdminPedidosComponent } from './pages/admin/admin-pedidos.component';
 import { MeusPedidosComponent } from './pages/meus-pedidos/meus-pedidos.component';
 import { OnboardingComponent } from './pages/onboarding/onboarding.component';
 import { PainelAdminComponent } from './pages/admin/painel-admin.component';
+import { HomeComponent } from './pages/home/home.component';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: AuthComponent },
   { path: 'auth', component: AuthComponent },
   { path: 'minhas-pedidos', component: MeusPedidosComponent, canActivate: [authGuard] },
+  { path: 'home', component: HomeComponent, canActivate: [authGuard] },
   { path: 'onboarding', component: OnboardingComponent, canActivate: [authGuard] },
   { path: 'painel-admin', component: PainelAdminComponent, canActivate: [authGuard] },
   {

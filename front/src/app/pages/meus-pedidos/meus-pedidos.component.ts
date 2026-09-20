@@ -5,7 +5,11 @@ import QRCode from 'qrcode';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
-import { labelStatus as rotularStatus } from '../../services/pedido-painel';
+import {
+  labelStatus as rotularStatus,
+  STATUS_COM_PIX,
+  type PedidoStatus,
+} from '../../services/pedido-painel';
 import { Button } from 'primeng/button';
 import { Textarea } from 'primeng/textarea';
 import { firstValueFrom } from 'rxjs';
@@ -29,6 +33,7 @@ interface Pedido {
   id: string;
   numero: number;
   status: string;
+  justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
   formaPagamento: string;
@@ -47,8 +52,6 @@ interface Pedido {
   createdAt: string;
   itens: PedidoItem[];
 }
-
-const STATUS_COM_PIX = new Set(['recebido', 'em_preparo', 'saiu_para_entrega']);
 
 @Component({
   selector: 'app-meus-pedidos',
@@ -72,7 +75,7 @@ export class MeusPedidosComponent implements OnInit {
   }
 
   mostraPix(pedido: Pedido): boolean {
-    return !!pedido.brCodePix && STATUS_COM_PIX.has(pedido.status);
+    return !!pedido.brCodePix && STATUS_COM_PIX.has(pedido.status as PedidoStatus);
   }
 
   ngOnInit(): void {

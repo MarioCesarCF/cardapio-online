@@ -12,6 +12,8 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
 import { R2Module } from './r2/r2.module.js';
 import { GaleriaModule } from './galeria/galeria.module.js';
 import { AdminSistemaModule } from './admin-sistema/admin-sistema.module.js';
+import { FavoritasModule } from './favoritas/favoritas.module.js';
+import { PlataformaModule } from './plataforma/plataforma.module.js';
 import { AssetsController } from './assets/assets.controller.js';
 
 @Module({
@@ -26,6 +28,8 @@ import { AssetsController } from './assets/assets.controller.js';
     PedidosModule,
     GaleriaModule,
     AdminSistemaModule,
+    FavoritasModule,
+    PlataformaModule,
   ],
   controllers: [AppController, HealthController, AssetsController],
   providers: [AppService],

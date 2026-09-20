@@ -177,6 +177,20 @@ export class PainelAdminService {
     return firstValueFrom(this.api.get<AdminPainel[]>('/admin-sistema/admins'));
   }
 
+  getPlataforma(): Promise<{ emailLojista: string | null }> {
+    return firstValueFrom(
+      this.api.get<{ emailLojista: string | null }>('/admin-sistema/plataforma'),
+    );
+  }
+
+  atualizarPlataforma(emailLojista: string | null): Promise<{ emailLojista: string | null }> {
+    return firstValueFrom(
+      this.api.patch<{ emailLojista: string | null }>('/admin-sistema/plataforma', {
+        emailLojista,
+      }),
+    );
+  }
+
   criarAdmin(body: { nome: string; email: string; senha: string }): Promise<AdminPainel> {
     return firstValueFrom(this.api.post<AdminPainel>('/admin-sistema/admins', body));
   }

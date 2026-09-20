@@ -1,7 +1,7 @@
 <div class="pedidos">
   <header>
     <h1>Meus pedidos</h1>
-    <a routerLink="/">Voltar ao início</a>
+    <a routerLink="/home">Voltar ao início</a>
   </header>
 
   @if (loading()) {
@@ -56,6 +56,12 @@
         }
         @if (pedido.observacao) {
           <p class="obs">Obs.: {{ pedido.observacao }}</p>
+        }
+        @if (pedido.justificativaCancelamento) {
+          <p class="obs obs--cancel">
+            <i class="pi pi-times-circle"></i> Motivo do cancelamento:
+            {{ pedido.justificativaCancelamento }}
+          </p>
         }
 
         @if (mostraPix(pedido)) {

@@ -1,0 +1,49 @@
+.home { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 18px; }
+.home__topo { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+flex-wrap: wrap; h1 { margin: 0; font-size: 1.4rem; } } .home__links { display: flex; align-items:
+center; gap: 1rem; font-size: 0.9rem; a { display: inline-flex; align-items: center; gap: 0.35rem;
+color: var(--app-texto-suave); font-weight: 600; &:hover { color: var(--p-primary-color);
+text-decoration: none; } } } .home__sair { display: inline-flex; align-items: center; gap: 0.35rem;
+background: none; border: none; padding: 0; font: inherit; font-size: 0.9rem; font-weight: 600;
+color: var(--app-texto-suave); cursor: pointer; &:hover { color: var(--p-red-500, #ef4444); } }
+.home__status { color: var(--app-texto-suave); margin: 0.25rem 0; } .home__erro { display: flex;
+align-items: center; gap: 0.4rem; color: var(--p-red-500, #ef4444); font-size: 0.85rem; margin:
+0.5rem 0 0; } .home__ok { display: flex; align-items: center; gap: 0.4rem; color: var(--p-green-500,
+#22c55e); font-size: 0.85rem; margin: 0.5rem 0 0; } .card { padding: 18px; display: grid; gap: 14px;
+h2 { margin: 0; font-size: 1.05rem; } } .card__linha { display: flex; align-items: flex-end; gap:
+0.75rem; flex-wrap: wrap; } .card__titulo-linha { display: flex; align-items: center;
+justify-content: space-between; gap: 1rem; } .campo { display: grid; gap: 4px; flex: 1; min-width:
+11rem; span { font-weight: 600; font-size: 0.85rem; color: var(--app-texto-suave); } } .campo--full
+{ flex-basis: 100%; } .grid-endereco { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.opcao { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; input { margin: 0; } }
+.acoes { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; } .endereco { display:
+flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem; border: 1px
+solid var(--app-borda); border-radius: var(--app-raio-sm); .endereco__info { display: grid; gap:
+2px; font-size: 0.9rem; span { color: var(--app-texto-suave); } em { font-size: 0.8rem; color:
+var(--p-primary-color); font-style: normal; } } .endereco__acoes { display: flex; gap: 0.75rem;
+white-space: nowrap; } } .link { background: none; border: none; padding: 0; font: inherit;
+font-size: 0.85rem; font-weight: 600; color: var(--p-primary-color); cursor: pointer; &:hover {
+text-decoration: underline; } } .link--perigo { color: var(--p-red-500, #ef4444); } .lista {
+display: grid; gap: 10px; margin-top: 6px; } .lista__titulo { margin: 0.75rem 0 0.25rem; font-size:
+1.15rem; } .busca { position: relative; display: flex; align-items: center; i { position: absolute;
+left: 0.85rem; color: var(--app-texto-suave); } input { width: 100%; padding-left: 2.5rem;
+box-shadow: var(--app-sombra); } } .lanchonete { display: flex; align-items: center; gap: 14px;
+padding: 14px 16px; .lanchonete__logo { width: 3rem; height: 3rem; border-radius:
+var(--app-raio-sm); object-fit: cover; flex-shrink: 0; } .lanchonete__info { display: grid; flex: 1;
+min-width: 0; .lanchonete__nome { font-weight: 700; } .lanchonete__detalhe { color:
+var(--app-texto-suave); font-size: 0.85rem; } .lanchonete__sacola { display: inline-flex;
+align-items: center; gap: 0.35rem; margin-top: 4px; font-size: 0.8rem; font-weight: 700; color:
+var(--p-primary-color); } } .lanchonete__fav { display: inline-flex; align-items: center;
+justify-content: center; width: 2.3rem; height: 2.3rem; border-radius: 999px; border: 1px solid
+var(--app-borda); background: var(--app-superficie-2); color: var(--app-texto-suave); font-size:
+1rem; cursor: pointer; flex-shrink: 0; transition: color 0.15s ease, background-color 0.15s ease;
+&:hover { color: var(--p-primary-color); } &:disabled { opacity: 0.5; cursor: default; } }
+.lanchonete__fav--ativa { color: var(--p-pink-500, #ec4899); border-color: color-mix(in srgb,
+var(--p-pink-500, #ec4899) 40%, var(--app-borda)); &:hover { color: var(--p-pink-500, #ec4899); } }
+.lanchonete__abrir { font-weight: 600; white-space: nowrap; i { font-size: 0.75rem; } } } .vazio {
+display: grid; justify-items: center; gap: 0.5rem; text-align: center; padding: 2rem 1.5rem; color:
+var(--app-texto-suave); i { font-size: 2rem; color: var(--p-pink-500, #ec4899); } p { margin: 0;
+max-width: 26rem; } } .lojista { display: flex; align-items: center; justify-content: space-between;
+gap: 1rem; margin-top: 0.75rem; padding: 16px 18px; div { display: grid; gap: 4px; font-size:
+0.9rem; strong { font-size: 1rem; } span { color: var(--app-texto-suave); } } .lojista__cta {
+display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; white-space: nowrap; } }

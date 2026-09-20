@@ -54,8 +54,8 @@ export class AuthService {
     }
   }
 
-  async signIn(email: string, password: string): Promise<void> {
-    await this.run(() => this.client.signIn.email({ email, password }));
+  async signIn(email: string, password: string, rememberMe = false): Promise<void> {
+    await this.run(() => this.client.signIn.email({ email, password, rememberMe }));
   }
 
   async signUp(name: string, email: string, password: string): Promise<void> {
@@ -69,6 +69,40 @@ export class AuthService {
         callbackURL: `${window.location.origin}/auth`,
       }),
     );
+  }
+
+  async verificarEmailCadastrado(email: string): Promise<boolean> {
+    try {
+      const body = await firstValueFrom(
+        this.api.post<{ registrado: boolean }>('/auth/verificar-email', { email }),
+      );
+      return body?.registrado === true;
+    } catch {
+      throw new AuthError('Não foi possível verificar o e-mail. Tente novamente.', 0);
+    }
+  }
+
+  async solicitarRedefinicaoSenha(email: string): Promise<void> {
+    const base = `${window.location.origin}/auth`;
+    const result = await this.client.requestPasswordReset({
+      email,
+      redirectTo: `${base}?esqueci=1`,
+    });
+    this.seResultadoOk(result);
+  }
+
+  async redefinirSenha(novaSenha: string, token: string): Promise<void> {
+    const result = await this.client.resetPassword({ newPassword: novaSenha, token });
+    this.seResultadoOk(result);
+  }
+
+  private seResultadoOk(result: unknown): void {
+    if (result && typeof result === 'object' && 'error' in result) {
+      const err = (result as { error?: { message?: string; code?: string } | null }).error;
+      if (err) {
+        throw new AuthError(err.message ?? 'Não foi possível concluir a operação.', 0, err.code);
+      }
+    }
   }
 
   async signOut(): Promise<void> {

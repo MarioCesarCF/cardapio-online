@@ -1,21 +1,69 @@
 <div class="auth">
   <header class="marca">
-    <span class="marca__selo"><i class="pi pi-shop"></i> cardápio online grátis</span>
-    <h1>Cardápio Online</h1>
-    <p class="marca__apoio">
-      Monte seu cardápio, receba pedidos pelo WhatsApp ou no painel e pague com PIX —
-      sem aplicativo e sem taxa.
-    </p>
+    <h1>{{ nomePlataforma }}</h1>
+    <p class="marca__apoio">{{ slogan }}</p>
   </header>
 
-  @if (me(); as dados) {
+  @if (tela() === 'login' && me(); as dados) {
     <section class="cartao superficie dados">
       <span class="selo"><i class="pi pi-user"></i> sua conta</span>
-      <h2>Olá, {{ dados.user.name ?? dados.user.email }}</h2>
+      <h2>Olá, {{ dados.user.name ?? 'visita' }}</h2>
       <p class="suave">{{ dados.user.email }}</p>
 
-      @if (dados.cliente) {
-        <p class="suave">Cliente: {{ dados.cliente.nome ?? dados.cliente.id }}</p>
+      <h3>Dados da conta</h3>
+      <form class="dados__form" (ngSubmit)="salvarPerfil()">
+        <label class="campo">
+          <span>Nome</span>
+          <input
+            pInputText
+            type="text"
+            autocomplete="name"
+            [(ngModel)]="perfilNome"
+            name="perfilNome"
+            required
+            minlength="2"
+            maxlength="80"
+          />
+        </label>
+        <label class="campo">
+          <span>WhatsApp</span>
+          <input
+            pInputText
+            type="tel"
+            autocomplete="tel"
+            inputmode="numeric"
+            [(ngModel)]="perfilTelefone"
+            name="perfilTelefone"
+            placeholder="(11) 99999-9999"
+          />
+        </label>
+        @if (perfilErro(); as erro) {
+          <p class="aviso"><i class="pi pi-exclamation-circle"></i> {{ erro }}</p>
+        }
+        @if (perfilSucesso()) {
+          <p class="aviso aviso--ok"><i class="pi pi-check-circle"></i> Dados salvos!</p>
+        }
+        <p-button
+          type="submit"
+          label="Salvar dados"
+          icon="pi pi-save"
+          [loading]="salvandoPerfil()"
+          [outlined]="true"
+        />
+      </form>
+
+      @if (dados.adminSistema) {
+        <h3>Acesso administrativo</h3>
+        <div class="dados__acoes">
+          <p-button
+            label="Painel administrativo da plataforma"
+            icon="pi pi-shield"
+            (onClick)="abrirPainel()"
+          />
+          @if (dados.adminSistemaFuncao === 'super') {
+            <p-tag value="raiz" severity="warn" />
+          }
+        </div>
       }
 
       <h3>Lanches cadastrados</h3>
@@ -32,92 +80,216 @@
             </li>
           }
         </ul>
+        <a class="dados__gerenciar" routerLink="/admin"
+          ><i class="pi pi-sliders-h"></i> Gerenciar minhas lanchonetes</a
+        >
       }
 
-      <p-button
-        label="Sair"
-        icon="pi pi-sign-out"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="sair()"
-      />
+      <div class="dados__acoes">
+        <p-button
+          label="Sair"
+          icon="pi pi-sign-out"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="sair()"
+        />
+      </div>
     </section>
   } @else {
-    <form class="cartao superficie form" (ngSubmit)="submit()">
-      <span class="selo"><i class="pi pi-store"></i> área da lanchonete</span>
+    <form
+      class="cartao superficie form"
+      (ngSubmit)="
+        tela() === 'login'
+          ? submit()
+          : tela() === 'recuperar'
+            ? enviarLinkRecuperacao()
+            : redefinir()
+      "
+    >
       <h2>{{ titulo }}</h2>
 
       @if (error(); as erro) {
         <p-message severity="error" [text]="erro" class="bloco" />
       }
+      @if (sucesso(); as ok) {
+        <p-message severity="success" [text]="ok" class="bloco" />
+      }
 
-      <p-selectbutton
-        [options]="modos"
-        optionLabel="label"
-        optionValue="value"
-        [(ngModel)]="mode"
-        name="modo"
-        class="bloco"
-      />
+      @if (tela() === 'login') {
+        <p-selectbutton
+          [options]="modos"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="mode"
+          name="modo"
+          class="bloco"
+        />
 
-      @if (mode() === 'cadastro') {
+        @if (mode() === 'cadastro') {
+          <label class="campo">
+            <span>Nome</span>
+            <input
+              pInputText
+              type="text"
+              autocomplete="name"
+              [(ngModel)]="name"
+              name="name"
+              required
+            />
+          </label>
+        }
+
         <label class="campo">
-          <span>Nome</span>
+          <span>Email</span>
           <input
             pInputText
-            type="text"
-            autocomplete="name"
-            [(ngModel)]="name"
-            name="name"
+            type="email"
+            autocomplete="email"
+            [(ngModel)]="email"
+            name="email"
             required
           />
         </label>
+
+        <label class="campo">
+          <span>Senha</span>
+          <span class="senha">
+            <input
+              pInputText
+              [type]="mostrandoSenha() ? 'text' : 'password'"
+              autocomplete="current-password"
+              [(ngModel)]="password"
+              name="password"
+              required
+              minlength="8"
+            />
+            <button
+              type="button"
+              class="senha__olho"
+              [attr.aria-label]="mostrandoSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+              (click)="alternarSenha()"
+            >
+              <i [class]="mostrandoSenha() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+          </span>
+        </label>
+
+        <div class="form__linha">
+          <label class="lembrar">
+            <input type="checkbox" [checked]="lembrar()" (change)="alternarLembrar()" />
+            Lembrar de mim
+          </label>
+          <button type="button" class="link" (click)="abrirRecuperacao()">Esqueci senha</button>
+        </div>
+
+        <p-button
+          type="submit"
+          [label]="submitting() ? 'Aguarde…' : botao"
+          [loading]="submitting()"
+          class="bloco"
+        />
+
+        <div class="divisor"><span>ou</span></div>
+
+        <p-button
+          type="button"
+          label="Continuar com Google"
+          icon="pi pi-google"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="submitting()"
+          (onClick)="entrarComGoogle()"
+          class="bloco"
+        />
       }
 
-      <label class="campo">
-        <span>Email</span>
-        <input
-          pInputText
-          type="email"
-          autocomplete="email"
-          [(ngModel)]="email"
-          name="email"
-          required
+      @if (tela() === 'recuperar') {
+        <p class="suave">
+          Informe seu e-mail de cadastro e enviaremos um link para você definir uma nova senha.
+        </p>
+
+        <label class="campo">
+          <span>Email</span>
+          <input
+            pInputText
+            type="email"
+            autocomplete="email"
+            [(ngModel)]="emailRecuperar"
+            name="emailRecuperar"
+            required
+          />
+        </label>
+
+        @if (recuperarErro(); as erro) {
+          <p-message severity="error" [text]="erro" class="bloco" />
+        }
+
+        <p-button
+          type="submit"
+          label="Enviar link de redefinição"
+          [loading]="enviandoRecuperar()"
+          class="bloco"
         />
-      </label>
 
-      <label class="campo">
-        <span>Senha</span>
-        <input
-          pInputText
-          type="password"
-          autocomplete="current-password"
-          [(ngModel)]="password"
-          name="password"
-          required
-          minlength="8"
+        <button type="button" class="link link--central" (click)="voltarAoLogin()">
+          Voltar ao login
+        </button>
+      }
+
+      @if (tela() === 'redefinir') {
+        <p class="suave">Defina sua nova senha. Use pelo menos 8 caracteres.</p>
+
+        <label class="campo">
+          <span>Nova senha</span>
+          <span class="senha">
+            <input
+              pInputText
+              [type]="mostrandoNovaSenha() ? 'text' : 'password'"
+              autocomplete="new-password"
+              [(ngModel)]="novaSenha"
+              name="novaSenha"
+              required
+              minlength="8"
+            />
+            <button
+              type="button"
+              class="senha__olho"
+              [attr.aria-label]="mostrandoNovaSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+              (click)="alternarNovaSenha()"
+            >
+              <i [class]="mostrandoNovaSenha() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            </button>
+          </span>
+        </label>
+
+        <label class="campo">
+          <span>Confirmar nova senha</span>
+          <input
+            pInputText
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="confirmarSenha"
+            name="confirmarSenha"
+            required
+            minlength="8"
+          />
+        </label>
+
+        @if (redefinirErro(); as erro) {
+          <p-message severity="error" [text]="erro" class="bloco" />
+        }
+
+        <p-button
+          type="submit"
+          label="Redefinir senha"
+          [loading]="enviandoRedefinir()"
+          class="bloco"
         />
-      </label>
 
-      <p-button
-        type="submit"
-        [label]="submitting() ? 'Aguarde…' : botao"
-        [loading]="submitting()"
-        class="bloco"
-      />
-
-      <div class="divisor"><span>ou</span></div>
-
-      <p-button
-        type="button"
-        label="Continuar com Google"
-        icon="pi pi-google"
-        severity="secondary"
-        [outlined]="true"
-        [loading]="submitting()"
-        (onClick)="entrarComGoogle()"
-        class="bloco"
-      />
+        <button type="button" class="link link--central" (click)="voltarAoLogin()">
+          Voltar ao login
+        </button>
+      }
     </form>
   }
 </div>

@@ -11,9 +11,6 @@ import { AuthService } from '../../services/auth.service';
   template: `
     <main class="shell">
       <header class="shell__topo">
-        <a class="shell__voltar" [routerLink]="'/admin'">
-          <i class="pi pi-arrow-left"></i> Lanchonetes
-        </a>
         <h1>{{ nome() }}</h1>
         <div class="shell__acoes">
           <a class="shell__ver" [href]="'/' + slug()" target="_blank">
@@ -84,14 +81,6 @@ import { AuthService } from '../../services/auth.service';
     a {
       text-decoration: none;
     }
-    .shell__voltar {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      color: var(--app-texto-suave);
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
     .shell__ver {
       display: inline-flex;
       align-items: center;
@@ -133,7 +122,6 @@ import { AuthService } from '../../services/auth.service';
       color: var(--p-primary-contrast-color, #fff) !important;
       background: var(--p-primary-color);
     }
-    .shell__voltar:hover,
     .shell__ver:hover {
       text-decoration: none;
     }

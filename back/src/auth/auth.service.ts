@@ -1,4 +1,11 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
+
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 import { ConfigService } from '@nestjs/config';
 import { decodeProtectedHeader, importJWK, jwtVerify, SignJWT } from 'jose';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -37,6 +44,22 @@ export class AuthService {
   // session.token retornada é o token OPACO do cookie (HttpOnly). Este endpoint
   // resolve esse token no neon_auth.session e emite um JWT HS256 próprio da API,
   // que o front usa como Bearer dali em diante.
+  async verificarEmailExistente(
+    emailInput: string,
+  ): Promise<{ registrado: boolean }> {
+    const email = typeof emailInput === 'string' ? emailInput.trim() : '';
+    if (!EMAIL_REGEX.test(email)) {
+      throw new BadRequestException('E-mail inválido.');
+    }
+    const rows = await this.prisma.$queryRaw<{ existe: number }[]>`
+      SELECT 1 AS existe
+      FROM neon_auth."user"
+      WHERE LOWER(email) = LOWER(${email})
+      LIMIT 1
+    `;
+    return { registrado: rows.length > 0 };
+  }
+
   async exchangeSessionToken(token: string): Promise<{ token: string }> {
     const opaco = typeof token === 'string' ? token.trim() : '';
     if (!opaco || !this.appKey.length) {

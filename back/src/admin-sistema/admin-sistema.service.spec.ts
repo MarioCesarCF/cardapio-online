@@ -237,6 +237,97 @@ describe('AdminSistemaService', () => {
     });
   });
 
+  describe('plataforma', () => {
+    it('retorna o e-mail de contato cadastrado', async () => {
+      const prisma = {
+        configPlataforma: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({
+              id: 'global',
+              emailLojista: 'contato@cardapio.com',
+            }),
+        },
+      };
+      const servico = criarServico(prisma);
+      await expect(servico.getPlataforma()).resolves.toEqual({
+        emailLojista: 'contato@cardapio.com',
+      });
+    });
+
+    it('retorna nulo quando não há configuração', async () => {
+      const prisma = {
+        configPlataforma: { findUnique: vi.fn().mockResolvedValue(null) },
+      };
+      const servico = criarServico(prisma);
+      await expect(servico.getPlataforma()).resolves.toEqual({
+        emailLojista: null,
+      });
+    });
+
+    it('atualiza o e-mail válido e registra log', async () => {
+      const logCriado: unknown[] = [];
+      const prisma = {
+        configPlataforma: {
+          upsert: vi.fn().mockResolvedValue({
+            id: 'global',
+            emailLojista: 'novo@cardapio.com',
+          }),
+        },
+        logSistema: {
+          create: vi.fn().mockImplementation((d) => {
+            logCriado.push(d.data);
+            return d.data;
+          }),
+        },
+      };
+      const servico = criarServico(prisma);
+      const resultado = await servico.updatePlataforma(USER_SUPER, {
+        emailLojista: 'novo@cardapio.com',
+      });
+      expect(resultado).toEqual({ emailLojista: 'novo@cardapio.com' });
+      expect(prisma.configPlataforma.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'global' },
+          create: { id: 'global', emailLojista: 'novo@cardapio.com' },
+          update: { emailLojista: 'novo@cardapio.com' },
+        }),
+      );
+      expect(logCriado).toHaveLength(1);
+      expect((logCriado[0] as { mensagem: string }).mensagem).toBe(
+        'E-mail de contato atualizado',
+      );
+    });
+
+    it('limpa o e-mail quando o valor é vazio', async () => {
+      const prisma = {
+        configPlataforma: {
+          upsert: vi
+            .fn()
+            .mockResolvedValue({ id: 'global', emailLojista: null }),
+        },
+        logSistema: { create: vi.fn().mockResolvedValue({}) },
+      };
+      const servico = criarServico(prisma);
+      const resultado = await servico.updatePlataforma(USER_SUPER, {
+        emailLojista: '',
+      });
+      expect(resultado).toEqual({ emailLojista: null });
+    });
+
+    it('rejeita e-mail malformado', async () => {
+      const prisma = {
+        configPlataforma: { upsert: vi.fn() },
+        logSistema: { create: vi.fn() },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.updatePlataforma(USER_SUPER, { emailLojista: 'nao-email' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.configPlataforma.upsert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('listarLogs', () => {
     it('busca logs e enriquece com nome/e-mail do usuário via join', async () => {
       const prisma = {

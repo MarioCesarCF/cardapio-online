@@ -34,6 +34,7 @@ model Lanchonete {
   categorias   Categoria[]
   gruposOpcoes GrupoOpcoes[]
   pedidos      Pedido[]
+  favoritas    LanchoneteFavorita[]
 
   @@index([donoId])
   @@map("lanchonetes")
@@ -128,6 +129,7 @@ model Cliente {
 
   enderecos Endereco[]
   pedidos   Pedido[]
+  favoritas LanchoneteFavorita[]
 
   @@map("clientes")
 }
@@ -153,6 +155,20 @@ model Endereco {
   @@map("enderecos")
 }
 
+// Lanchonetes que o cliente favoritou (a 1ª vem do primeiro pedido finalizado).
+model LanchoneteFavorita {
+  id           String     @id @default(cuid()) @db.VarChar(30)
+  clienteId    String     @db.Uuid
+  cliente      Cliente    @relation(fields: [clienteId], references: [id])
+  lanchoneteId String
+  lanchonete   Lanchonete @relation(fields: [lanchoneteId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([clienteId, lanchoneteId])
+  @@index([clienteId, createdAt])
+  @@map("lanchonetes_favoritas")
+}
+
 model Pedido {
   id              String   @id @default(cuid()) @db.VarChar(30)
   numero          Int
@@ -166,6 +182,7 @@ model Pedido {
   formaPagamento  String   @default("pix")
   brCodePix       String?
   clienteTelefone String?
+  justificativaCancelamento String?
   enderecoEntrega Json?
   observacao      String?
   createdAt       DateTime @default(now())
@@ -245,4 +262,15 @@ model LogSistema {
 
   @@index([createdAt])
   @@map("logs_sistema")
+}
+
+// Configurações gerais da plataforma (linha única, id fixo "global").
+// emailLojista: e-mail de contato para quem quer anunciar como lojista.
+model ConfigPlataforma {
+  id           String   @id @default("global")
+  emailLojista String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("config_plataforma")
 }

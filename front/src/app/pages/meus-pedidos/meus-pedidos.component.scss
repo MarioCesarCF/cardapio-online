@@ -69,14 +69,23 @@ header {
   .status-recebido {
     --cor: #2563eb;
   }
+  .status-aceito {
+    --cor: #0e7490;
+  }
   .status-em_preparo {
     --cor: #d97706;
   }
-  .status-saiu_para_entrega {
+  .status-concluido {
+    --cor: #6d28d9;
+  }
+  .status-enviado {
     --cor: #7c3aed;
   }
   .status-entregue {
     --cor: #059669;
+  }
+  .status-finalizado {
+    --cor: #475569;
   }
   .status-cancelado {
     --cor: #dc2626;
@@ -118,6 +127,14 @@ header {
     font-size: 0.85rem;
     color: var(--app-texto-suave);
     margin: 0.65rem 0 0;
+  }
+
+  .obs--cancel {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--p-red-600, #dc2626);
+    font-weight: 600;
   }
 
   .rodape {

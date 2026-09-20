@@ -13,7 +13,7 @@ import { AuthService } from '../../services/auth.service';
 import { MarcaService } from '../../services/marca.service';
 import { CartService, type CartItem } from '../../services/cart.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
-import { labelStatus } from '../../services/pedido-painel';
+import { labelStatus, STATUS_COM_PIX, type PedidoStatus } from '../../services/pedido-painel';
 
 interface Lanchonete {
   id: string;
@@ -117,6 +117,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly cardapio = signal<CardapioResponse | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly logado = computed(() => this.auth.isAuthenticated());
 
   readonly theme = computed(() => {
     const c = this.config();
@@ -467,7 +468,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   precisaPagar(status: string): boolean {
-    return ['recebido', 'em_preparo', 'saiu_para_entrega'].includes(status);
+    return STATUS_COM_PIX.has(status as PedidoStatus);
   }
 
   async reabrirPedido(): Promise<void> {

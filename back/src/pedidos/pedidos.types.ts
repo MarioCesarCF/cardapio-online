@@ -17,6 +17,7 @@ export interface PedidoPainel {
   id: string;
   numero: number;
   status: string;
+  justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
   formaPagamento: string;
@@ -40,6 +41,7 @@ export function formataPedido(p: PedidoComSnapshots): PedidoPainel {
     id: p.id,
     numero: p.numero,
     status: p.status,
+    justificativaCancelamento: p.justificativaCancelamento ?? null,
     subtotal: Number(p.subtotal),
     total: Number(p.total),
     formaPagamento: p.formaPagamento,

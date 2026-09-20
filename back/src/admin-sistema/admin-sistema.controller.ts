@@ -85,6 +85,19 @@ export class AdminSistemaController {
     return this.adminSistemaService.criarAdmin(user, body);
   }
 
+  @Get('plataforma')
+  consultarPlataforma() {
+    return this.adminSistemaService.getPlataforma();
+  }
+
+  @Patch('plataforma')
+  atualizarPlataforma(
+    @Body() body: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminSistemaService.updatePlataforma(user, body);
+  }
+
   @Delete('admins/:id')
   removerAdmin(
     @Param('id') id: string,

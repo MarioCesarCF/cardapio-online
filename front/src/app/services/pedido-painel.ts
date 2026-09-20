@@ -10,6 +10,7 @@ export interface PedidoPainel {
   id: string;
   numero: number;
   status: string;
+  justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
   formaPagamento: string;
@@ -31,9 +32,12 @@ export interface PedidoPainel {
 
 export const PEDIDO_STATUSES = [
   'recebido',
+  'aceito',
   'em_preparo',
-  'saiu_para_entrega',
+  'concluido',
+  'enviado',
   'entregue',
+  'finalizado',
   'cancelado',
 ] as const;
 
@@ -41,13 +45,51 @@ export type PedidoStatus = (typeof PEDIDO_STATUSES)[number];
 
 export const PEDIDO_STATUS_LABELS: Record<PedidoStatus, string> = {
   recebido: 'Recebido',
+  aceito: 'Aceito',
   em_preparo: 'Em preparo',
-  saiu_para_entrega: 'Saiu para entrega',
+  concluido: 'Concluído',
+  enviado: 'Enviado',
   entregue: 'Entregue',
+  finalizado: 'Finalizado',
   cancelado: 'Cancelado',
 };
 
-const FLUXO = PEDIDO_STATUSES.slice(0, 4);
+export const PEDIDO_STATUS_SEVERIDADE: Record<PedidoStatus, string> = {
+  recebido: 'info',
+  aceito: 'warn',
+  em_preparo: 'warn',
+  concluido: 'info',
+  enviado: 'contrast',
+  entregue: 'success',
+  finalizado: 'success',
+  cancelado: 'danger',
+};
+
+const FLUXO: readonly PedidoStatus[] = [
+  'recebido',
+  'aceito',
+  'em_preparo',
+  'concluido',
+  'enviado',
+  'entregue',
+  'finalizado',
+];
+
+export const STATUS_CANCELAVEIS = new Set<PedidoStatus>([
+  'recebido',
+  'aceito',
+  'em_preparo',
+  'concluido',
+]);
+
+// Status em que o cliente ainda pode/devem pagar via PIX (antes de entregue).
+export const STATUS_COM_PIX = new Set<PedidoStatus>([
+  'recebido',
+  'aceito',
+  'em_preparo',
+  'concluido',
+  'enviado',
+]);
 
 export function labelStatus(status: string): string {
   return PEDIDO_STATUS_LABELS[status as PedidoStatus] ?? status;
@@ -56,4 +98,8 @@ export function labelStatus(status: string): string {
 export function proximoStatus(status: string): PedidoStatus | null {
   const i = (FLUXO as readonly string[]).indexOf(status);
   return i >= 0 && i < FLUXO.length - 1 ? FLUXO[i + 1] : null;
+}
+
+export function podeCancelar(status: string): boolean {
+  return STATUS_CANCELAVEIS.has(status as PedidoStatus);
 }
