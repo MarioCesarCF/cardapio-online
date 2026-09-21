@@ -1,14 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
+import { Dialog } from 'primeng/dialog';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import {
   AdminPainel,
   CardapioConsulta,
@@ -22,14 +24,25 @@ import { TIPOS_LANCHONETE } from '../../services/lanchonete-visual';
 import { labelStatus as labelStatusPedido } from '../../services/pedido-painel';
 
 const SITUACAO_LABELS: Record<string, string> = {
-  pendente: 'pendente',
-  ativa: 'ativa',
-  pausada: 'pausada',
+  pendente: 'Pendente',
+  ativa: 'Ativa',
+  pausada: 'Pausada',
 };
+
+const SITUACAO_FILTROS = [
+  { rotulo: 'Pendente', valor: 'pendente' },
+  { rotulo: 'Ativa', valor: 'ativa' },
+  { rotulo: 'Pausada', valor: 'pausada' },
+];
+
+const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
+  rotulo: t.rotulo,
+  valor: t.valor,
+}));
 
 @Component({
   selector: 'app-painel-admin',
-  imports: [FormsModule, RouterLink, Button, InputText, Select, Tag, JsonPipe],
+  imports: [FormsModule, RouterLink, Button, InputText, Select, Tag, JsonPipe, Dialog],
   template: `
     <main class="pa">
       @if (semAcesso()) {
@@ -39,11 +52,20 @@ const SITUACAO_LABELS: Record<string, string> = {
         <p class="pa__erro">Você não tem acesso ao painel administrativo desta plataforma.</p>
       } @else {
         <header class="pa__topo">
-          <a class="pa__voltar" routerLink="/"><i class="pi pi-arrow-left"></i> Início</a>
           <h1>Painel administrativo da plataforma</h1>
-          @if (eSuper()) {
-            <p-tag value="raiz" severity="warn" />
-          }
+          <p-tag
+            [value]="eSuper() ? 'Raiz' : 'Admin'"
+            [severity]="eSuper() ? 'warn' : 'secondary'"
+          />
+          <p-button
+            class="pa__sair"
+            label="Sair"
+            icon="pi pi-sign-out"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            (onClick)="sair()"
+          />
         </header>
 
         <nav class="pa__abas">
@@ -51,7 +73,7 @@ const SITUACAO_LABELS: Record<string, string> = {
             type="button"
             class="pa__aba"
             [class.pa__aba--ativa]="aba() === 'lanchonetes'"
-            (click)="aba.set('lanchonetes')"
+            (click)="trocarAba('lanchonetes')"
           >
             Lanchonetes ({{ lanchonetes().length }})
           </button>
@@ -59,7 +81,7 @@ const SITUACAO_LABELS: Record<string, string> = {
             type="button"
             class="pa__aba"
             [class.pa__aba--ativa]="aba() === 'admins'"
-            (click)="aba.set('admins')"
+            (click)="trocarAba('admins')"
           >
             Administradores ({{ admins().length }})
           </button>
@@ -75,7 +97,7 @@ const SITUACAO_LABELS: Record<string, string> = {
             type="button"
             class="pa__aba"
             [class.pa__aba--ativa]="aba() === 'config'"
-            (click)="aba.set('config')"
+            (click)="trocarAba('config')"
           >
             Configurações
           </button>
@@ -142,7 +164,7 @@ const SITUACAO_LABELS: Record<string, string> = {
               @if (consultaDados(); as dados) {
                 <div class="pa__consulta-dados">
                   <span><strong>Situação:</strong> {{ rotuloSituacao(dados.situacao) }}</span>
-                  <span><strong>Tipo:</strong> {{ dados.tipo ?? '—' }}</span>
+                  <span><strong>Tipo:</strong> {{ rotuloTipo(dados.tipo) }}</span>
                   <span
                     ><strong>Dono:</strong> {{ dados.donoNome || '—' }} ({{
                       dados.donoEmail || '—'
@@ -277,6 +299,46 @@ const SITUACAO_LABELS: Record<string, string> = {
             } @else if (lanchonetes().length === 0) {
               <p class="pa__vazio">Nenhuma lanchonete cadastrada ainda.</p>
             } @else {
+              <div class="pa__filtros">
+                <label class="pa__campo pa__filtro-busca">
+                  <span>Buscar</span>
+                  <input
+                    pInputText
+                    type="text"
+                    [value]="filtroBusca()"
+                    (input)="filtroBusca.set($any($event.target).value)"
+                    placeholder="Nome, /slug ou dono"
+                  />
+                </label>
+                <label class="pa__campo">
+                  <span>Situação</span>
+                  <p-select
+                    [options]="situacaoFiltros"
+                    optionLabel="rotulo"
+                    optionValue="valor"
+                    [(ngModel)]="filtroSituacao"
+                    name="filtroSituacao"
+                    placeholder="Todas"
+                    [showClear]="true"
+                  />
+                </label>
+                <label class="pa__campo">
+                  <span>Tipo</span>
+                  <p-select
+                    [options]="tiposFiltros"
+                    optionLabel="rotulo"
+                    optionValue="valor"
+                    [(ngModel)]="filtroTipo"
+                    name="filtroTipo"
+                    placeholder="Todos"
+                    [showClear]="true"
+                  />
+                </label>
+              </div>
+
+              @if (lanchonetesFiltradas().length === 0) {
+                <p class="pa__vazio">Nenhuma lanchonete encontrada.</p>
+              } @else {
               <div class="pa__tabela">
                 <div class="pa__linha pa__linha--cabecalho">
                   <span>Lanchonete</span>
@@ -286,7 +348,7 @@ const SITUACAO_LABELS: Record<string, string> = {
                   <span>Status</span>
                   <span>Ações</span>
                 </div>
-                @for (l of lanchonetes(); track l.id) {
+                @for (l of lanchonetesFiltradas(); track l.id) {
                   <div class="pa__linha" [class.pa__linha--pausada]="l.situacao === 'pausada'">
                     <span class="pa__nome">
                       @let tipo = tipoDe(l.tipo);
@@ -363,6 +425,7 @@ const SITUACAO_LABELS: Record<string, string> = {
                   </div>
                 }
               </div>
+              }
             }
           }
 
@@ -405,11 +468,11 @@ const SITUACAO_LABELS: Record<string, string> = {
                 <div class="pa__log superficie">
                   <span class="pa__log-badges">
                     <p-tag
-                      [value]="log.nivel"
+                      [value]="capitalizar(log.nivel)"
                       [severity]="log.nivel === 'erro' ? 'danger' : 'secondary'"
                     />
                     <p-tag
-                      [value]="log.categoria"
+                      [value]="capitalizar(log.categoria)"
                       [severity]="log.categoria === 'erro' ? 'danger' : 'info'"
                     />
                   </span>
@@ -474,57 +537,16 @@ const SITUACAO_LABELS: Record<string, string> = {
 
           @if (aba() === 'admins') {
             <section class="pa__bloco">
-              <h2>Novo administrador</h2>
-              <form class="pa__novo-admin" (ngSubmit)="criarAdmin()">
-                <label class="pa__campo">
-                  <span>Nome</span>
-                  <input
-                    pInputText
-                    type="text"
-                    [(ngModel)]="novoAdminNome"
-                    name="adminNome"
-                    required
-                    minlength="2"
-                    maxlength="80"
-                  />
-                </label>
-                <label class="pa__campo">
-                  <span>E-mail</span>
-                  <input
-                    pInputText
-                    type="email"
-                    [(ngModel)]="novoAdminEmail"
-                    name="adminEmail"
-                    required
-                  />
-                </label>
-                <label class="pa__campo">
-                  <span>Senha</span>
-                  <input
-                    pInputText
-                    type="password"
-                    [(ngModel)]="novoAdminSenha"
-                    name="adminSenha"
-                    required
-                    minlength="8"
-                    placeholder="mínimo 8 caracteres"
-                  />
-                </label>
+              <div class="pa__bloco-topo">
+                <h2>Administradores</h2>
                 <p-button
-                  type="submit"
-                  [label]="salvandoAdmin() ? 'Criando…' : 'Criar administrador'"
+                  label="Criar administrador"
                   icon="pi pi-plus"
-                  [loading]="salvandoAdmin()"
-                  [disabled]="salvandoAdmin() || !adminFormValido()"
+                  size="small"
+                  [disabled]="!eSuper()"
+                  (onClick)="abrirCriarAdmin()"
                 />
-              </form>
-              @if (erroAdmin()) {
-                <p class="pa__erro">{{ erroAdmin() }}</p>
-              }
-            </section>
-
-            <section class="pa__bloco">
-              <h2>Administradores</h2>
+              </div>
               @if (admins().length === 0) {
                 <p class="pa__vazio">Nenhum administrador cadastrado.</p>
               }
@@ -535,11 +557,19 @@ const SITUACAO_LABELS: Record<string, string> = {
                     <small>{{ admin.email }}</small>
                   </div>
                   <p-tag
-                    [value]="admin.funcao === 'super' ? 'raiz' : 'admin'"
+                    [value]="admin.funcao === 'super' ? 'Raiz' : 'Admin'"
                     [severity]="admin.funcao === 'super' ? 'warn' : 'secondary'"
                   />
                   <small class="pa__desde">desde {{ dataDe(admin.createdAt) }}</small>
                   @if (eSuper()) {
+                    <p-button
+                      label="Editar"
+                      icon="pi pi-pencil"
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      (onClick)="abrirEditarAdmin(admin)"
+                    />
                     <p-button
                       label="Remover"
                       icon="pi pi-trash"
@@ -556,6 +586,110 @@ const SITUACAO_LABELS: Record<string, string> = {
           }
         }
       }
+
+      <p-dialog
+        [(visible)]="adminCriarAberto"
+        header="Criar administrador"
+        [modal]="true"
+        [dismissableMask]="true"
+        appendTo="body"
+        [style]="{ width: 'min(90vw, 30rem)' }"
+      >
+        <div class="pa__modal-corpo">
+          <label class="pa__campo">
+            <span>Nome</span>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="novoAdminNome"
+              name="adminNome"
+              (input)="erroAdmin.set(null)"
+            />
+          </label>
+          <label class="pa__campo">
+            <span>E-mail</span>
+            <input
+              pInputText
+              type="email"
+              [(ngModel)]="novoAdminEmail"
+              name="adminEmail"
+              (input)="erroAdmin.set(null)"
+            />
+          </label>
+          <label class="pa__campo">
+            <span>Senha</span>
+            <input
+              pInputText
+              type="password"
+              [(ngModel)]="novoAdminSenha"
+              name="adminSenha"
+              placeholder="mínimo 8 caracteres"
+              (input)="erroAdmin.set(null)"
+            />
+          </label>
+          @if (erroAdmin()) {
+            <p class="pa__erro">{{ erroAdmin() }}</p>
+          }
+        </div>
+        <div class="pa__modal-acoes">
+          <p-button
+            label="Cancelar"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="salvandoAdmin()"
+            (onClick)="adminCriarAberto.set(false)"
+          />
+          <p-button
+            label="Criar"
+            icon="pi pi-plus"
+            [loading]="salvandoAdmin()"
+            [disabled]="salvandoAdmin() || !adminFormValido()"
+            (onClick)="criarAdmin()"
+          />
+        </div>
+      </p-dialog>
+
+      <p-dialog
+        [(visible)]="adminEditarAberto"
+        [header]="'Editar ' + (editandoAdmin()?.nome || 'administrador')"
+        [modal]="true"
+        [dismissableMask]="true"
+        appendTo="body"
+        [style]="{ width: 'min(90vw, 28rem)' }"
+      >
+        <div class="pa__modal-corpo">
+          <p class="pa__modal-info">{{ editandoAdmin()?.email }}</p>
+          <label class="pa__campo">
+            <span>Nome</span>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="editarAdminNome"
+              name="editarAdminNome"
+              (input)="erroEditarAdmin.set(null)"
+            />
+          </label>
+          @if (erroEditarAdmin()) {
+            <p class="pa__erro">{{ erroEditarAdmin() }}</p>
+          }
+        </div>
+        <div class="pa__modal-acoes">
+          <p-button
+            label="Cancelar"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="salvandoAdminEdicao()"
+            (onClick)="adminEditarAberto.set(false)"
+          />
+          <p-button
+            label="Salvar"
+            icon="pi pi-check"
+            [loading]="salvandoAdminEdicao()"
+            [disabled]="salvandoAdminEdicao() || !editarAdminNomeValido()"
+            (onClick)="salvarEditarAdmin()"
+          />
+        </div>
+      </p-dialog>
     </main>
   `,
   styles: `
@@ -566,15 +700,17 @@ const SITUACAO_LABELS: Record<string, string> = {
     }
     .pa__topo {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: 16px;
       margin-bottom: 16px;
       flex-wrap: wrap;
-      padding-right: 7.5rem;
     }
     .pa__topo h1 {
       font-size: 1.3rem;
       margin: 0;
+    }
+    .pa__sair {
+      margin-left: auto;
     }
     .pa__voltar {
       display: inline-flex;
@@ -618,7 +754,7 @@ const SITUACAO_LABELS: Record<string, string> = {
       color: var(--p-primary-color);
     }
     .pa__aba--ativa {
-      color: var(--p-primary-contrast-color, #fff);
+      color: var(--p-primary-contrast-color, #fff) !important;
       background: var(--p-primary-color);
     }
     .pa__erro {
@@ -687,6 +823,31 @@ const SITUACAO_LABELS: Record<string, string> = {
       margin: 0 0 6px;
       font-size: 1.05rem;
     }
+    .pa__bloco-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .pa__bloco-topo h2 {
+      margin: 0;
+    }
+    .pa__modal-corpo {
+      display: grid;
+      gap: 14px;
+    }
+    .pa__modal-acoes {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 16px;
+    }
+    .pa__modal-info {
+      margin: 0;
+      color: var(--app-texto-suave);
+      font-size: 0.9rem;
+    }
     .pa__campo {
       display: grid;
       gap: 4px;
@@ -697,11 +858,9 @@ const SITUACAO_LABELS: Record<string, string> = {
         color: var(--app-texto-suave);
       }
     }
-    .pa__novo-admin {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto;
-      gap: 12px;
-      align-items: end;
+    .pa__filtro-busca {
+      min-width: 16rem;
+      flex: 1;
     }
     .pa__config {
       display: grid;
@@ -945,9 +1104,8 @@ const SITUACAO_LABELS: Record<string, string> = {
       .pa__linha--cabecalho {
         display: none;
       }
-      .pa__novo-admin {
-        grid-template-columns: 1fr;
-        align-items: stretch;
+      .pa__filtro-busca {
+        min-width: 100%;
       }
       .pa__consulta-dados {
         grid-template-columns: 1fr;
@@ -958,6 +1116,8 @@ const SITUACAO_LABELS: Record<string, string> = {
 export class PainelAdminComponent {
   private readonly api = inject(ApiService);
   private readonly painel = inject(PainelAdminService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly aba = signal<'lanchonetes' | 'admins' | 'logs' | 'config'>('lanchonetes');
   readonly lanchonetes = signal<LanchonetePainel[]>([]);
@@ -967,6 +1127,37 @@ export class PainelAdminComponent {
   readonly mensagem = signal<string | null>(null);
   readonly funcao = signal<string | null>(null);
   readonly eSuper = computed(() => this.funcao() === 'super');
+
+  readonly filtroBusca = signal('');
+  readonly filtroSituacao = signal<string | null>(null);
+  readonly filtroTipo = signal<string | null>(null);
+
+  readonly situacaoFiltros = SITUACAO_FILTROS;
+  readonly tiposFiltros = TIPOS_FILTROS;
+
+  readonly lanchonetesFiltradas = computed(() => {
+    const busca = this.filtroBusca().trim().toLowerCase();
+    const situacao = this.filtroSituacao();
+    const tipo = this.filtroTipo();
+    return this.lanchonetes().filter((l) => {
+      if (situacao && l.situacao !== situacao) return false;
+      if (tipo && l.tipo !== tipo) return false;
+      if (!busca) return true;
+      const alvo =
+        `${l.nome} /${l.slug} ${l.donoNome ?? ''} ${l.donoEmail ?? ''}`.toLowerCase();
+      return alvo.includes(busca);
+    });
+  });
+
+  readonly adminCriarAberto = signal(false);
+  readonly adminEditarAberto = signal(false);
+  readonly editandoAdmin = signal<AdminPainel | null>(null);
+  readonly editarAdminNome = signal('');
+  readonly salvandoAdminEdicao = signal(false);
+  readonly erroEditarAdmin = signal<string | null>(null);
+  readonly editarAdminNomeValido = computed(
+    () => this.editarAdminNome().trim().length >= 2,
+  );
 
   readonly consultando = signal<LanchonetePainel | null>(null);
   readonly consultaDados = signal<LanchoneteConsulta | null>(null);
@@ -1072,10 +1263,16 @@ export class PainelAdminComponent {
   }
 
   trocarAba(aba: 'lanchonetes' | 'admins' | 'logs' | 'config') {
+    this.fecharConsulta();
     this.aba.set(aba);
     if (aba === 'logs') {
       void this.carregarLogs();
     }
+  }
+
+  async sair(): Promise<void> {
+    await this.auth.signOut();
+    await this.router.navigate(['/']);
   }
 
   async carregarLogs(): Promise<void> {
@@ -1096,6 +1293,16 @@ export class PainelAdminComponent {
 
   tipoDe(tipo: string | null) {
     return TIPOS_LANCHONETE.find((t) => t.valor === tipo) ?? null;
+  }
+
+  rotuloTipo(tipo: string | null): string {
+    const info = this.tipoDe(tipo);
+    if (info) return info.rotulo;
+    return tipo ? this.capitalizar(tipo) : '—';
+  }
+
+  capitalizar(texto: string): string {
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   dataDe(data: string): string {
@@ -1193,6 +1400,15 @@ export class PainelAdminComponent {
     }
   }
 
+  abrirCriarAdmin(): void {
+    if (!this.eSuper()) return;
+    this.novoAdminNome.set('');
+    this.novoAdminEmail.set('');
+    this.novoAdminSenha.set('');
+    this.erroAdmin.set(null);
+    this.adminCriarAberto.set(true);
+  }
+
   async criarAdmin(): Promise<void> {
     if (!this.adminFormValido()) return;
     this.salvandoAdmin.set(true);
@@ -1206,11 +1422,38 @@ export class PainelAdminComponent {
       this.novoAdminNome.set('');
       this.novoAdminEmail.set('');
       this.novoAdminSenha.set('');
+      this.adminCriarAberto.set(false);
       await this.carregarAdmins();
     } catch (error) {
       this.erroAdmin.set(this.mensagemDe(error));
     } finally {
       this.salvandoAdmin.set(false);
+    }
+  }
+
+  abrirEditarAdmin(admin: AdminPainel): void {
+    if (!this.eSuper()) return;
+    this.editandoAdmin.set(admin);
+    this.editarAdminNome.set(admin.nome ?? '');
+    this.erroEditarAdmin.set(null);
+    this.adminEditarAberto.set(true);
+  }
+
+  async salvarEditarAdmin(): Promise<void> {
+    const admin = this.editandoAdmin();
+    if (!admin || !this.editarAdminNomeValido() || this.salvandoAdminEdicao()) return;
+    this.salvandoAdminEdicao.set(true);
+    this.erroEditarAdmin.set(null);
+    try {
+      await this.painel.atualizarAdmin(admin.id, {
+        nome: this.editarAdminNome().trim().replace(/\s+/g, ' '),
+      });
+      this.adminEditarAberto.set(false);
+      await this.carregarAdmins();
+    } catch (error) {
+      this.erroEditarAdmin.set(this.mensagemDe(error));
+    } finally {
+      this.salvandoAdminEdicao.set(false);
     }
   }
 

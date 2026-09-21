@@ -105,4 +105,13 @@ export class AdminSistemaController {
   ) {
     return this.adminSistemaService.removerAdmin(id, user);
   }
+
+  @Patch('admins/:id')
+  atualizarAdmin(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminSistemaService.atualizarAdmin(id, body, user);
+  }
 }

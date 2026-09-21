@@ -32,9 +32,7 @@ export interface PedidoPainel {
 
 export const PEDIDO_STATUSES = [
   'recebido',
-  'aceito',
   'em_preparo',
-  'concluido',
   'enviado',
   'entregue',
   'finalizado',
@@ -45,9 +43,7 @@ export type PedidoStatus = (typeof PEDIDO_STATUSES)[number];
 
 export const PEDIDO_STATUS_LABELS: Record<PedidoStatus, string> = {
   recebido: 'Recebido',
-  aceito: 'Aceito',
   em_preparo: 'Em preparo',
-  concluido: 'Concluído',
   enviado: 'Enviado',
   entregue: 'Entregue',
   finalizado: 'Finalizado',
@@ -56,9 +52,7 @@ export const PEDIDO_STATUS_LABELS: Record<PedidoStatus, string> = {
 
 export const PEDIDO_STATUS_SEVERIDADE: Record<PedidoStatus, string> = {
   recebido: 'info',
-  aceito: 'warn',
   em_preparo: 'warn',
-  concluido: 'info',
   enviado: 'contrast',
   entregue: 'success',
   finalizado: 'success',
@@ -67,29 +61,16 @@ export const PEDIDO_STATUS_SEVERIDADE: Record<PedidoStatus, string> = {
 
 const FLUXO: readonly PedidoStatus[] = [
   'recebido',
-  'aceito',
   'em_preparo',
-  'concluido',
   'enviado',
   'entregue',
   'finalizado',
 ];
 
-export const STATUS_CANCELAVEIS = new Set<PedidoStatus>([
-  'recebido',
-  'aceito',
-  'em_preparo',
-  'concluido',
-]);
+export const STATUS_CANCELAVEIS = new Set<PedidoStatus>(['recebido', 'em_preparo']);
 
 // Status em que o cliente ainda pode/devem pagar via PIX (antes de entregue).
-export const STATUS_COM_PIX = new Set<PedidoStatus>([
-  'recebido',
-  'aceito',
-  'em_preparo',
-  'concluido',
-  'enviado',
-]);
+export const STATUS_COM_PIX = new Set<PedidoStatus>(['recebido', 'em_preparo', 'enviado']);
 
 export function labelStatus(status: string): string {
   return PEDIDO_STATUS_LABELS[status as PedidoStatus] ?? status;

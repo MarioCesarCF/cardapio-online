@@ -74,9 +74,13 @@ import {
 
         <div class="grid2">
           <label class="campo">
-            <span>Endereço (slug)</span>
+            <span
+              class="rotulo-com-dica"
+              [attr.title]="tooltipSlug(c.slug)"
+            >
+              Rota de acesso (slug) <i class="pi pi-info-circle"></i>
+            </span>
             <span class="slug-linha">
-              <span class="slug-prefixo">/</span>
               <input
                 pInputText
                 type="text"
@@ -84,6 +88,7 @@ import {
                 name="slug"
                 required
                 pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                placeholder="ex.: minha-lanchonete"
               />
               <p-button
                 label="Copiar link"
@@ -93,13 +98,6 @@ import {
                 (onClick)="copiarLink()"
               />
             </span>
-            <small class="slug-dica" [class.copiado]="linkCopiado">
-              @if (linkCopiado) {
-                Link copiado!
-              } @else {
-                Sua página fica em /{{ c.slug }} depois da aprovação.
-              }
-            </small>
           </label>
           <label class="campo">
             <span>Logo</span>
@@ -228,7 +226,7 @@ import {
           />
         </div>
         @if (mensagem) {
-          <p class="aviso" [class.aviso--ok]="mensagem === 'Salvo!'">{{ mensagem }}</p>
+          <p class="aviso" [class.aviso--ok]="isSucesso">{{ mensagem }}</p>
         }
       </form>
     }
@@ -263,16 +261,19 @@ import {
         min-width: 0;
       }
     }
-    .slug-prefixo {
-      color: var(--app-texto-suave);
-      font-size: 0.9rem;
+    .rotulo-com-dica {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+
+      i {
+        font-size: 0.85rem;
+        color: var(--app-texto-suave);
+      }
     }
-    .slug-dica {
-      color: var(--app-texto-suave);
-      font-size: 0.78rem;
-    }
-    .slug-dica.copiado {
-      color: var(--p-green-500, #22c55e);
+    .slug-linha p-button button,
+    .logo-linha p-button button {
+      white-space: nowrap;
     }
     .config h2 {
       font-size: 1.05rem;
@@ -325,7 +326,7 @@ import {
     }
     .notifs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
     .check {
@@ -334,12 +335,14 @@ import {
       gap: 8px;
       font-weight: 500;
       font-size: 0.9rem;
+      min-width: 0;
     }
     .acoes {
       display: flex;
       gap: 10px;
       margin-top: 10px;
       flex-wrap: wrap;
+      justify-content: flex-end;
     }
     .aviso {
       margin: 0;
@@ -350,9 +353,16 @@ import {
       color: var(--p-green-500, #22c55e);
     }
     @media (max-width: 600px) {
-      .grid2,
-      .notifs {
+      .grid2 {
         grid-template-columns: 1fr;
+      }
+      .notifs {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .check {
+        font-size: 0.78rem;
+        gap: 4px;
       }
     }
   `,
@@ -365,10 +375,21 @@ export class AdminConfigComponent {
   readonly conf = signal<LanchoneteConfig | null>(null);
   salvando = false;
   mensagem = '';
-  linkCopiado = false;
   private slug = '';
 
   readonly tipos = TIPOS_LANCHONETE;
+
+  tooltipSlug(slug: string): string {
+    return (
+      `Endereço da sua página na plataforma: /${slug}. ` +
+      'Use apenas letras minúsculas e hífens, por exemplo: minha-lanchonete. ' +
+      'Você pode alterá-lo aqui a qualquer momento.'
+    );
+  }
+
+  get isSucesso(): boolean {
+    return this.mensagem === 'Salvo!' || this.mensagem === 'Link copiado!';
+  }
 
   readonly fontes = computed<FonteOpcao[]>(() => {
     const atual = this.conf()?.fonte;
@@ -383,9 +404,9 @@ export class AdminConfigComponent {
     if (!slug) return;
     try {
       await navigator.clipboard.writeText(`${location.origin}/${slug}`);
-      this.linkCopiado = true;
+      this.mensagem = 'Link copiado!';
       setTimeout(() => {
-        this.linkCopiado = false;
+        if (this.mensagem === 'Link copiado!') this.mensagem = '';
       }, 2500);
     } catch {
       this.mensagem = 'Não foi possível copiar o link.';

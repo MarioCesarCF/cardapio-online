@@ -484,6 +484,43 @@ export class AdminSistemaService implements OnModuleInit {
     return { ok: true };
   }
 
+  async atualizarAdmin(
+    adminId: string,
+    body: Record<string, unknown>,
+    user: AuthenticatedUser,
+  ): Promise<AdminSistemaDados> {
+    const admin = await this.prisma.adminSistema.findUnique({
+      where: { id: adminId },
+    });
+    if (!admin) throw new NotFoundException('Administrador não encontrado.');
+
+    const nome = this.nomeValido(body.nome);
+    if (nome === admin.nome) {
+      throw new BadRequestException('Nenhuma alteração no nome do administrador.');
+    }
+
+    const atualizado = await this.prisma.adminSistema.update({
+      where: { id: admin.id },
+      data: { nome },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        funcao: true,
+        createdAt: true,
+      },
+    });
+
+    await this.registrarLog(user, 'info', 'acao', 'Administrador editado', {
+      adminId: admin.id,
+      adminEmail: admin.email,
+      nomeAnterior: admin.nome,
+      nomeNovo: nome,
+    });
+
+    return atualizado;
+  }
+
   // ---------- Configurações da plataforma ----------
 
   async getPlataforma(): Promise<{ emailLojista: string | null }> {
@@ -568,9 +605,7 @@ export class AdminSistemaService implements OnModuleInit {
   private statusPedidoValido(value: string): boolean {
     return [
       'recebido',
-      'aceito',
       'em_preparo',
-      'concluido',
       'enviado',
       'entregue',
       'finalizado',

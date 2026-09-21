@@ -1,0 +1,18 @@
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1.25rem;
+  background: var(--p-surface-950);
+  border-bottom: 1px solid var(--p-surface-700);
+
+  &__logo {
+    display: block;
+    height: 1.9rem;
+    width: auto;
+  }
+}

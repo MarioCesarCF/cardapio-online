@@ -146,6 +146,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly pedido = signal<PedidoConfirmado | null>(null);
   readonly pedidoPainelAberto = signal(false);
   readonly qrUrl = signal<string | null>(null);
+  readonly formaPedido = signal<'pix' | 'cartao' | 'dinheiro' | null>(null);
 
   readonly enderecos = signal<Endereco[]>([]);
   readonly enderecoSelecionadoId = signal<string | null>(null);
@@ -153,6 +154,9 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly salvarNovo = signal(false);
   readonly novoEndereco = signal<Record<string, string>>({});
   readonly observacao = signal('');
+  readonly formaPagamento = signal<'pix' | 'cartao' | 'dinheiro'>('pix');
+  readonly precisaTroco = signal(false);
+  readonly trocoPara = signal('');
   readonly semTelefone = signal(false);
   readonly telefone = signal('');
   readonly telefoneSalvo = signal<string | null>(null);
@@ -168,6 +172,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.pedido.set(null);
       this.qrUrl.set(null);
       this.pedidoPainelAberto.set(false);
+      this.formaPedido.set(null);
       this.cart.carregar(slug);
       this.load(slug);
     });
@@ -321,6 +326,9 @@ export class CardapioComponent implements OnInit, OnDestroy {
   private async abrirCheckout(): Promise<void> {
     this.erroPedido.set(null);
     this.observacao.set('');
+    this.formaPagamento.set('pix');
+    this.precisaTroco.set(false);
+    this.trocoPara.set('');
     this.usarNovo.set(false);
     this.novoEndereco.set({});
     try {
@@ -356,6 +364,35 @@ export class CardapioComponent implements OnInit, OnDestroy {
     this.checkoutAberto.set(false);
   }
 
+  definirFormaPagamento(forma: 'pix' | 'cartao' | 'dinheiro', marcado: boolean): void {
+    if (marcado) {
+      this.formaPagamento.set(forma);
+      if (forma !== 'dinheiro') {
+        this.precisaTroco.set(false);
+        this.trocoPara.set('');
+      }
+    }
+  }
+
+  private observacaoMontada(): string | undefined {
+    let pagamento: string;
+    switch (this.formaPagamento()) {
+      case 'cartao':
+        pagamento = 'Forma de pagamento: Cartão de crédito/débito';
+        break;
+      case 'dinheiro':
+        pagamento = this.precisaTroco()
+          ? `Forma de pagamento: Dinheiro (troco para R$ ${Number(this.trocoPara().replace(',', '.')).toFixed(2)})`
+          : 'Forma de pagamento: Dinheiro';
+        break;
+      default:
+        pagamento = 'Forma de pagamento: Pix';
+    }
+    const obs = this.observacao().trim();
+    if (!obs) return pagamento;
+    return `${pagamento}\n${obs}`;
+  }
+
   async confirmarPedido(): Promise<void> {
     this.erroPedido.set(null);
     if (this.enviando()) return;
@@ -374,6 +411,14 @@ export class CardapioComponent implements OnInit, OnDestroy {
       const digitos = this.telefone().replace(/\D/g, '');
       if (!/^\d{10,13}$/.test(digitos)) {
         this.erroPedido.set('Informe seu WhatsApp com DDD (ex.: 11999999999).');
+        return;
+      }
+    }
+
+    if (this.formaPagamento() === 'dinheiro' && this.precisaTroco()) {
+      const valor = Number(this.trocoPara().replace(',', '.'));
+      if (!this.trocoPara().trim() || !Number.isFinite(valor) || valor <= 0) {
+        this.erroPedido.set('Informe para quanto precisa de troco (ex.: 50,00).');
         return;
       }
     }
@@ -423,7 +468,8 @@ export class CardapioComponent implements OnInit, OnDestroy {
         this.api.post<PedidoConfirmado>(`/l/${this.slug}/pedidos`, {
           itens,
           ...(enderecoId ? { enderecoId } : { endereco }),
-          observacao: this.observacao().trim() || undefined,
+          observacao: this.observacaoMontada(),
+          formaPagamento: this.formaPagamento(),
           telefone: this.telefone().replace(/\D/g, '') || this.telefoneSalvo() || undefined,
         }),
       );
@@ -431,11 +477,14 @@ export class CardapioComponent implements OnInit, OnDestroy {
         this.semTelefone.set(false);
       }
       this.pedido.set(pedido);
+      this.formaPedido.set(this.formaPagamento());
       this.qrUrl.set(null);
-      try {
-        this.qrUrl.set(await QRCode.toDataURL(pedido.brCodePix, { width: 240, margin: 1 }));
-      } catch {
-        this.qrUrl.set(null);
+      if (this.formaPagamento() === 'pix') {
+        try {
+          this.qrUrl.set(await QRCode.toDataURL(pedido.brCodePix, { width: 240, margin: 1 }));
+        } catch {
+          this.qrUrl.set(null);
+        }
       }
       this.pedidoPainelAberto.set(true);
       this.checkoutAberto.set(false);
@@ -468,7 +517,20 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   precisaPagar(status: string): boolean {
-    return STATUS_COM_PIX.has(status as PedidoStatus);
+    return (
+      STATUS_COM_PIX.has(status as PedidoStatus) && this.formaPedido() === 'pix'
+    );
+  }
+
+  pagamentoRotulo(): string {
+    switch (this.formaPedido()) {
+      case 'cartao':
+        return 'Cartão de crédito/débito';
+      case 'dinheiro':
+        return 'Dinheiro';
+      default:
+        return 'Pix';
+    }
   }
 
   async reabrirPedido(): Promise<void> {

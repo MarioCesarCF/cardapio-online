@@ -7,3 +7,7 @@ dist/
 .angular/
 .vscode/
 CREDENCIAIS-TESTE.md
+
+# Artefatos de dev/verificação
+check-*.mjs
+dev-server.log

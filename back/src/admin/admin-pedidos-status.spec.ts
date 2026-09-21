@@ -57,17 +57,17 @@ describe('AdminService.updatePedidoStatus', () => {
     const servico = criarServico(prisma, gateway);
 
     const resultado = await servico.updatePedidoStatus(DONO, 'p1', {
-      status: 'aceito',
+      status: 'em_preparo',
     });
 
-    expect(resultado.status).toBe('aceito');
+    expect(resultado.status).toBe('em_preparo');
     expect(prisma.pedido.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'aceito' } }),
+      expect.objectContaining({ data: { status: 'em_preparo' } }),
     );
     expect(gateway.emitirStatusPedido).toHaveBeenCalledWith('l1', {
       id: 'p1',
       numero: 42,
-      status: 'aceito',
+      status: 'em_preparo',
     });
   });
 
@@ -93,14 +93,14 @@ describe('AdminService.updatePedidoStatus', () => {
   });
 
   it('cancelado exige justificativa', async () => {
-    const servico = criarServico(prismaCom(pedidoPrisma('aceito')));
+    const servico = criarServico(prismaCom(pedidoPrisma('recebido')));
     await expect(
       servico.updatePedidoStatus(DONO, 'p1', { status: 'cancelado' }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('cancelado armazena a justificativa', async () => {
-    const prisma = prismaCom(pedidoPrisma('aceito'));
+    const prisma = prismaCom(pedidoPrisma('recebido'));
     const servico = criarServico(prisma);
 
     const resultado = await servico.updatePedidoStatus(DONO, 'p1', {
@@ -134,7 +134,9 @@ describe('AdminService.updatePedidoStatus', () => {
     const prisma = prismaCom(pedidoPrisma('recebido'));
     const servico = criarServico(prisma);
     await expect(
-      servico.updatePedidoStatus('outro-dono', 'p1', { status: 'aceito' }),
+      servico.updatePedidoStatus('outro-dono', 'p1', {
+        status: 'em_preparo',
+      }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -44,6 +44,7 @@ export interface CriaPedidoInput {
   endereco?: EnderecoInput;
   observacao?: string;
   telefone?: string;
+  formaPagamento?: 'pix' | 'cartao' | 'dinheiro';
 }
 
 @Injectable()
@@ -63,6 +64,7 @@ export class PedidosService {
     const itens = this.validaItens(body.itens);
     const observacao = this.opcional(body.observacao, 300);
     const telefone = this.validaTelefone(body.telefone);
+    const formaPagamento = this.validaFormaPagamento(body.formaPagamento);
 
     const lanchonete = await this.prisma.lanchonete.findFirst({
       where: { slug, situacao: 'ativa' },
@@ -75,7 +77,7 @@ export class PedidosService {
 
     await this.ensureCliente(user, telefone);
 
-    const brCodePix = this.geraPix(lanchonete, subtotal);
+    const brCodePix = formaPagamento === 'pix' ? this.geraPix(lanchonete, subtotal) : null;
     const numero = await this.proximoNumero(lanchonete.id);
 
     const pedido = await this.prisma.$transaction(async (tx) => {
@@ -87,7 +89,7 @@ export class PedidosService {
           status: 'recebido',
           subtotal,
           total: subtotal,
-          formaPagamento: 'pix',
+          formaPagamento,
           brCodePix,
           clienteTelefone: telefone,
           enderecoEntrega: enderecoEntrega as Prisma.InputJsonValue,
@@ -390,6 +392,15 @@ export class PedidosService {
       );
     }
     return digitos;
+  }
+
+  private validaFormaPagamento(value: unknown): 'pix' | 'cartao' | 'dinheiro' {
+    if (value == null) return 'pix';
+    const forma = String(value).toLowerCase();
+    if (forma !== 'pix' && forma !== 'cartao' && forma !== 'dinheiro') {
+      throw new BadRequestException('Forma de pagamento inválida.');
+    }
+    return forma;
   }
 
   private opcional(value: unknown, max: number): string | null {

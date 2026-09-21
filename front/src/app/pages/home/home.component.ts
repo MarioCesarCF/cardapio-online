@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -58,7 +59,7 @@ interface LinhaLanchonete {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, Button, InputText],
+  imports: [RouterLink, Button, InputText, Dialog],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
@@ -82,6 +83,7 @@ export class HomeComponent implements OnInit {
   readonly salvandoPerfil = signal(false);
   readonly perfilErro = signal<string | null>(null);
   readonly perfilOk = signal<'idle' | 'ok' | 'erro'>('idle');
+  readonly perfilAberto = signal(false);
 
   readonly enderecos = signal<Endereco[]>([]);
   readonly novoEnderecoAberto = signal(false);
@@ -230,12 +232,23 @@ export class HomeComponent implements OnInit {
       this.meNome.set(nome);
       this.meTelefone.set(bruto === '' ? '' : telefone);
       this.perfilOk.set('ok');
+      this.perfilAberto.set(false);
     } catch {
       this.perfilErro.set('Não foi possível salvar. Tente novamente.');
       this.perfilOk.set('erro');
     } finally {
       this.salvandoPerfil.set(false);
     }
+  }
+
+  abrirEdicaoPerfil(): void {
+    this.perfilErro.set(null);
+    this.perfilOk.set('idle');
+    this.perfilAberto.set(true);
+  }
+
+  fecharEdicaoPerfil(): void {
+    this.perfilAberto.set(false);
   }
 
   abrirNovoEndereco(): void {

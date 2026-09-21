@@ -21,21 +21,23 @@
 }
 
 .marca {
-  text-align: center;
-  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1.5rem;
 
-  h1 {
-    margin: 0 0 0.45rem;
-    font-size: clamp(2rem, 6vw, 3.2rem);
-    line-height: 1.1;
+  &__logo {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
   }
-}
 
-.marca__apoio {
-  margin: 0 auto;
-  max-width: 360px;
-  color: var(--app-texto-suave);
-  font-size: 1.02rem;
+  &__apoio {
+    margin: 0;
+    color: var(--app-texto-suave);
+    font-size: 1.02rem;
+  }
 }
 
 .cartao {
@@ -121,6 +123,23 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.cadastro__tipo {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cadastro__rotulo {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--app-texto-suave);
+}
+
+.cadastro__dica {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--app-texto-suave);
 }
 
 .lembrar {

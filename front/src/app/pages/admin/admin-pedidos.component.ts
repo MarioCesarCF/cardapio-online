@@ -305,14 +305,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     .pedido.status-recebido {
       border-left-color: #1976d2;
     }
-    .pedido.status-aceito {
-      border-left-color: #00838f;
-    }
     .pedido.status-em_preparo {
       border-left-color: #ed6c02;
-    }
-    .pedido.status-concluido {
-      border-left-color: #5e35b1;
     }
     .pedido.status-enviado {
       border-left-color: #9c27b0;

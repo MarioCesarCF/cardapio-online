@@ -18,6 +18,7 @@ import { AdminService, LanchoneteResumo } from '../../services/admin.service';
         >
       </header>
 
+@if (!carregando && lanchonetes().length === 0) {
       <form class="card criar superficie" (ngSubmit)="criar()" autocomplete="off">
         <h2>Criar lanchonete</h2>
         <label class="campo">
@@ -48,6 +49,7 @@ import { AdminService, LanchoneteResumo } from '../../services/admin.service';
           <p class="aviso"><i class="pi pi-exclamation-circle"></i> {{ mensagem }}</p>
         }
       </form>
+    }
 
       <section class="lista">
         @if (carregando) {

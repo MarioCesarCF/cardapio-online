@@ -1,7 +1,9 @@
 <div class="pedidos">
   <header>
     <h1>Meus pedidos</h1>
-    <a routerLink="/home">Voltar ao início</a>
+    <a class="voltar" routerLink="/home"
+      ><i class="pi pi-home"></i> Página principal</a
+    >
   </header>
 
   @if (loading()) {
@@ -92,7 +94,7 @@
 
         <div class="rodape">
           <div class="pagamento">
-            <span>PIX</span>
+            <span>{{ rotuloPagamento(pedido.formaPagamento) }}</span>
             <strong>{{ pedido.total | currency: 'BRL' }}</strong>
           </div>
           @if (podeRepetir(pedido)) {

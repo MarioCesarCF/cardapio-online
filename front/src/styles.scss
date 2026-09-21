@@ -74,13 +74,6 @@ a:hover {
   box-shadow: var(--app-sombra);
 }
 
-.app-chrome {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 1200;
-}
-
 input[type='checkbox'],
 input[type='radio'] {
   accent-color: var(--p-primary-color);

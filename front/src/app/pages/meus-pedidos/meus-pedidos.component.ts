@@ -74,8 +74,23 @@ export class MeusPedidosComponent implements OnInit {
     return rotularStatus(status);
   }
 
+  rotuloPagamento(forma: string): string {
+    switch (forma) {
+      case 'cartao':
+        return 'Cartão';
+      case 'dinheiro':
+        return 'Dinheiro';
+      default:
+        return 'PIX';
+    }
+  }
+
   mostraPix(pedido: Pedido): boolean {
-    return !!pedido.brCodePix && STATUS_COM_PIX.has(pedido.status as PedidoStatus);
+    return (
+      pedido.formaPagamento === 'pix' &&
+      !!pedido.brCodePix &&
+      STATUS_COM_PIX.has(pedido.status as PedidoStatus)
+    );
   }
 
   ngOnInit(): void {

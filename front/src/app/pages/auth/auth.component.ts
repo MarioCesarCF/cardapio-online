@@ -22,9 +22,11 @@ interface MeResponse {
 const OAUTH_PENDENTE_KEY = 'auth.oauth-pendente';
 const LEMBRAR_KEY = 'auth.lembrar';
 const EMAIL_SALVO_KEY = 'auth.email-salvo';
+const MODO_CADASTRO_KEY = 'auth.modo-cadastro';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Tela = 'login' | 'recuperar' | 'redefinir';
+type TipoConta = 'cliente' | 'lojista';
 
 @Component({
   selector: 'app-auth',
@@ -43,12 +45,13 @@ export class AuthComponent implements OnInit {
     { label: 'Criar conta', value: 'cadastro' },
   ];
 
-  readonly nomePlataforma = 'PediJá';
-  readonly slogan = 'Seu pedido começa aqui';
+  readonly tipoContas = [
+    { label: 'Sou cliente', value: 'cliente' },
+    { label: 'Quero vender', value: 'lojista' },
+  ];
 
   readonly tela = signal<Tela>('login');
   readonly mode = signal<'login' | 'cadastro'>('login');
-  readonly name = signal('');
   readonly email = signal('');
   readonly password = signal('');
   readonly mostrandoSenha = signal(false);
@@ -58,6 +61,11 @@ export class AuthComponent implements OnInit {
   readonly sucesso = signal<string | null>(null);
   readonly me = signal<MeResponse | null>(null);
   readonly redirect = signal<string | null>(null);
+
+  readonly cadastroNome = signal('');
+  readonly cadastroEmail = signal('');
+  readonly cadastroSenha = signal('');
+  readonly tipoConta = signal<TipoConta>('cliente');
 
   readonly emailRecuperar = signal('');
   readonly enviandoRecuperar = signal(false);
@@ -128,7 +136,14 @@ export class AuthComponent implements OnInit {
   private async posLogin(me: MeResponse): Promise<void> {
     const destino =
       this.redirect() ??
-      (me.adminSistema ? '/painel-admin' : me.lanchonetes.length > 0 ? '/admin' : '/home');
+      (me.adminSistema
+        ? '/painel-admin'
+        : me.lanchonetes.length > 0
+          ? '/admin'
+          : sessionStorage.getItem(MODO_CADASTRO_KEY) === 'lojista'
+            ? '/onboarding'
+            : '/home');
+    sessionStorage.removeItem(MODO_CADASTRO_KEY);
     if (destino) {
       this.redirect.set(null);
       await this.router.navigateByUrl(destino);
@@ -148,6 +163,12 @@ export class AuthComponent implements OnInit {
 
   setMode(mode: 'login' | 'cadastro'): void {
     this.mode.set(mode);
+    if (mode === 'cadastro') {
+      this.cadastroNome.set('');
+      this.cadastroEmail.set('');
+      this.cadastroSenha.set('');
+      this.tipoConta.set('cliente');
+    }
     this.error.set(null);
     this.sucesso.set(null);
   }
@@ -199,19 +220,38 @@ export class AuthComponent implements OnInit {
           localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
         }
       } else {
-        await this.auth.signUp(this.name(), this.email(), this.password());
+        await this.auth.signUp(
+          this.cadastroNome(),
+          this.cadastroEmail(),
+          this.cadastroSenha(),
+        );
+        if (this.tipoConta() === 'lojista') {
+          sessionStorage.setItem(MODO_CADASTRO_KEY, 'lojista');
+        } else {
+          sessionStorage.removeItem(MODO_CADASTRO_KEY);
+        }
       }
       const me = await this.carregarMe();
       await this.posLogin(me);
     } catch (error) {
       if (error instanceof AuthError) {
-        this.error.set(error.message);
+        this.error.set(this.mensagemDeErro(error));
       } else {
         this.error.set('Falha na autenticação. Tente novamente.');
       }
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private mensagemDeErro(error: AuthError): string {
+    if (
+      this.mode() === 'cadastro' &&
+      /already exists|already register|já existe|in use|em uso|earlier/i.test(error.message)
+    ) {
+      return 'Já existe uma conta com esse e-mail.';
+    }
+    return error.message;
   }
 
   async entrarComGoogle(): Promise<void> {

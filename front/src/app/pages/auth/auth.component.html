@@ -1,7 +1,7 @@
 <div class="auth">
   <header class="marca">
-    <h1>{{ nomePlataforma }}</h1>
-    <p class="marca__apoio">{{ slogan }}</p>
+    <img class="marca__logo" src="logo.png" alt="Peditto" />
+    <p class="marca__apoio">Seu pedido começa aqui</p>
   </header>
 
   @if (tela() === 'login' && me(); as dados) {
@@ -125,62 +125,117 @@
           class="bloco"
         />
 
-        @if (mode() === 'cadastro') {
+        @if (mode() === 'login') {
+          <label class="campo">
+            <span>Email</span>
+            <input
+              pInputText
+              type="email"
+              autocomplete="email"
+              [(ngModel)]="email"
+              name="email"
+              required
+            />
+          </label>
+
+          <label class="campo">
+            <span>Senha</span>
+            <span class="senha">
+              <input
+                pInputText
+                [type]="mostrandoSenha() ? 'text' : 'password'"
+                autocomplete="current-password"
+                [(ngModel)]="password"
+                name="password"
+                required
+                minlength="8"
+              />
+              <button
+                type="button"
+                class="senha__olho"
+                [attr.aria-label]="mostrandoSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+                (click)="alternarSenha()"
+              >
+                <i [class]="mostrandoSenha() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </span>
+          </label>
+
+          <div class="form__linha">
+            <label class="lembrar">
+              <input type="checkbox" [checked]="lembrar()" (change)="alternarLembrar()" />
+              Lembrar de mim
+            </label>
+            <button type="button" class="link" (click)="abrirRecuperacao()">
+              Esqueci senha
+            </button>
+          </div>
+        } @else {
           <label class="campo">
             <span>Nome</span>
             <input
               pInputText
               type="text"
               autocomplete="name"
-              [(ngModel)]="name"
-              name="name"
+              [(ngModel)]="cadastroNome"
+              name="cadastroNome"
               required
             />
           </label>
-        }
 
-        <label class="campo">
-          <span>Email</span>
-          <input
-            pInputText
-            type="email"
-            autocomplete="email"
-            [(ngModel)]="email"
-            name="email"
-            required
-          />
-        </label>
-
-        <label class="campo">
-          <span>Senha</span>
-          <span class="senha">
+          <label class="campo">
+            <span>Email</span>
             <input
               pInputText
-              [type]="mostrandoSenha() ? 'text' : 'password'"
-              autocomplete="current-password"
-              [(ngModel)]="password"
-              name="password"
+              type="email"
+              autocomplete="email"
+              [(ngModel)]="cadastroEmail"
+              name="cadastroEmail"
               required
-              minlength="8"
             />
-            <button
-              type="button"
-              class="senha__olho"
-              [attr.aria-label]="mostrandoSenha() ? 'Ocultar senha' : 'Mostrar senha'"
-              (click)="alternarSenha()"
-            >
-              <i [class]="mostrandoSenha() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-            </button>
-          </span>
-        </label>
-
-        <div class="form__linha">
-          <label class="lembrar">
-            <input type="checkbox" [checked]="lembrar()" (change)="alternarLembrar()" />
-            Lembrar de mim
           </label>
-          <button type="button" class="link" (click)="abrirRecuperacao()">Esqueci senha</button>
-        </div>
+
+          <label class="campo">
+            <span>Senha</span>
+            <span class="senha">
+              <input
+                pInputText
+                [type]="mostrandoSenha() ? 'text' : 'password'"
+                autocomplete="new-password"
+                [(ngModel)]="cadastroSenha"
+                name="cadastroSenha"
+                required
+                minlength="8"
+              />
+              <button
+                type="button"
+                class="senha__olho"
+                [attr.aria-label]="mostrandoSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+                (click)="alternarSenha()"
+              >
+                <i [class]="mostrandoSenha() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+              </button>
+            </span>
+          </label>
+
+          <div class="cadastro__tipo">
+            <span class="cadastro__rotulo">Como você quer usar o Peditto?</span>
+            <p-selectbutton
+              [options]="tipoContas"
+              optionLabel="label"
+              optionValue="value"
+              [(ngModel)]="tipoConta"
+              name="tipoConta"
+            />
+            <p class="cadastro__dica">
+              @if (tipoConta() === 'cliente') {
+                Faça pedidos nas lanchonetes e acompanhe tudo na sua página principal.
+              } @else {
+                Você vai montar sua lanchonete: página, cardápio e recebimento de pedidos.
+              }
+            </p>
+          </div>
+        }
 
         <p-button
           type="submit"

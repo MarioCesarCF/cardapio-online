@@ -16,9 +16,7 @@ const NOME_MAX = 50;
 const TIPOS_LANCHONETE = ['lanches', 'pizzaria', 'sorvetes', 'acai'] as const;
 const PEDIDO_STATUSES = [
   'recebido',
-  'aceito',
   'em_preparo',
-  'concluido',
   'enviado',
   'entregue',
   'finalizado',
@@ -27,10 +25,8 @@ const PEDIDO_STATUSES = [
 // Transições permitidas: o dono avança uma etapa por vez; cancelamento é
 // permitido antes de o pedido sair para entrega (com justificativa obrigatória).
 const TRANSICOES_STATUS: Record<string, readonly string[]> = {
-  recebido: ['aceito', 'cancelado'],
-  aceito: ['em_preparo', 'cancelado'],
-  em_preparo: ['concluido', 'cancelado'],
-  concluido: ['enviado', 'cancelado'],
+  recebido: ['em_preparo', 'cancelado'],
+  em_preparo: ['enviado', 'cancelado'],
   enviado: ['entregue'],
   entregue: ['finalizado'],
   finalizado: [],
@@ -746,9 +742,7 @@ export class AdminService {
   private rotulaStatus(status: string): string {
     const rotulos: Record<string, string> = {
       recebido: 'recebido',
-      aceito: 'aceito',
       em_preparo: 'em preparo',
-      concluido: 'concluído',
       enviado: 'enviado',
       entregue: 'entregue',
       finalizado: 'finalizado',

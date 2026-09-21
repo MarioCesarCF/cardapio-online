@@ -11,6 +11,9 @@ import { AuthService } from '../../services/auth.service';
   template: `
     <main class="shell">
       <header class="shell__topo">
+        @if (logo(); as logo) {
+          <img class="shell__logo" [src]="logo" alt="" />
+        }
         <h1>{{ nome() }}</h1>
         <div class="shell__acoes">
           <a class="shell__ver" [href]="'/' + slug()" target="_blank">
@@ -71,12 +74,24 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
-      padding-right: 7.5rem;
     }
     .shell__topo h1 {
       font-size: 1.3rem;
       margin: 0;
       flex: 1;
+    }
+    .shell__logo {
+      max-height: 3.5rem;
+      max-width: 9rem;
+      object-fit: contain;
+      border-radius: var(--app-raio-sm);
+    }
+    .shell__acoes {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     a {
       text-decoration: none;
@@ -92,7 +107,7 @@ import { AuthService } from '../../services/auth.service';
     .shell__abas {
       display: flex;
       gap: 6px;
-      margin: 18px 0 22px;
+      margin: 18px auto 22px;
       padding: 5px;
       border: 1px solid var(--app-borda);
       border-radius: 999px;
@@ -156,6 +171,7 @@ export class AdminShellComponent {
 
   readonly slug = signal('');
   readonly nome = signal('');
+  readonly logo = signal('');
   readonly situacao = signal<'' | 'pendente' | 'ativa' | 'pausada'>('');
 
   constructor() {
@@ -164,6 +180,7 @@ export class AdminShellComponent {
       this.slug.set(slug);
       void this.admin.getConfig(slug).then((config) => {
         this.nome.set(config.nome);
+        this.logo.set(config.logoUrl ?? '');
         this.situacao.set(config.situacao ?? '');
         this.marca.aplicar(config.corPrincipal);
       });

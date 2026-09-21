@@ -341,6 +341,52 @@
       style="width: 100%"
     ></textarea>
 
+    <h3>Forma de pagamento</h3>
+    <label class="opcao">
+      <input
+        type="checkbox"
+        [checked]="formaPagamento() === 'pix'"
+        (change)="definirFormaPagamento('pix', $any($event.target).checked)"
+      />
+      <span>Pix</span>
+    </label>
+    <label class="opcao">
+      <input
+        type="checkbox"
+        [checked]="formaPagamento() === 'cartao'"
+        (change)="definirFormaPagamento('cartao', $any($event.target).checked)"
+      />
+      <span>Cartão de crédito/débito</span>
+    </label>
+    <label class="opcao">
+      <input
+        type="checkbox"
+        [checked]="formaPagamento() === 'dinheiro'"
+        (change)="definirFormaPagamento('dinheiro', $any($event.target).checked)"
+      />
+      <span>Dinheiro</span>
+    </label>
+
+    @if (formaPagamento() === 'dinheiro') {
+    <label class="opcao">
+      <input type="checkbox" [checked]="precisaTroco()" (change)="precisaTroco.set($any($event.target).checked)" />
+      <span>Precisa de troco?</span>
+    </label>
+    @if (precisaTroco()) {
+    <label class="campo campo--full">
+      <span>Troco para quanto? (R$) *</span>
+      <input
+        pInputText
+        autocomplete="off"
+        inputmode="decimal"
+        [value]="trocoPara()"
+        (input)="trocoPara.set($any($event.target).value)"
+        placeholder="Ex.: 50,00"
+      />
+    </label>
+    }
+    }
+
     <div class="total">Total <strong>{{ cart.total() | currency: 'BRL' }}</strong></div>
 
     @if (erroPedido(); as erro) {

@@ -198,4 +198,8 @@ export class PainelAdminService {
   removerAdmin(id: string): Promise<{ ok: boolean }> {
     return firstValueFrom(this.api.delete<{ ok: boolean }>(`/admin-sistema/admins/${id}`));
   }
+
+  atualizarAdmin(id: string, body: { nome: string }): Promise<AdminPainel> {
+    return firstValueFrom(this.api.patch<AdminPainel>(`/admin-sistema/admins/${id}`, body));
+  }
 }

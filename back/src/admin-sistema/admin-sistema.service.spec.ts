@@ -237,6 +237,105 @@ describe('AdminSistemaService', () => {
     });
   });
 
+  describe('atualizarAdmin', () => {
+    it('edita o nome e registra log', async () => {
+      const logCriado: unknown[] = [];
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: '33333333-3333-3333-3333-333333333333',
+            nome: 'Ana',
+            email: 'ana@x.com',
+            funcao: 'admin',
+          }),
+          update: vi.fn().mockResolvedValue({
+            id: '33333333-3333-3333-3333-333333333333',
+            nome: 'Ana Souza',
+            email: 'ana@x.com',
+            funcao: 'admin',
+            createdAt: new Date(),
+          }),
+        },
+        logSistema: {
+          create: vi.fn().mockImplementation((d) => {
+            logCriado.push(d.data);
+            return d.data;
+          }),
+        },
+      };
+      const servico = criarServico(prisma);
+
+      const resultado = await servico.atualizarAdmin(
+        '33333333-3333-3333-3333-333333333333',
+        { nome: 'Ana Souza' },
+        USER_SUPER,
+      );
+
+      expect(resultado.nome).toBe('Ana Souza');
+      expect(prisma.adminSistema.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: expect.any(String) } }),
+      );
+      expect(logCriado).toHaveLength(1);
+      expect((logCriado[0] as { mensagem: string }).mensagem).toBe(
+        'Administrador editado',
+      );
+      expect((logCriado[0] as { detalhes: unknown }).detalhes).toMatchObject({
+        nomeAnterior: 'Ana',
+        nomeNovo: 'Ana Souza',
+      });
+    });
+
+    it('404 quando o administrador não existe', async () => {
+      const prisma = {
+        adminSistema: { findUnique: vi.fn().mockResolvedValue(null) },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.atualizarAdmin('nada', { nome: 'Maria' }, USER_SUPER),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rejeita nome inválido', async () => {
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: '33333333-3333-3333-3333-333333333333',
+            nome: 'Ana',
+            email: 'ana@x.com',
+          }),
+        },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.atualizarAdmin(
+          '33333333-3333-3333-3333-333333333333',
+          { nome: 'A!!' },
+          USER_SUPER,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejeita nome igual ao atual', async () => {
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: '33333333-3333-3333-3333-333333333333',
+            nome: 'Ana',
+            email: 'ana@x.com',
+          }),
+        },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.atualizarAdmin(
+          '33333333-3333-3333-3333-333333333333',
+          { nome: 'Ana' },
+          USER_SUPER,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
   describe('plataforma', () => {
     it('retorna o e-mail de contato cadastrado', async () => {
       const prisma = {
