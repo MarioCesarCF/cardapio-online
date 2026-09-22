@@ -1,12 +1,11 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { SelectButton } from 'primeng/selectbutton';
-import { Tag } from 'primeng/tag';
 import { AuthError, AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 
@@ -19,9 +18,9 @@ interface MeResponse {
   adminSistemaFuncao: string | null;
 }
 
-const OAUTH_PENDENTE_KEY = 'auth.oauth-pendente';
 const LEMBRAR_KEY = 'auth.lembrar';
 const EMAIL_SALVO_KEY = 'auth.email-salvo';
+const SENHA_SALVA_KEY = 'auth.senha-salva';
 const MODO_CADASTRO_KEY = 'auth.modo-cadastro';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -30,7 +29,7 @@ type TipoConta = 'cliente' | 'lojista';
 
 @Component({
   selector: 'app-auth',
-  imports: [FormsModule, RouterLink, Button, InputText, Message, SelectButton, Tag],
+  imports: [FormsModule, Button, InputText, Message, SelectButton],
   templateUrl: './auth.component.html',
   styleUrl: './auth.component.scss',
 })
@@ -59,8 +58,8 @@ export class AuthComponent implements OnInit {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly sucesso = signal<string | null>(null);
-  readonly me = signal<MeResponse | null>(null);
   readonly redirect = signal<string | null>(null);
+  readonly checando = signal(true);
 
   readonly cadastroNome = signal('');
   readonly cadastroEmail = signal('');
@@ -78,18 +77,16 @@ export class AuthComponent implements OnInit {
   readonly enviandoRedefinir = signal(false);
   readonly redefinirErro = signal<string | null>(null);
 
-  readonly perfilNome = signal('');
-  readonly perfilTelefone = signal('');
-  readonly salvandoPerfil = signal(false);
-  readonly perfilErro = signal<string | null>(null);
-  readonly perfilSucesso = signal(false);
-
   ngOnInit(): void {
     this.lembrar.set(localStorage.getItem(LEMBRAR_KEY) === '1');
     if (this.lembrar()) {
       const salvo = localStorage.getItem(EMAIL_SALVO_KEY);
       if (salvo) {
         this.email.set(salvo);
+      }
+      const senhaSalva = localStorage.getItem(SENHA_SALVA_KEY);
+      if (senhaSalva) {
+        this.password.set(senhaSalva);
       }
     }
     this.route.queryParamMap.subscribe((params) => {
@@ -112,25 +109,17 @@ export class AuthComponent implements OnInit {
 
   private async verificaSessao(): Promise<void> {
     await this.auth.init();
-    if (this.auth.isAuthenticated() && !this.me()) {
+    if (this.auth.isAuthenticated()) {
       try {
         const me = await this.carregarMe();
-        if (this.deveRedirecionar()) {
+        if (this.tela() === 'login') {
           await this.posLogin(me);
         }
       } catch {
         // erro já exibido por carregarMe
       }
     }
-  }
-
-  private deveRedirecionar(): boolean {
-    if (this.redirect()) return true;
-    if (sessionStorage.getItem(OAUTH_PENDENTE_KEY)) {
-      sessionStorage.removeItem(OAUTH_PENDENTE_KEY);
-      return true;
-    }
-    return false;
+    this.checando.set(false);
   }
 
   private async posLogin(me: MeResponse): Promise<void> {
@@ -204,8 +193,12 @@ export class AuthComponent implements OnInit {
     if (valor && this.email()) {
       localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
     }
+    if (valor && this.password()) {
+      localStorage.setItem(SENHA_SALVA_KEY, this.password());
+    }
     if (!valor) {
       localStorage.removeItem(EMAIL_SALVO_KEY);
+      localStorage.removeItem(SENHA_SALVA_KEY);
     }
   }
 
@@ -218,13 +211,10 @@ export class AuthComponent implements OnInit {
         await this.auth.signIn(this.email(), this.password(), this.lembrar());
         if (this.lembrar()) {
           localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
+          localStorage.setItem(SENHA_SALVA_KEY, this.password());
         }
       } else {
-        await this.auth.signUp(
-          this.cadastroNome(),
-          this.cadastroEmail(),
-          this.cadastroSenha(),
-        );
+        await this.auth.signUp(this.cadastroNome(), this.cadastroEmail(), this.cadastroSenha());
         if (this.tipoConta() === 'lojista') {
           sessionStorage.setItem(MODO_CADASTRO_KEY, 'lojista');
         } else {
@@ -251,6 +241,12 @@ export class AuthComponent implements OnInit {
     ) {
       return 'Já existe uma conta com esse e-mail.';
     }
+    if (
+      this.mode() === 'login' &&
+      /invalid email or password|invalid_credentials|invalid email/i.test(error.message)
+    ) {
+      return 'E-mail ou senha inválidos.';
+    }
     return error.message;
   }
 
@@ -258,10 +254,8 @@ export class AuthComponent implements OnInit {
     if (this.submitting()) return;
     this.submitting.set(true);
     this.error.set(null);
-    sessionStorage.setItem(OAUTH_PENDENTE_KEY, '1');
     try {
       await this.auth.signInGoogle();
-      sessionStorage.removeItem(OAUTH_PENDENTE_KEY);
       const me = await this.carregarMe();
       await this.posLogin(me);
     } catch (error) {
@@ -349,66 +343,10 @@ export class AuthComponent implements OnInit {
 
   async carregarMe(): Promise<MeResponse> {
     try {
-      const me = await firstValueFrom(this.api.get<MeResponse>('/me'));
-      this.me.set(me);
-      this.perfilNome.set(me.user.name ?? me.cliente?.nome ?? '');
-      this.perfilTelefone.set(me.cliente?.telefone ?? '');
-      return me;
+      return await firstValueFrom(this.api.get<MeResponse>('/me'));
     } catch {
       this.error.set('Não foi possível carregar seus dados.');
       throw new AuthError('Não foi possível carregar seus dados.', 0);
     }
-  }
-
-  async salvarPerfil(): Promise<void> {
-    if (this.salvandoPerfil()) return;
-    const nome = this.perfilNome().trim().replace(/\s+/g, ' ');
-    const telefoneBruto = this.perfilTelefone().trim();
-    const telefone = telefoneBruto.replace(/\D/g, '');
-
-    this.perfilErro.set(null);
-    this.perfilSucesso.set(false);
-
-    if (nome.length < 2 || nome.length > 80) {
-      this.perfilErro.set('O nome deve ter entre 2 e 80 caracteres.');
-      return;
-    }
-    if (telefoneBruto !== '' && !/^\d{10,13}$/.test(telefone)) {
-      this.perfilErro.set('WhatsApp inválido. Informe o número com DDD.');
-      return;
-    }
-
-    this.salvandoPerfil.set(true);
-    try {
-      await firstValueFrom(
-        this.api.patch('/me', {
-          nome,
-          telefone: telefoneBruto === '' ? '' : telefone,
-        }),
-      );
-      this.perfilSucesso.set(true);
-      const me = this.me();
-      if (me) {
-        this.me.set({
-          ...me,
-          user: { ...me.user, name: nome },
-          cliente: { ...(me.cliente ?? { id: me.user.id }), nome, telefone: telefone || null },
-        });
-      }
-    } catch {
-      this.perfilErro.set('Não foi possível salvar. Tente novamente.');
-    } finally {
-      this.salvandoPerfil.set(false);
-    }
-  }
-
-  abrirPainel(): void {
-    void this.router.navigate(['/painel-admin']);
-  }
-
-  async sair(): Promise<void> {
-    await this.auth.signOut();
-    this.me.set(null);
-    await this.router.navigate(['/']);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -253,7 +253,7 @@ const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
     }
     .ob__card h1 {
       margin: 0 0 2px;
-      font-size: 1.3rem;
+      font-size: 1.5rem;
     }
     .ob__subtitulo {
       margin: 0 0 16px;
@@ -374,6 +374,7 @@ export class OnboardingComponent {
   private readonly admin = inject(AdminService);
   private readonly router = inject(Router);
   private readonly marca = inject(MarcaService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly tipos = TIPOS_LANCHONETE;
   readonly fontes = FONTES_PADRAO;
@@ -507,7 +508,7 @@ export class OnboardingComponent {
   }
 
   aplicarCor(cor: string | null): void {
-    this.marca.aplicar(cor);
+    this.marca.aplicar(cor, this.host.nativeElement);
   }
 
   async finalizar(paraConfig = false): Promise<void> {

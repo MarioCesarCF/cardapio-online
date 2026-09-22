@@ -6,12 +6,33 @@
     >
   </header>
 
+  <div class="abas">
+    <button
+      type="button"
+      class="aba"
+      [class.aba--ativa]="!historico()"
+      (click)="!historico() ? null : alternarHistorico()"
+    >
+      Recentes
+    </button>
+    <button
+      type="button"
+      class="aba"
+      [class.aba--ativa]="historico()"
+      (click)="historico() ? null : alternarHistorico()"
+    >
+      Histórico
+    </button>
+  </div>
+
   @if (loading()) {
     <p class="status">Carregando…</p>
   } @else if (error(); as erro) {
     <p class="status">{{ erro }}</p>
   } @else if (pedidos().length === 0) {
-    <p class="status">Você ainda não fez pedidos.</p>
+    <p class="status">
+      {{ historico() ? 'Nenhum pedido arquivado ainda.' : 'Você ainda não fez pedidos.' }}
+    </p>
   } @else {
     @for (pedido of pedidos(); track pedido.id) {
       <article class="pedido">
@@ -20,6 +41,7 @@
             <a routerLink="/{{ pedido.lanchonete.slug }}">{{ pedido.lanchonete.nome }}</a>
             · pedido #{{ pedido.numero }}
           </h2>
+          <span class="tipo">{{ labelTipo(pedido.tipoEntrega) }}</span>
           <span class="status-badge status-{{ pedido.status }}">{{
             labelStatus(pedido.status)
           }}</span>
@@ -55,6 +77,9 @@
             }
             · {{ end.bairro }}, {{ end.cidade }}/{{ end.uf }}
           </p>
+        }
+        @if (pedido.pagamentoInfo) {
+          <p class="pagamento-info"><i class="pi pi-wallet"></i> {{ pedido.pagamentoInfo }}</p>
         }
         @if (pedido.observacao) {
           <p class="obs">Obs.: {{ pedido.observacao }}</p>

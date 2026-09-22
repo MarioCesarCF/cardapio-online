@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import QRCode from 'qrcode';
@@ -13,7 +13,14 @@ import { AuthService } from '../../services/auth.service';
 import { MarcaService } from '../../services/marca.service';
 import { CartService, type CartItem } from '../../services/cart.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
-import { labelStatus, STATUS_COM_PIX, type PedidoStatus } from '../../services/pedido-painel';
+import { dentroDoHorario, horarioResumo, type HorarioDia } from '../../services/horarios';
+import {
+  labelStatus,
+  STATUS_COM_PIX,
+  tipoEntregaCurto,
+  tipoEntregaLabel,
+  type PedidoStatus,
+} from '../../services/pedido-painel';
 
 interface Lanchonete {
   id: string;
@@ -25,6 +32,7 @@ interface Lanchonete {
   whatsapp: string | null;
   emailContato: string | null;
   enderecoLoja: string | null;
+  horarios: HorarioDia[] | null;
 }
 
 interface Opcao {
@@ -82,6 +90,7 @@ interface PedidoConfirmado {
   id: string;
   numero: number;
   status: string;
+  tipoEntrega: string;
   total: number;
   brCodePix: string;
 }
@@ -107,11 +116,14 @@ export class CardapioComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly marca = inject(MarcaService);
+  private readonly host = inject(ElementRef<HTMLElement>);
   readonly cart = inject(CartService);
 
   private timerRef: ReturnType<typeof setInterval> | null = null;
 
   readonly rotuloStatus = labelStatus;
+  readonly rotuloTipo = tipoEntregaLabel;
+  readonly tipoCurto = tipoEntregaCurto;
 
   readonly config = signal<Lanchonete | null>(null);
   readonly cardapio = signal<CardapioResponse | null>(null);
@@ -126,6 +138,12 @@ export class CardapioComponent implements OnInit, OnDestroy {
       '--cardapio-fonte': c?.fonte ? c.fonte : 'inherit',
     };
   });
+
+  readonly resumoHorarios = computed(() => horarioResumo(this.config()?.horarios));
+
+  estaAberta(): boolean {
+    return dentroDoHorario(this.config()?.horarios ?? null, new Date());
+  }
 
   resumoInfo(lanchonete: Lanchonete): string {
     return [
@@ -155,6 +173,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly novoEndereco = signal<Record<string, string>>({});
   readonly observacao = signal('');
   readonly formaPagamento = signal<'pix' | 'cartao' | 'dinheiro'>('pix');
+  readonly tipoPedido = signal<'entrega' | 'retirar' | 'consumir'>('entrega');
   readonly precisaTroco = signal(false);
   readonly trocoPara = signal('');
   readonly semTelefone = signal(false);
@@ -192,7 +211,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
     this.api.get<Lanchonete>(`/l/${slug}/config`).subscribe({
       next: (config) => {
         this.config.set(config);
-        this.marca.aplicar(config.corPrincipal);
+        this.marca.aplicar(config.corPrincipal, this.host.nativeElement);
         this.loadCardapio(slug);
       },
       error: () => {
@@ -327,6 +346,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
     this.erroPedido.set(null);
     this.observacao.set('');
     this.formaPagamento.set('pix');
+    this.tipoPedido.set('entrega');
     this.precisaTroco.set(false);
     this.trocoPara.set('');
     this.usarNovo.set(false);
@@ -374,28 +394,46 @@ export class CardapioComponent implements OnInit, OnDestroy {
     }
   }
 
-  private observacaoMontada(): string | undefined {
-    let pagamento: string;
+  definirTipoPedido(tipo: 'entrega' | 'retirar' | 'consumir', marcado: boolean): void {
+    if (marcado) {
+      this.tipoPedido.set(tipo);
+      this.erroPedido.set(null);
+    }
+  }
+
+  mostrarEndereco(): boolean {
+    return this.tipoPedido() === 'entrega';
+  }
+
+  avisoPagamento(): string | null {
+    if (this.formaPagamento() === 'pix') return null;
+    if (this.mostrarEndereco()) return 'Pagamento será realizado no momento da entrega.';
+    return this.tipoPedido() === 'retirar'
+      ? 'Pagamento será realizado no momento da retirada.'
+      : 'Pagamento será realizado no local.';
+  }
+
+  private pagamentoInfoMontada(): string {
     switch (this.formaPagamento()) {
       case 'cartao':
-        pagamento = 'Forma de pagamento: Cartão de crédito/débito';
-        break;
+        return 'Forma de pagamento: Cartão de crédito/débito';
       case 'dinheiro':
-        pagamento = this.precisaTroco()
+        return this.precisaTroco()
           ? `Forma de pagamento: Dinheiro (troco para R$ ${Number(this.trocoPara().replace(',', '.')).toFixed(2)})`
           : 'Forma de pagamento: Dinheiro';
-        break;
       default:
-        pagamento = 'Forma de pagamento: Pix';
+        return 'Forma de pagamento: Pix';
     }
-    const obs = this.observacao().trim();
-    if (!obs) return pagamento;
-    return `${pagamento}\n${obs}`;
   }
 
   async confirmarPedido(): Promise<void> {
     this.erroPedido.set(null);
     if (this.enviando()) return;
+
+    if (!this.estaAberta()) {
+      this.erroPedido.set('A lanchonete está fora do horário de funcionamento no momento.');
+      return;
+    }
 
     const itens = this.cart.linhas().map((item) => ({
       produtoId: item.produtoId,
@@ -426,39 +464,41 @@ export class CardapioComponent implements OnInit, OnDestroy {
     let enderecoId: string | null = null;
     let endereco: Record<string, string | undefined> | null = null;
 
-    if (this.usarNovo()) {
-      const form = this.novoEndereco();
-      if (
-        !form['rua']?.trim() ||
-        !form['numero']?.trim() ||
-        !form['bairro']?.trim() ||
-        !form['cidade']?.trim() ||
-        !form['uf']?.trim()
-      ) {
-        this.erroPedido.set('Preencha os campos obrigatórios do endereço.');
-        return;
-      }
-      const dados = {
-        rua: form['rua'].trim(),
-        numero: form['numero'].trim(),
-        complemento: form['complemento']?.trim() || undefined,
-        bairro: form['bairro'].trim(),
-        cidade: form['cidade'].trim(),
-        uf: form['uf'].trim().toUpperCase(),
-        cep: form['cep']?.trim() || undefined,
-        apelido: form['apelido']?.trim() || undefined,
-      };
-      if (this.salvarNovo()) {
-        const criado = await firstValueFrom(this.api.post<Endereco>('/me/enderecos', dados));
-        enderecoId = criado.id;
+    if (this.mostrarEndereco()) {
+      if (this.usarNovo()) {
+        const form = this.novoEndereco();
+        if (
+          !form['rua']?.trim() ||
+          !form['numero']?.trim() ||
+          !form['bairro']?.trim() ||
+          !form['cidade']?.trim() ||
+          !form['uf']?.trim()
+        ) {
+          this.erroPedido.set('Preencha os campos obrigatórios do endereço.');
+          return;
+        }
+        const dados = {
+          rua: form['rua'].trim(),
+          numero: form['numero'].trim(),
+          complemento: form['complemento']?.trim() || undefined,
+          bairro: form['bairro'].trim(),
+          cidade: form['cidade'].trim(),
+          uf: form['uf'].trim().toUpperCase(),
+          cep: form['cep']?.trim() || undefined,
+          apelido: form['apelido']?.trim() || undefined,
+        };
+        if (this.salvarNovo()) {
+          const criado = await firstValueFrom(this.api.post<Endereco>('/me/enderecos', dados));
+          enderecoId = criado.id;
+        } else {
+          endereco = dados;
+        }
       } else {
-        endereco = dados;
-      }
-    } else {
-      enderecoId = this.enderecoSelecionadoId();
-      if (!enderecoId) {
-        this.erroPedido.set('Escolha um endereço de entrega (ou cadastre um novo).');
-        return;
+        enderecoId = this.enderecoSelecionadoId();
+        if (!enderecoId) {
+          this.erroPedido.set('Escolha um endereço de entrega (ou cadastre um novo).');
+          return;
+        }
       }
     }
 
@@ -468,8 +508,10 @@ export class CardapioComponent implements OnInit, OnDestroy {
         this.api.post<PedidoConfirmado>(`/l/${this.slug}/pedidos`, {
           itens,
           ...(enderecoId ? { enderecoId } : { endereco }),
-          observacao: this.observacaoMontada(),
+          observacao: this.observacao().trim() || undefined,
+          pagamentoInfo: this.pagamentoInfoMontada(),
           formaPagamento: this.formaPagamento(),
+          tipoEntrega: this.tipoPedido(),
           telefone: this.telefone().replace(/\D/g, '') || this.telefoneSalvo() || undefined,
         }),
       );
@@ -517,9 +559,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   precisaPagar(status: string): boolean {
-    return (
-      STATUS_COM_PIX.has(status as PedidoStatus) && this.formaPedido() === 'pix'
-    );
+    return STATUS_COM_PIX.has(status as PedidoStatus) && this.formaPedido() === 'pix';
   }
 
   pagamentoRotulo(): string {

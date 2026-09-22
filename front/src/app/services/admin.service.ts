@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import type { PedidoPainel } from './pedido-painel';
+import type { HorarioDia } from './horarios';
 
 export type SituacaoLanchonete = 'pendente' | 'ativa' | 'pausada';
 
@@ -29,7 +30,7 @@ export interface LanchoneteConfig {
   enderecoLoja: string | null;
   notifPainel: boolean;
   notifWhatsapp: boolean;
-  notifEmail: boolean;
+  horarios: HorarioDia[] | null;
   situacao: SituacaoLanchonete;
   ativa: boolean;
 }
@@ -164,10 +165,13 @@ export class AdminService {
     return firstValueFrom(this.api.delete<{ ok: boolean }>(`/admin/opcoes/${idOpcao}`));
   }
 
-  listPedidos(slug: string, status?: string): Promise<PedidoPainel[]> {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  listPedidos(slug: string, status?: string, historico = false): Promise<PedidoPainel[]> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (historico) params.set('historico', '1');
+    const query = params.toString();
     return firstValueFrom(
-      this.api.get<PedidoPainel[]>(`/admin/lanchonetes/${slug}/pedidos${query}`),
+      this.api.get<PedidoPainel[]>(`/admin/lanchonetes/${slug}/pedidos${query ? `?${query}` : ''}`),
     );
   }
 

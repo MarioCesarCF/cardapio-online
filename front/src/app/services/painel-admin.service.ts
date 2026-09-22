@@ -51,7 +51,6 @@ export interface LanchoneteConsulta {
   enderecoLoja: string | null;
   notifPainel: boolean;
   notifWhatsapp: boolean;
-  notifEmail: boolean;
   situacao: string;
   createdAt: string;
   updatedAt: string;

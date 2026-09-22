@@ -8,7 +8,9 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { gerarBrCode } from './pix.js';
 import { formataPedido } from './pedidos.types.js';
+import { estaDentroDoHorario, type HorarioDia } from './horarios.js';
 import { PedidosGateway } from './pedidos.gateway.js';
+import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
 import type { AuthenticatedUser } from '../auth/authenticated-user.js';
 
 interface OpcaoPedidoInput {
@@ -43,8 +45,10 @@ export interface CriaPedidoInput {
   enderecoId?: string;
   endereco?: EnderecoInput;
   observacao?: string;
+  pagamentoInfo?: string;
   telefone?: string;
   formaPagamento?: 'pix' | 'cartao' | 'dinheiro';
+  tipoEntrega?: 'entrega' | 'retirar' | 'consumir';
 }
 
 @Injectable()
@@ -54,6 +58,7 @@ export class PedidosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: PedidosGateway,
+    private readonly whatsapp: WhatsAppService,
   ) {}
 
   async criaPedido(
@@ -63,21 +68,36 @@ export class PedidosService {
   ) {
     const itens = this.validaItens(body.itens);
     const observacao = this.opcional(body.observacao, 300);
+    const pagamentoInfo = this.opcional(body.pagamentoInfo, 100);
     const telefone = this.validaTelefone(body.telefone);
     const formaPagamento = this.validaFormaPagamento(body.formaPagamento);
+    const tipoEntrega = this.validaTipoEntrega(body.tipoEntrega);
 
     const lanchonete = await this.prisma.lanchonete.findFirst({
       where: { slug, situacao: 'ativa' },
     });
     if (!lanchonete) throw new NotFoundException('Cardápio não encontrado.');
 
-    const enderecoEntrega = await this.resolveEndereco(user, body);
+    if (
+      !estaDentroDoHorario(
+        lanchonete.horarios as HorarioDia[] | null,
+        new Date(),
+      )
+    ) {
+      throw new BadRequestException(
+        'Lanchonete fora do horário de funcionamento.',
+      );
+    }
+
+    const enderecoEntrega =
+      tipoEntrega === 'entrega' ? await this.resolveEndereco(user, body) : null;
     const produtos = await this.carregaProdutos(itens, lanchonete.id);
     const { itensMontados, subtotal } = this.montaItens(itens, produtos);
 
     await this.ensureCliente(user, telefone);
 
-    const brCodePix = formaPagamento === 'pix' ? this.geraPix(lanchonete, subtotal) : null;
+    const brCodePix =
+      formaPagamento === 'pix' ? this.geraPix(lanchonete, subtotal) : null;
     const numero = await this.proximoNumero(lanchonete.id);
 
     const pedido = await this.prisma.$transaction(async (tx) => {
@@ -87,6 +107,7 @@ export class PedidosService {
           lanchoneteId: lanchonete.id,
           clienteId: user.id,
           status: 'recebido',
+          tipoEntrega,
           subtotal,
           total: subtotal,
           formaPagamento,
@@ -94,6 +115,7 @@ export class PedidosService {
           clienteTelefone: telefone,
           enderecoEntrega: enderecoEntrega as Prisma.InputJsonValue,
           observacao,
+          pagamentoInfo,
           itens: {
             create: itensMontados.map((item) => ({
               produtoId: item.produtoId,
@@ -128,6 +150,18 @@ export class PedidosService {
       }),
     );
 
+    // Notificação WhatsApp ao dono quando o canal está ativo (nunca derruba o
+    // pedido: falha de envio é apenas logada).
+    try {
+      await this.notificaWhatsApp(lanchonete, pedido);
+    } catch (error) {
+      this.logger.warn(
+        `WhatsApp indisponível (loja ${lanchonete.id}): ${
+          error instanceof Error ? error.message : 'erro desconhecido'
+        }`,
+      );
+    }
+
     // A 1ª lanchonete cujo pedido o cliente finaliza vira favorita (silencioso).
     try {
       await this.prisma.lanchoneteFavorita.upsert({
@@ -152,6 +186,9 @@ export class PedidosService {
       id: pedido.id,
       numero: pedido.numero,
       status: pedido.status,
+      tipoEntrega: pedido.tipoEntrega,
+      formaPagamento: pedido.formaPagamento,
+      pagamentoInfo: pedido.pagamentoInfo,
       total: Number(pedido.total),
       brCodePix: pedido.brCodePix,
     };
@@ -350,6 +387,30 @@ export class PedidosService {
     return Number(next.next);
   }
 
+  private async notificaWhatsApp(
+    lanchonete: {
+      nome: string;
+      whatsapp: string | null;
+      notifWhatsapp: boolean;
+    },
+    pedido: {
+      numero: number;
+      total: unknown;
+      tipoEntrega: string;
+      formaPagamento: string;
+    },
+  ): Promise<void> {
+    if (!lanchonete.notifWhatsapp || !this.whatsapp.configured) {
+      return;
+    }
+    await this.whatsapp.enviarNovoPedido(lanchonete, {
+      numero: pedido.numero,
+      total: Number(pedido.total),
+      tipoEntrega: pedido.tipoEntrega,
+      formaPagamento: pedido.formaPagamento,
+    });
+  }
+
   private async ensureCliente(
     user: AuthenticatedUser,
     telefone?: string | null,
@@ -401,6 +462,17 @@ export class PedidosService {
       throw new BadRequestException('Forma de pagamento inválida.');
     }
     return forma;
+  }
+
+  private validaTipoEntrega(
+    value: unknown,
+  ): 'entrega' | 'retirar' | 'consumir' {
+    if (value == null) return 'entrega';
+    const tipo = String(value).toLowerCase();
+    if (tipo !== 'entrega' && tipo !== 'retirar' && tipo !== 'consumir') {
+      throw new BadRequestException('Tipo de pedido inválido.');
+    }
+    return tipo;
   }
 
   private opcional(value: unknown, max: number): string | null {

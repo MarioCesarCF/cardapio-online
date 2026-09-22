@@ -39,6 +39,30 @@ header {
   color: var(--app-texto-suave);
 }
 
+.abas {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1rem;
+
+  .aba {
+    padding: 6px 14px;
+    border: 1px solid var(--app-borda);
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--app-superficie-2);
+    color: var(--app-texto-suave);
+
+    &.aba--ativa {
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color, #fff);
+    }
+  }
+}
+
 .pedido {
   background: var(--app-superficie);
   border: 1px solid var(--app-borda);
@@ -73,6 +97,17 @@ header {
     background: color-mix(in srgb, var(--cor) 16%, transparent);
     color: var(--cor);
     border: 1px solid color-mix(in srgb, var(--cor) 32%, transparent);
+  }
+
+  .tipo {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--app-superficie-2);
+    color: var(--app-texto-suave);
+    border: 1px solid var(--app-borda);
   }
 
   .status-recebido {
@@ -126,10 +161,22 @@ header {
   }
 
   .endereco,
-  .obs {
+  .obs,
+  .pagamento-info {
     font-size: 0.85rem;
     color: var(--app-texto-suave);
     margin: 0.65rem 0 0;
+  }
+
+  .pagamento-info {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+
+    i {
+      color: var(--p-primary-color);
+    }
   }
 
   .obs--cancel {

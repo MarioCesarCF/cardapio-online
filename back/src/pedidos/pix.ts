@@ -39,6 +39,55 @@ function normalize(value: string, max: number): string {
   return ascii.slice(0, max);
 }
 
+// CPF válido (módulo 11) — desambigua 11 dígitos entre CPF e telefone móvel.
+function cpfValido(digitos: string): boolean {
+  if (!/^\d{11}$/.test(digitos)) {
+    return false;
+  }
+  if (/^(\d)\1+$/.test(digitos)) {
+    return false;
+  }
+  const somaInicial = (ate: number, base: number) => {
+    let soma = 0;
+    for (let i = 0; i < ate; i++) {
+      soma += Number(digitos[i]) * (base - i);
+    }
+    return soma;
+  };
+  const digito = (soma: number) => ((soma * 10) % 11) % 10;
+  const d1 = digito(somaInicial(9, 10));
+  const d2 = digito(somaInicial(10, 11));
+  return digitos[9] === String(d1) && digitos[10] === String(d2);
+}
+
+// Chave PIX para o formato exigido pelos bancos dentro do BR Code (idempotente):
+//   - telefone  -> dígitos + DDI 55 (ex.: (11) 99999-9999 -> +5511999999999)
+//   - e-mail    -> trim + minúsculas
+//   - CPF/CNPJ  -> somente dígitos (CPF é desambiguado de telefone por dígito verificador)
+//   - aleatória -> trim
+// Nunca logar a chave (dado sensível — ver regras em AGENTS.md).
+export function normalizarChavePix(chave: string): string {
+  const bruta = chave.trim();
+  if (!bruta) {
+    return bruta;
+  }
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bruta)) {
+    return bruta.toLowerCase();
+  }
+  const digitos = bruta.replace(/\D/g, '');
+  if (digitos.length >= 10 && digitos.length <= 13) {
+    if (digitos.length === 11 && cpfValido(digitos)) {
+      return digitos;
+    }
+    const jaTemDdi = digitos.startsWith('55') && digitos.length >= 12;
+    return (jaTemDdi ? '+' : '+55') + digitos;
+  }
+  if (digitos.length === 14) {
+    return digitos;
+  }
+  return bruta;
+}
+
 export function gerarBrCode(params: {
   chavePix: string;
   nomeTitular: string;
@@ -46,8 +95,8 @@ export function gerarBrCode(params: {
   valorTotal: number;
   txid?: string;
 }): string {
-  const merchantAccount =
-    emv('00', 'br.gov.bcb.pix') + emv('01', params.chavePix);
+  const chave = normalizarChavePix(params.chavePix);
+  const merchantAccount = emv('00', 'br.gov.bcb.pix') + emv('01', chave);
   const txid = params.txid ?? '***';
   const payloadSemCrc =
     emv('00', '01') +

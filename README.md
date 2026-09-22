@@ -7,7 +7,7 @@ Plataforma de cardápio online para lanchonetes pequenas: página pública por l
 - **Banco**: PostgreSQL serverless (Neon) via Prisma
 - **Auth**: Neon Auth (Managed Better Auth) — e-mail/senha + OAuth
 - **Storage**: Cloudflare R2 (galeria de imagens)
-- **E-mail**: Resend (reset de senha, notificações)
+- **E-mail**: reset de senha enviado pelo próprio Neon Auth (configurável no console da Neon)
 
 Mais detalhes em [PLAN.md](./PLAN.md).
 
@@ -21,7 +21,7 @@ back/    # NestJS API
 ## Requisitos
 
 - Node.js ≥ 20
-- Contas em Neon, Cloudflare R2, Vercel e Render (só para deploy); Resend para e-mails
+- Contas em Neon, Cloudflare R2, Vercel e Render (só para deploy)
 
 ## Rodando localmente
 

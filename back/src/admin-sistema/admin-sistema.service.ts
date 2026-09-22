@@ -239,7 +239,6 @@ export class AdminSistemaService implements OnModuleInit {
       enderecoLoja: lanchonete.enderecoLoja,
       notifPainel: lanchonete.notifPainel,
       notifWhatsapp: lanchonete.notifWhatsapp,
-      notifEmail: lanchonete.notifEmail,
       situacao: lanchonete.situacao,
       createdAt: lanchonete.createdAt,
       updatedAt: lanchonete.updatedAt,
@@ -496,7 +495,9 @@ export class AdminSistemaService implements OnModuleInit {
 
     const nome = this.nomeValido(body.nome);
     if (nome === admin.nome) {
-      throw new BadRequestException('Nenhuma alteração no nome do administrador.');
+      throw new BadRequestException(
+        'Nenhuma alteração no nome do administrador.',
+      );
     }
 
     const atualizado = await this.prisma.adminSistema.update({

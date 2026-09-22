@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type { GrupoOpcoes, Lanchonete, Opcao } from '@prisma/client';
 import { PedidosGateway } from '../pedidos/pedidos.gateway.js';
+import { normalizarChavePix } from '../pedidos/pix.js';
 import { formataPedido } from '../pedidos/pedidos.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -47,8 +48,19 @@ const CONFIG_FIELDS = [
   'enderecoLoja',
   'notifPainel',
   'notifWhatsapp',
-  'notifEmail',
+  'horarios',
 ] as const;
+
+// Dia 0 = domingo (bate com Date.getDay()). dias fechados guardam inicio/fim null.
+export interface HorarioDia {
+  dia: number;
+  aberto: boolean;
+  inicio: string | null;
+  fim: string | null;
+}
+
+const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+const QUANTIDADE_DIAS = 7;
 
 @Injectable()
 export class AdminService {
@@ -149,6 +161,12 @@ export class AdminService {
         data.nome = this.requiredNome(body, 'nome');
       } else if (field === 'tipo') {
         data.tipo = this.optionalTipo(value);
+      } else if (field === 'horarios') {
+        data.horarios = this.validaHorarios(
+          value,
+        ) as unknown as Prisma.LanchoneteUpdateInput['horarios'];
+      } else if (field === 'chavePix') {
+        data.chavePix = this.validaChavePix(value);
       } else {
         (data as unknown as Record<string, unknown>)[field] =
           value === '' ? null : value;
@@ -412,7 +430,7 @@ export class AdminService {
 
   // ---------- Pedidos (painel) ----------
 
-  async listPedidos(userId: string, slug: string, status?: string) {
+  async listPedidos(userId: string, slug: string, status?: string, historico = false) {
     const lanchonete = await this.getLanchoneteOwned(userId, slug);
     if (
       status !== undefined &&
@@ -421,7 +439,11 @@ export class AdminService {
       throw new BadRequestException('Status inválido');
     }
     const pedidos = await this.prisma.pedido.findMany({
-      where: { lanchoneteId: lanchonete.id, ...(status ? { status } : {}) },
+      where: {
+        lanchoneteId: lanchonete.id,
+        ...(status ? { status } : {}),
+        arquivado: historico,
+      },
       orderBy: { numero: 'desc' },
       include: {
         itens: { include: { opcoes: true } },
@@ -534,7 +556,7 @@ export class AdminService {
         ? 0
         : this.integer(body.minSelecoes, 'minSelecoes');
     let maxSelecoes: number | null =
-      body.maxSelecoes === undefined
+      body.maxSelecoes === undefined || body.maxSelecoes === null
         ? null
         : this.integer(body.maxSelecoes, 'maxSelecoes');
     if (maxSelecoes !== null && maxSelecoes < minSelecoes) {
@@ -890,6 +912,89 @@ export class AdminService {
     return value;
   }
 
+  // Horários: array de 7 itens, um por dia (0 = domingo). Dias abertos exigem
+  // inicio/fim "HH:MM" válidos e fim depois do início (00:00 = meia-noite). Dias
+  // fechados são normalizados com inicio/fim null.
+  private validaHorarios(value: unknown): HorarioDia[] | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (!Array.isArray(value) || value.length !== QUANTIDADE_DIAS) {
+      throw new BadRequestException(
+        'Os horários devem cobrir os 7 dias da semana.',
+      );
+    }
+    const dias = new Set<number>();
+    const resultado: HorarioDia[] = [];
+    for (const raw of value) {
+      if (typeof raw !== 'object' || raw === null) {
+        throw new BadRequestException(
+          'Cada dia da semana deve ter um período.',
+        );
+      }
+      const item = raw as Record<string, unknown>;
+      const dia = item.dia;
+      if (
+        typeof dia !== 'number' ||
+        !Number.isInteger(dia) ||
+        dia < 0 ||
+        dia > 6 ||
+        dias.has(dia)
+      ) {
+        throw new BadRequestException(
+          'Cada dia da semana deve aparecer uma única vez (0 a 6).',
+        );
+      }
+      dias.add(dia);
+      const aberto = Boolean(item.aberto);
+      const inicio = aberto
+        ? this.obrigatoriaHorario(item.inicio, 'início')
+        : null;
+      const fim = aberto ? this.obrigatoriaHorario(item.fim, 'fim') : null;
+      if (inicio !== null && fim !== null && !this.horarioValido(inicio, fim)) {
+        throw new BadRequestException(
+          'O horário de fim deve ser depois do horário de início.',
+        );
+      }
+      resultado.push({ dia, aberto, inicio, fim });
+    }
+    return resultado.sort((a, b) => a.dia - b.dia);
+  }
+
+  private obrigatoriaHorario(value: unknown, rotulo: string): string {
+    if (typeof value !== 'string' || !HORA_REGEX.test(value.trim())) {
+      throw new BadRequestException(
+        `Preencha o horário de ${rotulo} no formato HH:MM.`,
+      );
+    }
+    return value.trim();
+  }
+
+  private horarioValido(inicio: string, fim: string): boolean {
+    const ini = this.toMinutos(inicio);
+    const fimMin = this.toMinutos(fim);
+    // fim 00:00 = meia-noite (vira o dia, ex.: 22h–00h).
+    return fimMin > ini || (fimMin === 0 && ini > 0);
+  }
+
+  private toMinutos(horario: string): number {
+    const [h, m] = horario.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  // Chave PIX: normaliza para o formato do BR Code (telefone +55, CPF/CNPJ só
+  // dígitos, e-mail minúsculo, aleatória trim). Vazio limpa a chave.
+  private validaChavePix(value: unknown): string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value !== 'string') {
+      throw new BadRequestException('Chave PIX inválida.');
+    }
+    const normalizada = normalizarChavePix(value);
+    return normalizada === '' ? null : normalizada;
+  }
+
   private isUniqueError(error: unknown): boolean {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -913,7 +1018,7 @@ export class AdminService {
       enderecoLoja: lanchonete.enderecoLoja,
       notifPainel: lanchonete.notifPainel,
       notifWhatsapp: lanchonete.notifWhatsapp,
-      notifEmail: lanchonete.notifEmail,
+      horarios: lanchonete.horarios,
       situacao: lanchonete.situacao,
       ativa: lanchonete.situacao === 'ativa',
     };

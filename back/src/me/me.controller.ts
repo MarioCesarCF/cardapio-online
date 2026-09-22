@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -66,7 +67,10 @@ export class MeController {
   }
 
   @Get('pedidos')
-  listarPedidos(@CurrentUser() user: AuthenticatedUser) {
-    return this.meService.listarPedidos(user);
+  listarPedidos(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('historico') historico?: string,
+  ) {
+    return this.meService.listarPedidos(user, historico === '1');
   }
 }

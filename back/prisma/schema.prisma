@@ -26,8 +26,8 @@ model Lanchonete {
   enderecoLoja String?
   notifPainel  Boolean  @default(true)
   notifWhatsapp Boolean @default(false)
-  notifEmail   Boolean  @default(false)
   situacao     String   @default("pendente") // pendente | ativa | pausada
+  horarios     Json? // [{dia 0-6, aberto, inicio "HH:MM", fim "HH:MM"}] — dia 0 = domingo (Date.getDay())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -177,6 +177,7 @@ model Pedido {
   clienteId       String?  @db.Uuid
   cliente         Cliente?  @relation(fields: [clienteId], references: [id])
   status          String   @default("recebido")
+  tipoEntrega     String   @default("entrega") // entrega | retirar | consumir
   subtotal        Decimal  @db.Decimal(10, 2)
   total           Decimal  @db.Decimal(10, 2)
   formaPagamento  String   @default("pix")
@@ -185,11 +186,14 @@ model Pedido {
   justificativaCancelamento String?
   enderecoEntrega Json?
   observacao      String?
+  pagamentoInfo   String? // ex.: "Forma de pagamento: Dinheiro (troco para R$ 50,00)"
+  arquivado       Boolean  @default(false) // true após 24h (vai para o histórico)
   createdAt       DateTime @default(now())
 
   itens           PedidoItem[]
 
   @@unique([lanchoneteId, numero])
+  @@index([arquivado, createdAt])
   @@map("pedidos")
 }
 

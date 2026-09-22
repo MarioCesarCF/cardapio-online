@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Button } from 'primeng/button';
 import { AdminService } from '../../services/admin.service';
-import { MarcaService } from '../../services/marca.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -76,7 +75,7 @@ import { AuthService } from '../../services/auth.service';
       flex-wrap: wrap;
     }
     .shell__topo h1 {
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       margin: 0;
       flex: 1;
     }
@@ -166,7 +165,6 @@ export class AdminShellComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly admin = inject(AdminService);
-  private readonly marca = inject(MarcaService);
   private readonly auth = inject(AuthService);
 
   readonly slug = signal('');
@@ -182,7 +180,6 @@ export class AdminShellComponent {
         this.nome.set(config.nome);
         this.logo.set(config.logoUrl ?? '');
         this.situacao.set(config.situacao ?? '');
-        this.marca.aplicar(config.corPrincipal);
       });
     });
   }

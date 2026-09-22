@@ -31,9 +31,11 @@ export class LojasService {
         logoUrl: true,
         fonte: true,
         corPrincipal: true,
+        tipo: true,
         whatsapp: true,
         emailContato: true,
         enderecoLoja: true,
+        horarios: true,
       },
     });
 
@@ -41,7 +43,18 @@ export class LojasService {
       throw new NotFoundException('Lanchonete não encontrada');
     }
 
-    return lanchonete;
+    return {
+      id: lanchonete.id,
+      nome: lanchonete.nome,
+      logoUrl: lanchonete.logoUrl,
+      fonte: lanchonete.fonte,
+      corPrincipal: lanchonete.corPrincipal,
+      tipo: lanchonete.tipo,
+      whatsapp: lanchonete.whatsapp,
+      emailContato: lanchonete.emailContato,
+      enderecoLoja: lanchonete.enderecoLoja,
+      horarios: lanchonete.horarios,
+    };
   }
 
   async getCardapio(slug: string) {

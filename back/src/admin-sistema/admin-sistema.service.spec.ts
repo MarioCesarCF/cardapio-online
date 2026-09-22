@@ -340,12 +340,10 @@ describe('AdminSistemaService', () => {
     it('retorna o e-mail de contato cadastrado', async () => {
       const prisma = {
         configPlataforma: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({
-              id: 'global',
-              emailLojista: 'contato@cardapio.com',
-            }),
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'global',
+            emailLojista: 'contato@cardapio.com',
+          }),
         },
       };
       const servico = criarServico(prisma);

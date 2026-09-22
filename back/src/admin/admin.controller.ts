@@ -71,8 +71,9 @@ export class AdminController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('slug') slug: string,
     @Query('status') status?: string,
+    @Query('historico') historico?: string,
   ) {
-    return this.admin.listPedidos(user.id, slug, status);
+    return this.admin.listPedidos(user.id, slug, status, historico === '1');
   }
 
   @Patch('pedidos/:idPedido/status')

@@ -8,6 +8,7 @@ import { CartService } from '../../services/cart.service';
 import {
   labelStatus as rotularStatus,
   STATUS_COM_PIX,
+  tipoEntregaLabel as rotularTipo,
   type PedidoStatus,
 } from '../../services/pedido-painel';
 import { Button } from 'primeng/button';
@@ -33,6 +34,7 @@ interface Pedido {
   id: string;
   numero: number;
   status: string;
+  tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
@@ -48,6 +50,7 @@ interface Pedido {
     cep: string | null;
   } | null;
   observacao: string | null;
+  pagamentoInfo: string | null;
   lanchonete: { nome: string; slug: string; logoUrl: string | null };
   createdAt: string;
   itens: PedidoItem[];
@@ -66,12 +69,17 @@ export class MeusPedidosComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly pedidos = signal<Pedido[]>([]);
+  readonly historico = signal(false);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly qrUrls = signal<Record<string, string>>({});
 
   labelStatus(status: string): string {
     return rotularStatus(status);
+  }
+
+  labelTipo(tipo: string): string {
+    return rotularTipo(tipo);
   }
 
   rotuloPagamento(forma: string): string {
@@ -108,7 +116,9 @@ export class MeusPedidosComponent implements OnInit {
       return;
     }
     try {
-      const pedidos = await firstValueFrom(this.api.get<Pedido[]>('/me/pedidos'));
+      const pedidos = await firstValueFrom(
+        this.api.get<Pedido[]>(`/me/pedidos${this.historico() ? '?historico=1' : ''}`),
+      );
       this.pedidos.set(pedidos);
       await this.gerarQrs(pedidos);
     } catch {
@@ -116,6 +126,11 @@ export class MeusPedidosComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  alternarHistorico(): void {
+    this.historico.update((v) => !v);
+    void this.carregar();
   }
 
   private async gerarQrs(pedidos: Pedido[]): Promise<void> {

@@ -4,97 +4,10 @@
     <p class="marca__apoio">Seu pedido começa aqui</p>
   </header>
 
-  @if (tela() === 'login' && me(); as dados) {
-    <section class="cartao superficie dados">
-      <span class="selo"><i class="pi pi-user"></i> sua conta</span>
-      <h2>Olá, {{ dados.user.name ?? 'visita' }}</h2>
-      <p class="suave">{{ dados.user.email }}</p>
-
-      <h3>Dados da conta</h3>
-      <form class="dados__form" (ngSubmit)="salvarPerfil()">
-        <label class="campo">
-          <span>Nome</span>
-          <input
-            pInputText
-            type="text"
-            autocomplete="name"
-            [(ngModel)]="perfilNome"
-            name="perfilNome"
-            required
-            minlength="2"
-            maxlength="80"
-          />
-        </label>
-        <label class="campo">
-          <span>WhatsApp</span>
-          <input
-            pInputText
-            type="tel"
-            autocomplete="tel"
-            inputmode="numeric"
-            [(ngModel)]="perfilTelefone"
-            name="perfilTelefone"
-            placeholder="(11) 99999-9999"
-          />
-        </label>
-        @if (perfilErro(); as erro) {
-          <p class="aviso"><i class="pi pi-exclamation-circle"></i> {{ erro }}</p>
-        }
-        @if (perfilSucesso()) {
-          <p class="aviso aviso--ok"><i class="pi pi-check-circle"></i> Dados salvos!</p>
-        }
-        <p-button
-          type="submit"
-          label="Salvar dados"
-          icon="pi pi-save"
-          [loading]="salvandoPerfil()"
-          [outlined]="true"
-        />
-      </form>
-
-      @if (dados.adminSistema) {
-        <h3>Acesso administrativo</h3>
-        <div class="dados__acoes">
-          <p-button
-            label="Painel administrativo da plataforma"
-            icon="pi pi-shield"
-            (onClick)="abrirPainel()"
-          />
-          @if (dados.adminSistemaFuncao === 'super') {
-            <p-tag value="raiz" severity="warn" />
-          }
-        </div>
-      }
-
-      <h3>Lanches cadastrados</h3>
-      @if (dados.lanchonetes.length === 0) {
-        <p class="suave">Nenhuma lanchonete vinculada a esta conta ainda.</p>
-      } @else {
-        <ul class="lista">
-          @for (lanchonete of dados.lanchonetes; track lanchonete.id) {
-            <li>
-              <a routerLink="/{{ lanchonete.slug }}">
-                <i class="pi pi-shop"></i> {{ lanchonete.nome }}
-              </a>
-              <span class="suave">/{{ lanchonete.slug }}</span>
-            </li>
-          }
-        </ul>
-        <a class="dados__gerenciar" routerLink="/admin"
-          ><i class="pi pi-sliders-h"></i> Gerenciar minhas lanchonetes</a
-        >
-      }
-
-      <div class="dados__acoes">
-        <p-button
-          label="Sair"
-          icon="pi pi-sign-out"
-          severity="secondary"
-          [outlined]="true"
-          (onClick)="sair()"
-        />
-      </div>
-    </section>
+  @if (tela() === 'login' && checando()) {
+    <div class="cartao superficie form">
+      <p class="suave"><i class="pi pi-spinner pi-spin"></i> Verificando sessão…</p>
+    </div>
   } @else {
     <form
       class="cartao superficie form"
@@ -166,13 +79,11 @@
               <input type="checkbox" [checked]="lembrar()" (change)="alternarLembrar()" />
               Lembrar de mim
             </label>
-            <button type="button" class="link" (click)="abrirRecuperacao()">
-              Esqueci senha
-            </button>
+            <button type="button" class="link" (click)="abrirRecuperacao()">Esqueci senha</button>
           </div>
         } @else {
           <label class="campo">
-            <span>Nome</span>
+            <span>{{ tipoConta() === 'lojista' ? 'Nome do proprietário' : 'Nome' }}</span>
             <input
               pInputText
               type="text"
@@ -184,7 +95,7 @@
           </label>
 
           <label class="campo">
-            <span>Email</span>
+            <span>{{ tipoConta() === 'lojista' ? 'E-mail do proprietário' : 'E-mail' }}</span>
             <input
               pInputText
               type="email"
@@ -231,7 +142,8 @@
               @if (tipoConta() === 'cliente') {
                 Faça pedidos nas lanchonetes e acompanhe tudo na sua página principal.
               } @else {
-                Você vai montar sua lanchonete: página, cardápio e recebimento de pedidos.
+                Você vai montar sua lanchonete: página, cardápio e recebimento de pedidos. Os campos
+                acima são os dados da pessoa responsável.
               }
             </p>
           </div>

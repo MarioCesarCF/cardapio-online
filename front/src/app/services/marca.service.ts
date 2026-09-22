@@ -9,8 +9,8 @@ export class MarcaService {
     aplicarCorMarca(null);
   }
 
-  aplicar(cor?: string | null): void {
+  aplicar(cor?: string | null, alvo?: HTMLElement | null): void {
     this.cor.set(cor || COR_MARCA_PADRAO);
-    aplicarCorMarca(cor);
+    aplicarCorMarca(cor, alvo);
   }
 }

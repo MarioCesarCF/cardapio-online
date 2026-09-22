@@ -184,8 +184,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                   >
                   <span>
                     <strong>Notificações:</strong> painel {{ dados.notifPainel ? 'sim' : 'não' }} ·
-                    WhatsApp {{ dados.notifWhatsapp ? 'sim' : 'não' }} · e-mail
-                    {{ dados.notifEmail ? 'sim' : 'não' }}
+                    WhatsApp {{ dados.notifWhatsapp ? 'sim' : 'não' }}
                   </span>
                 </div>
               }
@@ -339,92 +338,92 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
               @if (lanchonetesFiltradas().length === 0) {
                 <p class="pa__vazio">Nenhuma lanchonete encontrada.</p>
               } @else {
-              <div class="pa__tabela">
-                <div class="pa__linha pa__linha--cabecalho">
-                  <span>Lanchonete</span>
-                  <span>Dono</span>
-                  <span>Conteúdo</span>
-                  <span>Criada em</span>
-                  <span>Status</span>
-                  <span>Ações</span>
-                </div>
-                @for (l of lanchonetesFiltradas(); track l.id) {
-                  <div class="pa__linha" [class.pa__linha--pausada]="l.situacao === 'pausada'">
-                    <span class="pa__nome">
-                      @let tipo = tipoDe(l.tipo);
-                      <span class="pa__emoji">{{ tipo?.emoji ?? '🏪' }}</span>
-                      <span>
-                        <strong>{{ l.nome }}</strong>
-                        <small>/{{ l.slug }}</small>
-                      </span>
-                    </span>
-                    <span class="pa__dono">
-                      {{ l.donoNome || '—' }}
-                      <small>{{ l.donoEmail || '' }}</small>
-                    </span>
-                    <span class="pa__conteudo">
-                      {{ l.totalCategorias }} cat. · {{ l.totalProdutos }} prod. ·
-                      {{ l.totalPedidos }} ped.
-                    </span>
-                    <span>{{ dataDe(l.createdAt) }}</span>
-                    <span>
-                      <p-tag
-                        [value]="rotuloSituacao(l.situacao)"
-                        [severity]="situacaoSeverity(l.situacao)"
-                      />
-                    </span>
-                    <span class="pa__acoes">
-                      <p-button
-                        label="Consultar"
-                        icon="pi pi-search"
-                        size="small"
-                        severity="secondary"
-                        [outlined]="true"
-                        (onClick)="abrirConsulta(l)"
-                      />
-                      @if (l.situacao === 'pendente') {
-                        <p-button
-                          label="Aprovar"
-                          icon="pi pi-check"
-                          size="small"
-                          severity="success"
-                          (onClick)="aprovar(l)"
-                        />
-                      }
-                      @if (l.situacao === 'ativa') {
-                        <p-button
-                          label="Pausar"
-                          icon="pi pi-pause"
-                          size="small"
-                          severity="secondary"
-                          [outlined]="true"
-                          (onClick)="pausar(l)"
-                        />
-                      }
-                      @if (l.situacao === 'pausada') {
-                        <p-button
-                          label="Reativar"
-                          icon="pi pi-play"
-                          size="small"
-                          severity="secondary"
-                          [outlined]="true"
-                          (onClick)="reativar(l)"
-                        />
-                      }
-                      @if (eSuper()) {
-                        <p-button
-                          label="Excluir"
-                          icon="pi pi-trash"
-                          size="small"
-                          severity="danger"
-                          [outlined]="true"
-                          (onClick)="excluir(l)"
-                        />
-                      }
-                    </span>
+                <div class="pa__tabela">
+                  <div class="pa__linha pa__linha--cabecalho">
+                    <span>Lanchonete</span>
+                    <span>Dono</span>
+                    <span>Conteúdo</span>
+                    <span>Criada em</span>
+                    <span>Status</span>
+                    <span>Ações</span>
                   </div>
-                }
-              </div>
+                  @for (l of lanchonetesFiltradas(); track l.id) {
+                    <div class="pa__linha" [class.pa__linha--pausada]="l.situacao === 'pausada'">
+                      <span class="pa__nome">
+                        @let tipo = tipoDe(l.tipo);
+                        <span class="pa__emoji">{{ tipo?.emoji ?? '🏪' }}</span>
+                        <span>
+                          <strong>{{ l.nome }}</strong>
+                          <small>/{{ l.slug }}</small>
+                        </span>
+                      </span>
+                      <span class="pa__dono">
+                        {{ l.donoNome || '—' }}
+                        <small>{{ l.donoEmail || '' }}</small>
+                      </span>
+                      <span class="pa__conteudo">
+                        {{ l.totalCategorias }} cat. · {{ l.totalProdutos }} prod. ·
+                        {{ l.totalPedidos }} ped.
+                      </span>
+                      <span>{{ dataDe(l.createdAt) }}</span>
+                      <span>
+                        <p-tag
+                          [value]="rotuloSituacao(l.situacao)"
+                          [severity]="situacaoSeverity(l.situacao)"
+                        />
+                      </span>
+                      <span class="pa__acoes">
+                        <p-button
+                          label="Consultar"
+                          icon="pi pi-search"
+                          size="small"
+                          severity="secondary"
+                          [outlined]="true"
+                          (onClick)="abrirConsulta(l)"
+                        />
+                        @if (l.situacao === 'pendente') {
+                          <p-button
+                            label="Aprovar"
+                            icon="pi pi-check"
+                            size="small"
+                            severity="success"
+                            (onClick)="aprovar(l)"
+                          />
+                        }
+                        @if (l.situacao === 'ativa') {
+                          <p-button
+                            label="Pausar"
+                            icon="pi pi-pause"
+                            size="small"
+                            severity="secondary"
+                            [outlined]="true"
+                            (onClick)="pausar(l)"
+                          />
+                        }
+                        @if (l.situacao === 'pausada') {
+                          <p-button
+                            label="Reativar"
+                            icon="pi pi-play"
+                            size="small"
+                            severity="secondary"
+                            [outlined]="true"
+                            (onClick)="reativar(l)"
+                          />
+                        }
+                        @if (eSuper()) {
+                          <p-button
+                            label="Excluir"
+                            icon="pi pi-trash"
+                            size="small"
+                            severity="danger"
+                            [outlined]="true"
+                            (onClick)="excluir(l)"
+                          />
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
               }
             }
           }
@@ -706,7 +705,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
       flex-wrap: wrap;
     }
     .pa__topo h1 {
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       margin: 0;
     }
     .pa__sair {
@@ -1143,8 +1142,7 @@ export class PainelAdminComponent {
       if (situacao && l.situacao !== situacao) return false;
       if (tipo && l.tipo !== tipo) return false;
       if (!busca) return true;
-      const alvo =
-        `${l.nome} /${l.slug} ${l.donoNome ?? ''} ${l.donoEmail ?? ''}`.toLowerCase();
+      const alvo = `${l.nome} /${l.slug} ${l.donoNome ?? ''} ${l.donoEmail ?? ''}`.toLowerCase();
       return alvo.includes(busca);
     });
   });
@@ -1155,9 +1153,7 @@ export class PainelAdminComponent {
   readonly editarAdminNome = signal('');
   readonly salvandoAdminEdicao = signal(false);
   readonly erroEditarAdmin = signal<string | null>(null);
-  readonly editarAdminNomeValido = computed(
-    () => this.editarAdminNome().trim().length >= 2,
-  );
+  readonly editarAdminNomeValido = computed(() => this.editarAdminNome().trim().length >= 2);
 
   readonly consultando = signal<LanchonetePainel | null>(null);
   readonly consultaDados = signal<LanchoneteConsulta | null>(null);

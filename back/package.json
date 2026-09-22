@@ -22,7 +22,9 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "seed:galeria": "node --env-file=.env scripts/seed-galeria.mjs",
     "seed:teste": "node --env-file=.env scripts/seed-teste.mjs",
-    "criar:admin": "node --env-file=.env scripts/criar-admin.mjs"
+    "criar:admin": "node --env-file=.env scripts/criar-admin.mjs",
+    "corrigir:chaves-pix": "node --env-file=.env scripts/corrigir-chaves-pix.mjs",
+    "testar:whatsapp": "node --env-file=.env scripts/testar-whatsapp.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1130.0",

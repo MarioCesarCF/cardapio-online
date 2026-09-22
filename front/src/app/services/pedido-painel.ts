@@ -10,6 +10,7 @@ export interface PedidoPainel {
   id: string;
   numero: number;
   status: string;
+  tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
@@ -24,6 +25,8 @@ export interface PedidoPainel {
     cep: string | null;
   } | null;
   observacao: string | null;
+  pagamentoInfo: string | null;
+  arquivado: boolean;
   createdAt: string;
   lanchonete: { id: string; nome: string; slug: string };
   cliente: { id: string; nome: string | null; telefone: string | null } | null;
@@ -83,4 +86,24 @@ export function proximoStatus(status: string): PedidoStatus | null {
 
 export function podeCancelar(status: string): boolean {
   return STATUS_CANCELAVEIS.has(status as PedidoStatus);
+}
+
+const TIPO_ENTREGA_LABELS: Record<string, string> = {
+  entrega: 'Entrega (Delivery)',
+  retirar: 'Retirar no local',
+  consumir: 'Consumir no local',
+};
+
+const TIPO_ENTREGA_LABELS_CURTO: Record<string, string> = {
+  entrega: 'Entrega',
+  retirar: 'Retirar',
+  consumir: 'No local',
+};
+
+export function tipoEntregaLabel(tipo: string): string {
+  return TIPO_ENTREGA_LABELS[tipo] ?? tipo;
+}
+
+export function tipoEntregaCurto(tipo: string): string {
+  return TIPO_ENTREGA_LABELS_CURTO[tipo] ?? tipo;
 }

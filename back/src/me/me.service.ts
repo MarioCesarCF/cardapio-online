@@ -207,10 +207,10 @@ export class MeService {
     return { ok: true };
   }
 
-  async listarPedidos(user: AuthenticatedUser) {
+  async listarPedidos(user: AuthenticatedUser, historico = false) {
     await this.ensureCliente(user);
     const pedidos = await this.prisma.pedido.findMany({
-      where: { clienteId: user.id },
+      where: { clienteId: user.id, arquivado: historico },
       orderBy: { createdAt: 'desc' },
       include: {
         lanchonete: { select: { nome: true, slug: true, logoUrl: true } },
@@ -222,6 +222,7 @@ export class MeService {
       id: p.id,
       numero: p.numero,
       status: p.status,
+      tipoEntrega: p.tipoEntrega,
       justificativaCancelamento: p.justificativaCancelamento ?? null,
       subtotal: Number(p.subtotal),
       total: Number(p.total),
@@ -229,6 +230,8 @@ export class MeService {
       brCodePix: p.brCodePix,
       enderecoEntrega: p.enderecoEntrega,
       observacao: p.observacao,
+      pagamentoInfo: p.pagamentoInfo ?? null,
+      arquivado: p.arquivado,
       lanchonete: p.lanchonete,
       createdAt: p.createdAt,
       itens: p.itens.map((item) => ({

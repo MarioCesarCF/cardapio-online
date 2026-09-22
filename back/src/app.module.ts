@@ -10,6 +10,7 @@ import { MeModule } from './me/me.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { R2Module } from './r2/r2.module.js';
+import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
 import { GaleriaModule } from './galeria/galeria.module.js';
 import { AdminSistemaModule } from './admin-sistema/admin-sistema.module.js';
 import { FavoritasModule } from './favoritas/favoritas.module.js';
@@ -21,6 +22,7 @@ import { AssetsController } from './assets/assets.controller.js';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     R2Module,
+    WhatsAppModule,
     AuthModule,
     LojasModule,
     MeModule,

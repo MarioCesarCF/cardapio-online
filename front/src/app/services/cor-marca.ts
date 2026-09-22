@@ -60,15 +60,16 @@ function hsl(h: number, s: number, l: number): string {
 }
 
 /**
- * Aplica a cor da lanchonete como paleta primária do PrimeNG.
- * Escreve as variáveis inline em <html>, que têm precedência sobre o tema
- * injetado, garantindo que os acentos sigam a marca em claro e escuro.
+ * Aplica uma cor como paleta primária do PrimeNG sobre um elemento-alvo.
+ * Sem alvo, escreve as variáveis inline em <html> (paleta global do site).
+ * Escrevendo num elemento da página (ex.: host do cardápio), a cor fica
+ * restrita àquela subárvore — o resto do site mantém a cor padrão.
  */
-export function aplicarCorMarca(cor?: string | null): void {
+export function aplicarCorMarca(cor?: string | null, alvo?: HTMLElement | null): void {
   const rgb = cor ? hexParaRgb(cor) : null;
   const base = rgb ?? (hexParaRgb(COR_MARCA_PADRAO) as [number, number, number]);
   const tom = rgbParaHsl(base[0], base[1], base[2]);
-  const raiz = document.documentElement;
+  const raiz = alvo ?? document.documentElement;
 
   const meio = Math.max(42, Math.min(58, tom.l));
   const niveis: Record<number, { l: number; s: number }> = {

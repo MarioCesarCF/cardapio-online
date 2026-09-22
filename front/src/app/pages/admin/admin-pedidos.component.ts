@@ -15,6 +15,7 @@ import {
   PedidoPainel,
   podeCancelar as podeCancelarStatus,
   proximoStatus as proximo,
+  tipoEntregaCurto as rotularTipoCurto,
 } from '../../services/pedido-painel';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
@@ -47,6 +48,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             [outlined]="true"
             (onClick)="recarregar()"
           />
+          <button
+            type="button"
+            class="chip chip--historico"
+            [class.ativa]="historico()"
+            (click)="alternarHistorico()"
+          >
+            <i class="pi pi-calendar-clock"></i>
+            {{ historico() ? 'Atuais' : 'Histórico' }}
+          </button>
         </div>
 
         @if (erro(); as msg) {
@@ -93,6 +103,7 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <article class="pedido superficie status-{{ pedido.status }}">
               <header>
                 <h3>#{{ pedido.numero }}</h3>
+                <span class="tipo">{{ labelTipoCurto(pedido.tipoEntrega) }}</span>
                 <p-tag
                   [value]="labelStatus(pedido.status)"
                   [severity]="severidade(pedido.status)"
@@ -152,6 +163,11 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                     - {{ end.complemento }}
                   }
                   · {{ end.bairro }} — {{ end.cidade }}/{{ end.uf }}
+                </p>
+              }
+              @if (pedido.pagamentoInfo) {
+                <p class="obs obs--pagamento">
+                  <i class="pi pi-wallet"></i> {{ pedido.pagamentoInfo }}
                 </p>
               }
               @if (pedido.observacao) {
@@ -331,6 +347,17 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
       color: var(--p-red-500, #ef4444);
       font-weight: 600;
     }
+    .obs.obs--pagamento {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-weight: 600;
+
+      i {
+        color: var(--p-primary-color);
+        font-size: 0.72rem;
+      }
+    }
     .cancel {
       display: grid;
       gap: 8px;
@@ -367,6 +394,16 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     header h3 {
       margin: 0;
       font-size: 1.05rem;
+    }
+    .tipo {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      background: var(--app-superficie-2);
+      color: var(--app-texto-suave);
+      border: 1px solid var(--app-borda);
     }
     .data {
       color: var(--app-texto-suave);
@@ -426,6 +463,7 @@ export class AdminPedidosComponent implements OnDestroy {
   readonly slug = signal('');
   readonly pedidos = signal<PedidoPainel[]>([]);
   readonly filtro = signal<string>('todos');
+  readonly historico = signal(false);
   readonly loading = signal(true);
   readonly erro = signal<string | null>(null);
   readonly novoPedido = signal<PedidoPainel | null>(null);
@@ -497,12 +535,18 @@ export class AdminPedidosComponent implements OnDestroy {
     this.loading.set(true);
     this.erro.set(null);
     try {
-      this.pedidos.set(await this.admin.listPedidos(this.slug()));
+      this.pedidos.set(await this.admin.listPedidos(this.slug(), undefined, this.historico()));
     } catch {
       await this.router.navigate(['/admin']);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  alternarHistorico() {
+    this.historico.update((v) => !v);
+    this.filtro.set('todos');
+    void this.carregar();
   }
 
   recarregar() {
@@ -512,6 +556,10 @@ export class AdminPedidosComponent implements OnDestroy {
 
   labelStatus(status: string): string {
     return rotularStatus(status);
+  }
+
+  labelTipoCurto(tipo: string): string {
+    return rotularTipoCurto(tipo);
   }
 
   proximoStatus(status: string): string | null {

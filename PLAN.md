@@ -1,6 +1,6 @@
 # Cardápio Online — Plano do Projeto
 
-## 0. Andamento (atualizado em 2026-09-20)
+## 0. Andamento (atualizado em 2026-09-21)
 
 > O app foi reconstruído por papel (plataforma → dono → cliente). Docs técnicos dos módulos em `AGENTS.md`; contas de teste em `CREDENCIAIS-TESTE.md`.
 
@@ -13,11 +13,52 @@
 - **Etapa 4 — Cadeia nova de status dos pedidos (concluída)**: status agora `recebido→em_preparo→enviado→entregue→finalizado`, com `cancelado` (só antes de sair pra entrega) e **justificativa obrigatória** em `pedido.justificativaCancelamento`. Dono avança uma etapa por vez no painel (`admin-pedidos` tem fluxo "próximo status" + botão "Cancelar pedido" com textarea de motivo); `PATCH /admin/pedidos/:idPedido/status` valida transições/justificativa e o realtime segue com `pedido:status`. Cliente vê o motivo do cancelamento e o PIX fica disponível de `recebido` até `enviado` (`STATUS_COM_PIX`).
 - **Etapa 5 — Identidade da home + contato para lojistas (concluída)**: tabela `config_plataforma` (`m9_plataforma_email_lojista`, linha única) guarda o **e-mail de contato** que aparece na página principal do cliente para quem quer abrir loja; editável pelo admin no painel (aba Configurações) via `GET/PATCH /admin-sistema/plataforma` e exposto publicamente em `GET /plataforma/email-lojista`. A home passou a se chamar **"Página principal"**, ganhou "Lanchonetes favoritas" como subtítulo antes do filtro e uma seção `mailto` "Quer vender pelo Cardápio Online?"; o link do cardápio virou "Página principal". Default do e-mail no boot = e-mail do admin raiz.
 - **Etapa 6 — Login: olhinho, lembrar de mim e recuperação de senha (concluída)**: tela de auth ganhou botão de **mostrar/ocultar senha**, checkbox **"Lembrar de mim"** (persiste e-mail + `rememberMe` no sign-in) e **"Esqueci senha"** que pede o e-mail, confirma cadastro via novo `POST /auth/verificar-email` e dispara o link de redefinição do Neon Auth (`requestPasswordReset`). O link cai em `/auth?esqueci=1&token=…` com tela própria de **nova senha + confirmação** → `resetPassword` sobrescreve a senha. Fluxo de link+reset 100% validado em smoke (senha do `cliente.teste` trocada e revertida); entrega real do e-mail depende da config de e-mail da Neon (infra em aberto).
-- **Bases**: M1 (core), `m4*` (admin_sistema), `m5` (situacao+logs, backfill), `m6` (cliente_telefone), `m7` (lanchonetes_favoritas), `m8` (pedido_status_justificativa), `m9` (plataforma_email_lojista). Seed `npm run seed:teste` e galeria `npm run seed:galeria` (Pexels → URL, R2 só com env).
+- **Bases**: M1 (core), `m4*` (admin_sistema), `m5` (situacao+logs, backfill), `m6` (cliente_telefone), `m7` (lanchonetes_favoritas), `m8` (pedido_status_justificativa), `m9` (plataforma_email_lojista), `m10` (pedido_tipo_entrega), `m11` (lanchonete_horarios). Seed `npm run seed:teste` e galeria `npm run seed:galeria` (Pexels → URL, R2 só com env).
 
 ### Falta fazer
-- **Infra/higiene**: configurar OAuth Google no console Neon (hoje dev usa usuários compartilhados); ativar R2 real (galeria evolui de URL Pexels → upload do `R2Service`); notificações WhatsApp (Evolution API a validar) e e-mail (Resend); deploy Vercel (front) + Render (back); correr testes karma do front (precisam de Chrome).
+- **Infra/higiene**: configurar OAuth Google no console Neon (hoje dev usa usuários compartilhados); ativar R2 real (galeria evolui de URL Pexels → upload do `R2Service`); **WhatsApp (F8.6)**: confirmar o envio com o número de TESTE da Meta (criar app + `WA_GRAPH_TOKEN`/`WA_PHONE_NUMBER_ID` e rodar `npm run testar:whatsapp` — em aberto, requer o dono); **recuperação de senha**: o envio do e-mail é do próprio **Neon Auth** — configurar remetente/SMTP (ex.: Gmail com App Password) no **console da Neon** (nosso back não envia e-mail); deploy Vercel (front) + Render (back); correr testes karma do front (precisam de Chrome).
 - **Etapa 7 — Importação de cardápio com IA (planejada)**: ver seção própria abaixo.
+- **Etapa 11 — Separação de perfis (Lanchonete × Cliente × Admin)**: planejada **por último** — ver seção própria abaixo.
+
+### Etapa 8 — Novas demandas (2026-09-21)
+Implementação **gradual em fases** (cada fase termina com build + testes do back e build do front):
+- **F8.1 — Tipo de pedido ✅**: `Pedido.tipoEntrega String @default("entrega")` (migração `m10_pedido_tipo_entrega`); `POST /l/:slug/pedidos` aceita `tipoEntrega` (`entrega|retirar|consumir`, default `entrega`, inválido → 400) e **só exige endereço quando `entrega`**; exposto no `formataPedido` (painel + histórico) e na resposta do POST. Front: checkout com **Entrega marcado por padrão**, `retirar`/`consumir` ocultam o bloco de endereço; badges no painel do dono, em meus-pedidos e no modal/barra do pedido.
+- **F8.2 — Aviso de pagamento presencial ✅**: no checkout, quando `cartao`/`dinheiro`, subtexto bem próximo do checkbox — dinâmico conforme o tipo de pedido: "Pagamento será realizado no momento da entrega." / "…da retirada." / "…no local." (front puro, `avisoPagamento()` + `.pago-delay`).
+- **F8.3 — Horário de funcionamento + bloqueio ✅**: `Lanchonete.horarios Json?` (migração `m11_lanchonete_horarios`, formato `[{dia 0-6, aberto, inicio "HH:MM", fim "HH:MM"}]`, **dia 0 = domingo** — `Date.getDay()`); validação estrutural no `updateConfig` (`validaHorarios`: 7 itens, dia único, HH:MM válido, fim depois do início ou `00:00` = meia-noite, dias fechados normalizados com inicio/fim null); helper puro `estaDentroDoHorario()` em `back/src/pedidos/horarios.ts` (8 specs — minuto antes/depois, fim 00:00, dia fechado, sem horários não bloqueia), usado em `criaPedido` → 400 "Lanchonete fora do horário de funcionamento." (sem detalhes sensíveis); exposto em `toConfig` (painel do dono) e no `GET /l/:slug/config`. Front: seção "Horário de funcionamento" no `admin-config` (7 linhas: dia + toggle + início/fim com `<input type="time">`, validação pt-BR no rodapé via `validaHorarios` compartilhado em `front/src/app/services/horarios.ts`) e cardápio público mostra resumo (`horarioResumo` — ex.: "TER a QUA 16h–22h") com badge "aberto/fechado agora" + guarda no `confirmarPedido` (front é só UX; bloqueio real é server-side).
+- **F8.4 — PIX real (correção) ✅**: causa confirmada — a chave do Duarte no dev estava **crua sem `+55`** (o BR Code embutia `27995077806` em vez de `+5527995077806`). `normalizarChavePix()` em `back/src/pedidos/pix.ts`: telefone → dígitos + `+55` (CPF de 11 dígitos desambiguado por dígito verificador, senão vira telefone), e-mail → trim+minúsculas, CPF/CNPJ → só dígitos, aleatória → trim; **idempotente** e usada **no save** (`validaChavePix` no `updateConfig`, vazio limpa, não-string → 400) e **dentro do `gerarBrCode`** (defesa em profundidade). Script retroativo `npm run corrigir:chaves-pix` (roda `dist/pedidos/pix.js`, então exige `npm run build` antes; **nunca imprime chaves**) — no dev normalizou 1 chave (Duarte, telefone) sem tocar nas 3 corretas e é idempotente (2ª execução: 0 alteradas). Testes em `pix.spec.ts`: +6 de normalização (máscaras, DDI, CPF×telefone, idempotência) e decodificação **independente** do payload EMV (parsing TLV + conferência do campo 26/01 e do CRC). Back `npm test` = **56**. **Pendente (requer dono)**: re-teste do QR com a **chave real do banco do dono** — se ainda falhar no app, validar o payload de debug app a app.
+- **F8.5 — E-mail ➡️ cancelado por decisão do dono**: implementei `EmailService` (Resend via fetch) + tabela `parametros` (`m12`) + notificação de pedido por e-mail, mas depois de avaliar o custo de dependências decidimos **remover por completo** (migração `m13_remove_email` dropa a tabela `parametros` e a coluna `notifEmail`). **Notificações de novo pedido ficam só no painel (realtime) + WhatsApp (F8.6); as notificações de pedido NÃO usam e-mail.** E a **recuperação de senha não usa o nosso back**: quem envia o e-mail de reset é o próprio **Neon Auth** — para usar o seu Gmail, configure SMTP (host `smtp.gmail.com`, porta 465/587, usuário + **App Password**, from) no **console da Neon** (projeto → Auth/e-mail), sem mexer no código.
+- **F8.6 — WhatsApp (notificação ao dono) ✅ (validação do envio pronta)**: escolhemos a **Meta WhatsApp Cloud API** (oficial). `WhatsAppModule` `@Global` implementado (`normalizarNumeroWhatsApp` + `enviarTemplate`/`enviarNovoPedido` com os coringas `{1}..{5}`); hook em `criaPedido` quando `notifWhatsapp` (+ default `false`, envio ficou **desligado** — dono só queria validar); nunca loga token/payload. `npm run testar:whatsapp` envia o template (default `hello_world`) para `27998927442` usando o **número de TESTE** da Meta (grátis, até 5 destinatários). **Pendente (requer dono)**: criar o app na Meta (developers.facebook.com → WhatsApp → API Setup), preencher `WA_GRAPH_TOKEN`/`WA_PHONE_NUMBER_ID` no `back/.env` e rodar `npm run build` + `npm run testar:whatsapp` para **confirmar o recebimento no celular**. Para produção: Business Account + verificação + número real `27995077806` + template aprovado (`pedido_novo`, pt_BR).
+- **F8.7 — Cardápio com IA (texto | planilha | foto | voz)**: ver Etapa 7 + **voz** via Gemini multimodal (transcrição embutida — ditar cardápio). Possibilidades apresentadas ao usuário antes de implementar.
+- **F8.8 — Planos de assinatura**: `Lanchonete.plano String?` (`trial|pago`) + `planoExpira DateTime?`; loja nova nasce `trial` (30d); admin-sistema alterna para `pago` (R$ 149,90/mês) quando assinar. Landing page e gateway depois.
+- **F8.9 — Segurança (preliminar)**: CORS liberado em `main.ts`, sem rate limit, sem Helmet, cuidado com secrets em logs. Fase dedicada depois que o usuário trouxer mais detalhes.
+- **F8.10 — LGPD + Termo de Uso**: página pública `/termos` + checkbox de consentimento no cadastro; modelo do termo em debate (ver bate-papo).
+
+### Etapa 11 — Separação de perfis: Lanchonete × Cliente × Admin (planejada — fica por último)
+
+**Pedido do dono (2026-09-21)**: separar bem as responsabilidades por perfil. Cada perfil só deve ver o que lhe convém (ex.: dono de lanchonete não deve cair na área do cliente).
+
+**Causa do bug relatado**: o `authGuard` do front (`front/src/app/guards/auth.guard.ts`) só checa **autenticação** (`isAuthenticated`), sem saber o perfil — então qualquer logado navega para qualquer rota protegida: `/home` e `/meus-pedidos` (área cliente), `/onboarding`, `/admin` e `/admin/:slug/*` (área dono), `/painel-admin` (área plataforma). Com o login de uma lanchonete o dono consegue abrir a área do cliente (`/home`).
+
+**O que já está protegido (back, defense in depth)**:
+- `/admin/*`: dono-check no `AdminModule` (quem não é dono recebe 404) + `POST /admin/lanchonetes` aberto a qualquer logado (é assim que alguém vira dono).
+- `/admin-sistema/*`: `AdminSistemaGuard` (403 para quem não está na tabela `admin_sistema`).
+- Áreas de cliente (`/me*`, `/favoritas`, `POST /l/:slug/pedidos`): abertas a qualquer autenticado — todo usuário Neon vira registro em `clientes` automaticamente (design atual).
+
+**Ressalva do modelo**: um mesmo usuário pode **acumular perfis** (ex.: dono que também tem registro de cliente e/ou `admin_sistema`). "Perfil exclusivo" é impossível no modelo atual; o objetivo realista é: **redirecionar para o perfil principal** e **bloquear/explicar** áreas de outros perfis que o usuário não tem.
+
+**Passo a passo (sugestão para quando for implementar)**:
+1. **Fonte dos perfis**: `GET /me` já retorna `cliente`, `lanchonetes`, `adminSistema` e `adminSistemaFuncao` — suficiente, sem mudança de schema.
+2. **Centralizar perfis no front**: criar `front/src/app/services/perfil.service.ts` (computeds: `ehCliente`, `ehDono`, `ehAdminSistema`, `perfilPrincipal()` = admin-sistema > dono > cliente) consumindo `AuthService` + `/me` — consolida a regra que hoje vive espalhada em `posLogin` (auth.component.ts), `admin-home`, `admin-shell` e painel.
+3. **Guard por perfil** (ex.: `perfilGuard('dono')`) que carrega `/me` e libera só as rotas do perfil:
+   - cliente → `/home`, `/meus-pedidos`, `/favoritas` (via `/home`);
+   - dono → `/admin`, `/admin/:slug/*`;
+   - admin-sistema → `/painel-admin`.
+   Quem não tem o perfil: redireciona para o perfil principal (ex.: cliente tentando `/admin` → convite "Quer vender pelo Peditto?"; dono tentando `/home` → volta pro `/admin/:slug/config`).
+4. **Decidir o caso multi-perfil** (ex.: dono que também é cliente): manter acesso explícito via link "Área do cliente" no painel do dono vs. bloqueio total — **definir com o dono na fase**.
+5. **Navegação/UI**: mostrar apenas os links/menus do perfil atual (home do cliente, abas do shell do dono, painel da plataforma).
+6. **Verificação**: com as contas de teste (`lojista.duarte@…`, `cliente.teste@…`, `admin@…`) conferir que cada uma só abre as rotas do próprio perfil e, fora delas, cai no redirect correto (sem tela em branco/erros).
+
+---
 
 ### Etapa 7 — Importação de cardápio com IA (planejada, 2026-09-20)
 Dono monta o cardápio mandando **texto corrido, planilha ou fotos do menu físico**; a IA estrutura tudo no schema existente (categorias/produtos/grupos/opções) e grava via o mesmo pipeline do `AdminService`, depois de uma **revisão em rascunho** (nada publicado direto).
@@ -97,7 +138,7 @@ Plataforma para lanchonetes pequenas criarem e operarem seu próprio cardápio o
 | Banco       | PostgreSQL serverless (**Neon**) via **Prisma**              | Neon       |
 | Auth        | **Neon Auth** (Managed Better Auth, beta)                    | Neon       |
 | Storage     | Cloudflare **R2** (galeria de imagens)                       | Cloudflare |
-| E-mail      | Resend (reset de senha, notificações)                        | Resend     |
+| E-mail      | Reset de senha enviado pelo **Neon Auth** (SMTP no console da Neon) | Neon     |
 | Realtime    | Socket.io (gateway no NestJS), fallback de polling           | Render     |
 
 ### Responsabilidades (back é o dono dos dados)
@@ -181,7 +222,7 @@ Plataforma para lanchonetes pequenas criarem e operarem seu próprio cardápio o
 - **M1 — Auth e página pública**: integrar **Neon Auth** (login dono e cliente), `slug`, cardápio público lendo do banco.
 - **M2 — Painel de configuração**: logo, nome, fonte, cores, contato, PIX + CRUD completo do cardápio com grupos de opções.
 - **M3 — Checkout**: carrinho, login cliente, endereços salvos, pedido persistido, PIX estático.
-- **M4 — Pedidos e notificações**: painel em tempo real (WebSocket), WhatsApp (Evolution API a validar), e-mail (Resend), gestão de status.
+- **M4 — Pedidos e notificações**: painel em tempo real (WebSocket), WhatsApp (Evolution API a validar), gestão de status. (Sem e-mail de pedido — decisão do dono.)
 - **M5 — Imagens e deploy**: seed da galeria no R2, polimento visual, deploy Vercel + Render.
 
 ---

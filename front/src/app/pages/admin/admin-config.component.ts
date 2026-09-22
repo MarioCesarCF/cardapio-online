@@ -1,12 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { AdminService, LanchoneteConfig } from '../../services/admin.service';
+import { ApiService } from '../../services/api.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
 import {
   FONTES_PADRAO,
@@ -14,10 +17,11 @@ import {
   logoPadrao,
   type FonteOpcao,
 } from '../../services/lanchonete-visual';
+import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horarios';
 
 @Component({
   selector: 'app-admin-config',
-  imports: [FormsModule, HeaderLanchoneteComponent, Button, InputText, Select, Tag, ToggleSwitch],
+  imports: [FormsModule, HeaderLanchoneteComponent, Button, Dialog, InputText, Select, Tag, ToggleSwitch],
   template: `
     @if (conf(); as c) {
       <form class="config superficie" (ngSubmit)="salvar()" autocomplete="off">
@@ -42,6 +46,95 @@ import {
             <span>Lanchonete pausada pela plataforma — a página está fora do ar.</span>
           </div>
         }
+
+        <h2>Dados do proprietário</h2>
+        <div class="grid2">
+          <label class="campo">
+            <span>Nome do proprietário</span>
+            <input pInputText type="text" [value]="proprietario()?.nome ?? '—'" disabled />
+          </label>
+          <label class="campo">
+            <span>E-mail do proprietário</span>
+            <input pInputText type="text" [value]="proprietario()?.email ?? '—'" disabled />
+          </label>
+          <label class="campo">
+            <span>WhatsApp do proprietário</span>
+            <input
+              pInputText
+              type="text"
+              [value]="proprietario()?.telefone ?? '—'"
+              placeholder="(00) 00000-0000"
+              disabled
+            />
+          </label>
+          <div class="campo">
+            <span>&nbsp;</span>
+            <p-button
+              label="Editar dados"
+              icon="pi pi-user-edit"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="editandoProprietario.set(true)"
+            />
+          </div>
+        </div>
+
+        <p-dialog
+          header="Dados do proprietário"
+          [(visible)]="editandoProprietario"
+          [modal]="true"
+          [style]="{ width: 'min(480px, 95vw)' }"
+          appendTo="body"
+        >
+          <form class="proprietario-form" (ngSubmit)="salvarProprietario()" autocomplete="off">
+            <div class="grid2">
+              <label class="campo">
+                <span>Nome do proprietário</span>
+                <input
+                  pInputText
+                  type="text"
+                  [(ngModel)]="propNome"
+                  name="propNome"
+                  [disabled]="salvandoProprietario()"
+                />
+              </label>
+              <label class="campo">
+                <span>E-mail do proprietário</span>
+                <input pInputText type="text" [value]="proprietario()?.email ?? '—'" disabled />
+                <small class="dica">
+                  Conta usada para criar esta lanchonete. Para alterar o e-mail solicite suporte da
+                  plataforma.
+                </small>
+              </label>
+              <label class="campo">
+                <span>WhatsApp do proprietário</span>
+                <input
+                  pInputText
+                  type="tel"
+                  inputmode="numeric"
+                  [(ngModel)]="propTelefone"
+                  name="propTelefone"
+                  placeholder="(00) 00000-0000"
+                  [disabled]="salvandoProprietario()"
+                />
+              </label>
+            </div>
+            <div class="produtorio-salvar">
+              <p-button
+                type="submit"
+                [label]="salvandoProprietario() ? 'Salvando…' : 'Salvar'"
+                icon="pi pi-check"
+                [disabled]="salvandoProprietario()"
+              />
+              @if (propErro(); as e) {
+                <span class="erro-txt">{{ e }}</span>
+              }
+              @if (propSucesso()) {
+                <span class="obs-ok">Dados do proprietário salvos.</span>
+              }
+            </div>
+          </form>
+        </p-dialog>
 
         <h2>Identidade</h2>
         <div class="grid2">
@@ -74,10 +167,7 @@ import {
 
         <div class="grid2">
           <label class="campo">
-            <span
-              class="rotulo-com-dica"
-              [attr.title]="tooltipSlug(c.slug)"
-            >
+            <span class="rotulo-com-dica" [attr.title]="tooltipSlug(c.slug)">
               Rota de acesso (slug) <i class="pi pi-info-circle"></i>
             </span>
             <span class="slug-linha">
@@ -202,11 +292,46 @@ import {
             <p-toggleswitch [(ngModel)]="c.notifWhatsapp" name="notifWhatsapp" />
             <span>WhatsApp</span>
           </label>
-          <label class="check">
-            <p-toggleswitch [(ngModel)]="c.notifEmail" name="notifEmail" />
-            <span>E-mail</span>
-          </label>
         </div>
+
+        <h2>Horário de funcionamento</h2>
+        <div class="horarios">
+          @for (dia of horarios(); track dia.dia) {
+            <div class="linha-horario" [class.linha-horario--fechada]="!dia.aberto">
+              <span class="linha-dia">{{ diasSemana[dia.dia] }}</span>
+              <div class="linha-controles">
+                <p-toggleswitch
+                  [ngModel]="dia.aberto"
+                  name="horario-{{ dia.dia }}"
+                  (ngModelChange)="setHorario(dia.dia, 'aberto', $event)"
+                />
+                <label class="mini-campo">
+                  <span>Início</span>
+                  <input
+                    type="time"
+                    [value]="dia.inicio ?? ''"
+                    [disabled]="!dia.aberto"
+                    (change)="setHorario(dia.dia, 'inicio', $any($event.target).value)"
+                  />
+                </label>
+                <label class="mini-campo">
+                  <span>Fim</span>
+                  <input
+                    type="time"
+                    [value]="dia.fim ?? ''"
+                    [disabled]="!dia.aberto"
+                    (change)="setHorario(dia.dia, 'fim', $any($event.target).value)"
+                  />
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+        <p class="dica">
+          Marque os dias de funcionamento e preencha o início e o fim (ex.: 16:00 e 22:00). Use
+          00:00 como fim para funcionar até a meia-noite. Fora do horário, os pedidos ficam
+          bloqueados na plataforma. Deixe tudo desligado para não bloquear pedidos.
+        </p>
 
         <div class="acoes">
           <p-button
@@ -291,6 +416,29 @@ import {
         color: var(--app-texto-suave);
       }
     }
+    .dica {
+      margin: -4px 0 0;
+      font-size: 0.8rem;
+      color: var(--app-texto-suave);
+    }
+    .produtorio-salvar {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-top: 2px;
+
+      .erro-txt {
+        font-size: 0.85rem;
+        color: var(--p-red-500, #ef4444);
+        font-weight: 600;
+      }
+      .obs-ok {
+        font-size: 0.85rem;
+        color: var(--p-green-500, #22c55e);
+        font-weight: 600;
+      }
+    }
     .logo-linha {
       display: flex;
       gap: 8px;
@@ -326,7 +474,7 @@ import {
     }
     .notifs {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
     .check {
@@ -336,6 +484,75 @@ import {
       font-weight: 500;
       font-size: 0.9rem;
       min-width: 0;
+    }
+    .horarios {
+      display: grid;
+      gap: 6px;
+    }
+    .linha-horario {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 12px;
+      border: 1px solid var(--app-borda);
+      border-radius: var(--app-raio-sm);
+      background: var(--app-superficie-2);
+    }
+    .linha-dia {
+      flex: 1;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .linha-horario--fechada .linha-dia {
+      color: var(--app-texto-suave);
+      font-weight: 500;
+    }
+    .linha-controles {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mini-campo {
+      display: grid;
+      gap: 3px;
+
+      span {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--app-texto-suave);
+      }
+
+      input {
+        width: 7.5rem;
+        padding: 5px 8px;
+        border: 1px solid var(--app-borda);
+        border-radius: var(--app-raio-sm);
+        background: var(--app-superficie);
+        color: var(--app-texto);
+        font: inherit;
+        font-size: 0.9rem;
+
+        &:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+      }
+    }
+    @media (max-width: 600px) {
+      .linha-horario {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .linha-dia {
+        flex: 1 1 100%;
+      }
+      .linha-controles {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .mini-campo input {
+        width: 8.5rem;
+      }
     }
     .acoes {
       display: flex;
@@ -357,7 +574,7 @@ import {
         grid-template-columns: 1fr;
       }
       .notifs {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 6px;
       }
       .check {
@@ -371,13 +588,64 @@ export class AdminConfigComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly admin = inject(AdminService);
+  private readonly api = inject(ApiService);
 
   readonly conf = signal<LanchoneteConfig | null>(null);
+  readonly proprietario = signal<{
+    nome: string;
+    email: string;
+    telefone: string | null;
+  } | null>(null);
+  readonly propNome = signal('');
+  readonly propTelefone = signal('');
+  readonly salvandoProprietario = signal(false);
+  readonly propErro = signal<string | null>(null);
+  readonly propSucesso = signal(false);
+  readonly editandoProprietario = signal(false);
   salvando = false;
   mensagem = '';
   private slug = '';
 
   readonly tipos = TIPOS_LANCHONETE;
+  readonly diasSemana = DIAS_SEMANA;
+  readonly horarios = signal<HorarioDia[]>([]);
+
+  private diasPadrao(): HorarioDia[] {
+    return Array.from({ length: 7 }, (_, dia) => ({
+      dia,
+      aberto: false,
+      inicio: null,
+      fim: null,
+    }));
+  }
+
+  setHorario(dia: number, campo: 'aberto' | 'inicio' | 'fim', valor: unknown): void {
+    this.horarios.update((dias) =>
+      dias.map((d) => {
+        if (d.dia !== dia) return d;
+        if (campo === 'aberto') return { ...d, aberto: Boolean(valor) };
+        const texto = typeof valor === 'string' ? valor : '';
+        return campo === 'inicio' ? { ...d, inicio: texto || null } : { ...d, fim: texto || null };
+      }),
+    );
+  }
+
+  private validaHorarios(dias: HorarioDia[]): string | null {
+    for (const d of dias) {
+      if (!d.aberto) continue;
+      if (!horaValida(d.inicio) || !horaValida(d.fim)) {
+        return `Preencha o início e o fim (formato HH:MM) de ${DIAS_SEMANA[d.dia]}.`;
+      }
+      const [hIni, mIni] = d.inicio!.split(':').map(Number);
+      const [hFim, mFim] = d.fim!.split(':').map(Number);
+      const ini = hIni * 60 + mIni;
+      const fim = hFim * 60 + mFim;
+      if (!(fim > ini || (fim === 0 && ini > 0))) {
+        return `O horário de fim deve ser depois do início em ${DIAS_SEMANA[d.dia]}.`;
+      }
+    }
+    return null;
+  }
 
   tooltipSlug(slug: string): string {
     return (
@@ -435,9 +703,66 @@ export class AdminConfigComponent {
   private async carregar(slug: string) {
     this.slug = slug;
     try {
-      this.conf.set(await this.admin.getConfig(slug));
+      const conf = await this.admin.getConfig(slug);
+      this.conf.set(conf);
+      this.horarios.set(
+        conf.horarios && conf.horarios.length === 7 ? conf.horarios : this.diasPadrao(),
+      );
+      void this.carregarProprietario();
     } catch {
       await this.router.navigate(['/admin']);
+    }
+  }
+
+  private async carregarProprietario(): Promise<void> {
+    try {
+      const me = await firstValueFrom(
+        this.api.get<{
+          user: { name?: string | null; email?: string | null };
+          cliente?: { telefone?: string | null };
+        }>('/me'),
+      );
+      this.proprietario.set({
+        nome: me.user?.name ?? '',
+        email: me.user?.email ?? '',
+        telefone: me.cliente?.telefone ?? null,
+      });
+      this.propNome.set(me.user?.name ?? '');
+      this.propTelefone.set(me.cliente?.telefone ?? '');
+    } catch {
+      this.proprietario.set(null);
+    }
+  }
+
+  async salvarProprietario(): Promise<void> {
+    this.salvandoProprietario.set(true);
+    this.propErro.set(null);
+    this.propSucesso.set(false);
+    try {
+      const telefone = this.propTelefone().trim();
+      await firstValueFrom(
+        this.api.patch('/me', {
+          nome: this.propNome().trim(),
+          ...(telefone ? { telefone } : { telefone: null }),
+        }),
+      );
+      this.proprietario.update((p) =>
+        p
+          ? {
+              ...p,
+              nome: this.propNome().trim(),
+              telefone: telefone || null,
+            }
+          : p,
+      );
+      this.propSucesso.set(true);
+      setTimeout(() => this.propSucesso.set(false), 2500);
+    } catch (error) {
+      this.propErro.set(
+        (error as { error?: { message?: string } }).error?.message ?? 'Falha ao salvar',
+      );
+    } finally {
+      this.salvandoProprietario.set(false);
     }
   }
 
@@ -445,11 +770,17 @@ export class AdminConfigComponent {
     if (!this.conf()) return;
     this.salvando = true;
     this.mensagem = '';
+    const erroHorarios = this.validaHorarios(this.horarios());
+    if (erroHorarios) {
+      this.mensagem = erroHorarios;
+      this.salvando = false;
+      return;
+    }
     try {
-      const atualizada = await this.admin.updateConfig(
-        this.slug,
-        this.conf() as unknown as Record<string, unknown>,
-      );
+      const atualizada = await this.admin.updateConfig(this.slug, {
+        ...(this.conf() as unknown as Record<string, unknown>),
+        horarios: this.horarios(),
+      } as unknown as Record<string, unknown>);
       this.mensagem = 'Salvo!';
       if (atualizada.slug !== this.slug) {
         await this.router.navigate(['/admin', atualizada.slug, 'config'], { replaceUrl: true });

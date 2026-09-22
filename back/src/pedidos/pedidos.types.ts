@@ -17,12 +17,15 @@ export interface PedidoPainel {
   id: string;
   numero: number;
   status: string;
+  tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
   total: number;
   formaPagamento: string;
   enderecoEntrega: unknown;
   observacao: string | null;
+  pagamentoInfo: string | null;
+  arquivado: boolean;
   createdAt: string;
   lanchonete: { id: string; nome: string; slug: string };
   cliente: { id: string; nome: string | null; telefone: string | null } | null;
@@ -41,12 +44,15 @@ export function formataPedido(p: PedidoComSnapshots): PedidoPainel {
     id: p.id,
     numero: p.numero,
     status: p.status,
+    tipoEntrega: p.tipoEntrega,
     justificativaCancelamento: p.justificativaCancelamento ?? null,
     subtotal: Number(p.subtotal),
     total: Number(p.total),
     formaPagamento: p.formaPagamento,
     enderecoEntrega: p.enderecoEntrega,
     observacao: p.observacao,
+    pagamentoInfo: p.pagamentoInfo ?? null,
+    arquivado: p.arquivado,
     createdAt: p.createdAt.toISOString(),
     lanchonete: p.lanchonete ?? { id: '', nome: '', slug: '' },
     cliente: p.cliente ?? null,

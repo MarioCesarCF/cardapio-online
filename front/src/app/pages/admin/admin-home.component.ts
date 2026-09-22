@@ -91,6 +91,10 @@ import { AdminService, LanchoneteResumo } from '../../services/admin.service';
       flex-wrap: wrap;
       padding-right: 7.5rem;
     }
+    .admin-home__topo h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
     .admin-home__link {
       font-size: 0.9rem;
       font-weight: 600;
