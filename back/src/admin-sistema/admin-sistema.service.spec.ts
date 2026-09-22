@@ -307,6 +307,7 @@ describe('AdminSistemaService', () => {
       const logCriado: unknown[] = [];
       const prisma = {
         adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'super' }),
           create: vi.fn().mockResolvedValue({
             id: '33333333-3333-3333-3333-333333333333',
             nome: 'Ana',
@@ -343,7 +344,12 @@ describe('AdminSistemaService', () => {
     });
 
     it('conflito quando o e-mail já existe', async () => {
-      const prisma = { adminSistema: { create: vi.fn() } };
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'super' }),
+          create: vi.fn(),
+        },
+      };
       const servico = criarServico(prisma);
       vi.stubGlobal(
         'fetch',
@@ -361,6 +367,25 @@ describe('AdminSistemaService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
       vi.unstubAllGlobals();
     });
+
+    it('rejeita quando quem chama não é raiz', async () => {
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'admin' }),
+          create: vi.fn(),
+        },
+        logSistema: { create: vi.fn() },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.criarAdmin(USER_ADMIN, {
+          nome: 'Ana',
+          email: 'ana@x.com',
+          senha: 'senha1234',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.adminSistema.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('atualizarAdmin', () => {
@@ -368,12 +393,15 @@ describe('AdminSistemaService', () => {
       const logCriado: unknown[] = [];
       const prisma = {
         adminSistema: {
-          findUnique: vi.fn().mockResolvedValue({
-            id: '33333333-3333-3333-3333-333333333333',
-            nome: 'Ana',
-            email: 'ana@x.com',
-            funcao: 'admin',
-          }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValueOnce({ funcao: 'super' })
+            .mockResolvedValue({
+              id: '33333333-3333-3333-3333-333333333333',
+              nome: 'Ana',
+              email: 'ana@x.com',
+              funcao: 'admin',
+            }),
           update: vi.fn().mockResolvedValue({
             id: '33333333-3333-3333-3333-333333333333',
             nome: 'Ana Souza',
@@ -413,7 +441,12 @@ describe('AdminSistemaService', () => {
 
     it('404 quando o administrador não existe', async () => {
       const prisma = {
-        adminSistema: { findUnique: vi.fn().mockResolvedValue(null) },
+        adminSistema: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValueOnce({ funcao: 'super' })
+            .mockResolvedValue(null),
+        },
       };
       const servico = criarServico(prisma);
       await expect(
@@ -424,11 +457,14 @@ describe('AdminSistemaService', () => {
     it('rejeita nome inválido', async () => {
       const prisma = {
         adminSistema: {
-          findUnique: vi.fn().mockResolvedValue({
-            id: '33333333-3333-3333-3333-333333333333',
-            nome: 'Ana',
-            email: 'ana@x.com',
-          }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValueOnce({ funcao: 'super' })
+            .mockResolvedValue({
+              id: '33333333-3333-3333-3333-333333333333',
+              nome: 'Ana',
+              email: 'ana@x.com',
+            }),
         },
       };
       const servico = criarServico(prisma);
@@ -444,11 +480,14 @@ describe('AdminSistemaService', () => {
     it('rejeita nome igual ao atual', async () => {
       const prisma = {
         adminSistema: {
-          findUnique: vi.fn().mockResolvedValue({
-            id: '33333333-3333-3333-3333-333333333333',
-            nome: 'Ana',
-            email: 'ana@x.com',
-          }),
+          findUnique: vi
+            .fn()
+            .mockResolvedValueOnce({ funcao: 'super' })
+            .mockResolvedValue({
+              id: '33333333-3333-3333-3333-333333333333',
+              nome: 'Ana',
+              email: 'ana@x.com',
+            }),
         },
       };
       const servico = criarServico(prisma);
@@ -459,6 +498,25 @@ describe('AdminSistemaService', () => {
           USER_SUPER,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejeita quando quem chama não é raiz', async () => {
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'admin' }),
+          update: vi.fn(),
+        },
+        logSistema: { create: vi.fn() },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.atualizarAdmin(
+          '33333333-3333-3333-3333-333333333333',
+          { nome: 'Ana Souza' },
+          USER_ADMIN,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.adminSistema.update).not.toHaveBeenCalled();
     });
   });
 
@@ -491,6 +549,9 @@ describe('AdminSistemaService', () => {
     it('atualiza o e-mail válido e registra log', async () => {
       const logCriado: unknown[] = [];
       const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'super' }),
+        },
         configPlataforma: {
           upsert: vi.fn().mockResolvedValue({
             id: 'global',
@@ -524,6 +585,9 @@ describe('AdminSistemaService', () => {
 
     it('limpa o e-mail quando o valor é vazio', async () => {
       const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'super' }),
+        },
         configPlataforma: {
           upsert: vi
             .fn()
@@ -540,6 +604,9 @@ describe('AdminSistemaService', () => {
 
     it('rejeita e-mail malformado', async () => {
       const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'super' }),
+        },
         configPlataforma: { upsert: vi.fn() },
         logSistema: { create: vi.fn() },
       };
@@ -548,6 +615,68 @@ describe('AdminSistemaService', () => {
         servico.updatePlataforma(USER_SUPER, { emailLojista: 'nao-email' }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.configPlataforma.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rejeita quando quem chama não é raiz', async () => {
+      const prisma = {
+        adminSistema: {
+          findUnique: vi.fn().mockResolvedValue({ funcao: 'admin' }),
+        },
+        configPlataforma: { upsert: vi.fn() },
+        logSistema: { create: vi.fn() },
+      };
+      const servico = criarServico(prisma);
+      await expect(
+        servico.updatePlataforma(USER_ADMIN, {
+          emailLojista: 'novo@cardapio.com',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.configPlataforma.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('consultarLanchonete', () => {
+    const lanchoneteBase = {
+      id: 'l1',
+      nome: 'Duarte',
+      slug: 'duarte',
+      tipo: 'lanches',
+      logoUrl: null,
+      fonte: null,
+      corPrincipal: null,
+      chavePix: '+5527995077806',
+      nomePix: 'Duarte',
+      whatsapp: '27995077806',
+      emailContato: null,
+      enderecoLoja: 'Rua A',
+      notifPainel: true,
+      notifWhatsapp: false,
+      situacao: 'ativa',
+      plano: 'trial',
+      planoExpira: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const prismaCom = (funcao: string) => ({
+      lanchonete: { findUnique: vi.fn().mockResolvedValue(lanchoneteBase) },
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ id: 'd1', nome: 'Dono', email: 'dono@x.com' }]),
+      adminSistema: { findUnique: vi.fn().mockResolvedValue({ funcao }) },
+    });
+
+    it('raiz vê a chave PIX da lanchonete', async () => {
+      const servico = criarServico(prismaCom('super'));
+      const dados = await servico.consultarLanchonete('l1', USER_SUPER);
+      expect(dados.chavePix).toBe('+5527995077806');
+      expect(dados.donoNome).toBe('Dono');
+    });
+
+    it('admin humano recebe a chave PIX mascarada', async () => {
+      const servico = criarServico(prismaCom('admin'));
+      const dados = await servico.consultarLanchonete('l1', USER_ADMIN);
+      expect(dados.chavePix).toBeNull();
     });
   });
 

@@ -64,30 +64,6 @@ export class AdminSistemaService implements OnModuleInit {
       update: { funcao: 'super', nome: row.name ?? undefined },
     });
     this.logger.log(`Administrador raiz promovido: ${email}`);
-    await this.configurarEmailPadrao();
-  }
-
-  private async configurarEmailPadrao(): Promise<void> {
-    const existente = await this.prisma.configPlataforma.findUnique({
-      where: { id: 'global' },
-    });
-    if (existente?.emailLojista) return;
-
-    const raiz = await this.prisma.adminSistema.findFirst({
-      where: { funcao: 'super' },
-      select: { email: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (!raiz) return;
-
-    await this.prisma.configPlataforma.upsert({
-      where: { id: 'global' },
-      create: { id: 'global', emailLojista: raiz.email },
-      update: { emailLojista: raiz.email },
-    });
-    this.logger.log(
-      `E-mail de contato para lojistas definido como padrão: ${raiz.email}`,
-    );
   }
 
   // ---------- Lanchonetes ----------
@@ -262,7 +238,7 @@ export class AdminSistemaService implements OnModuleInit {
     return { ok: true };
   }
 
-  async consultarLanchonete(id: string) {
+  async consultarLanchonete(id: string, user: AuthenticatedUser) {
     const lanchonete = await this.prisma.lanchonete.findUnique({
       where: { id },
     });
@@ -277,6 +253,10 @@ export class AdminSistemaService implements OnModuleInit {
     `;
     const dono = donos[0];
 
+    // Chave PIX é dado sensível do dono — só o raiz enxerga na consulta;
+    // admins "humanos" recebem mascarado (null → "—" no painel).
+    const superAdmin = await this.isSuper(user);
+
     return {
       id: lanchonete.id,
       nome: lanchonete.nome,
@@ -285,7 +265,7 @@ export class AdminSistemaService implements OnModuleInit {
       logoUrl: lanchonete.logoUrl,
       fonte: lanchonete.fonte,
       corPrincipal: lanchonete.corPrincipal,
-      chavePix: lanchonete.chavePix,
+      chavePix: superAdmin ? lanchonete.chavePix : null,
       nomePix: lanchonete.nomePix,
       whatsapp: lanchonete.whatsapp,
       emailContato: lanchonete.emailContato,
@@ -494,6 +474,10 @@ export class AdminSistemaService implements OnModuleInit {
     user: AuthenticatedUser,
     body: Record<string, unknown>,
   ): Promise<AdminSistemaDados> {
+    // Criar/gerir contas de admin é poder de raiz — o front esconde os botões,
+    // e aqui é a linha de defesa no back.
+    await this.requerSuper(user);
+
     const nome = this.nomeValido(body.nome);
     const email = this.emailValido(body.email);
     const senha = this.senhaValida(body.senha);
@@ -520,6 +504,8 @@ export class AdminSistemaService implements OnModuleInit {
   }
 
   async removerAdmin(adminId: string, user: AuthenticatedUser) {
+    await this.requerSuper(user);
+
     const admin = await this.prisma.adminSistema.findUnique({
       where: { id: adminId },
     });
@@ -547,6 +533,8 @@ export class AdminSistemaService implements OnModuleInit {
     body: Record<string, unknown>,
     user: AuthenticatedUser,
   ): Promise<AdminSistemaDados> {
+    await this.requerSuper(user);
+
     const admin = await this.prisma.adminSistema.findUnique({
       where: { id: adminId },
     });
@@ -594,6 +582,9 @@ export class AdminSistemaService implements OnModuleInit {
     user: AuthenticatedUser,
     body: Record<string, unknown>,
   ): Promise<{ emailLojista: string | null }> {
+    // O e-mail de contato vira dado público na home — só o raiz decide.
+    await this.requerSuper(user);
+
     const emailLojista = this.emailContatoValido(body.emailLojista);
 
     await this.prisma.configPlataforma.upsert({
@@ -631,12 +622,16 @@ export class AdminSistemaService implements OnModuleInit {
 
   // ---------- Helpers ----------
 
-  private async requerSuper(user: AuthenticatedUser): Promise<void> {
+  private async isSuper(user: AuthenticatedUser): Promise<boolean> {
     const admin = await this.prisma.adminSistema.findUnique({
       where: { id: user.id },
       select: { funcao: true },
     });
-    if (!admin || admin.funcao !== 'super') {
+    return admin?.funcao === 'super';
+  }
+
+  private async requerSuper(user: AuthenticatedUser): Promise<void> {
+    if (!(await this.isSuper(user))) {
       throw new ForbiddenException(
         'Somente o administrador raiz pode executar esta ação.',
       );

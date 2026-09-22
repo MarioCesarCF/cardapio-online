@@ -26,8 +26,11 @@ export class AdminSistemaController {
   }
 
   @Get('lanchonetes/:id')
-  consultarLanchonete(@Param('id') id: string) {
-    return this.adminSistemaService.consultarLanchonete(id);
+  consultarLanchonete(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminSistemaService.consultarLanchonete(id, user);
   }
 
   @Get('lanchonetes/:id/cardapio')

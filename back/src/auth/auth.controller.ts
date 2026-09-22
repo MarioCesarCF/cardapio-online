@@ -7,6 +7,9 @@ import { AuthService } from './auth.service.js';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Enumeração de e-mails é o vetor mais barato de abusar — mais restrito que
+  // o restante do /auth.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('verificar-email')
   verificarEmail(
     @Body() body: { email?: string },

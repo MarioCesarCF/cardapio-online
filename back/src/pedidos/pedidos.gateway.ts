@@ -13,8 +13,39 @@ import { AuthService } from '../auth/auth.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PedidoPainel } from './pedidos.types.js';
 
+// Origem permitida no handshake WS segue a mesma política do CORS HTTP do
+// main.ts (FRONT_URL + CORS_ORIGINS). Não é autorização — a autenticação é o
+// JWT no handshake; é defesa em profundidade contra aberturas de origem.
+function origensWs(): string[] {
+  const front =
+    (process.env.FRONT_URL ?? 'http://localhost:4200').trim() ||
+    'http://localhost:4200';
+  const extrasRaw = (process.env.CORS_ORIGINS ?? '').trim();
+  const extras = extrasRaw
+    ? extrasRaw
+        .split(',')
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0)
+    : [];
+  return [...new Set([front, ...extras])];
+}
+
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: {
+    origin: (origin: string | undefined, callback) => {
+      // Sem header Origin (clientes não-navegador, socket puro) → libera.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const permitida = origensWs().includes(origin);
+      if (permitida) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origem não permitida.'));
+    },
+  },
 })
 @Injectable()
 export class PedidosGateway

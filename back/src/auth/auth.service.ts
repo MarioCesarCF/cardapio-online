@@ -138,6 +138,7 @@ export class AuthService {
       }
 
       const { payload } = await jwtVerify(token, key, {
+        algorithms: ['EdDSA'],
         issuer: this.issuer,
         audience: this.issuer,
       });

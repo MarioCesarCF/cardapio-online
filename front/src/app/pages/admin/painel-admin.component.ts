@@ -93,14 +93,16 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
           >
             Logs
           </button>
-          <button
-            type="button"
-            class="pa__aba"
-            [class.pa__aba--ativa]="aba() === 'config'"
-            (click)="trocarAba('config')"
-          >
-            Configurações
-          </button>
+          @if (eSuper()) {
+            <button
+              type="button"
+              class="pa__aba"
+              [class.pa__aba--ativa]="aba() === 'config'"
+              (click)="trocarAba('config')"
+            >
+              Configurações
+            </button>
+          }
         </nav>
 
         @if (mensagem()) {
@@ -524,7 +526,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
             }
           }
 
-          @if (aba() === 'config') {
+          @if (aba() === 'config' && eSuper()) {
             <section class="pa__bloco">
               <h2>E-mail de contato para lojistas</h2>
               <div class="pa__config">

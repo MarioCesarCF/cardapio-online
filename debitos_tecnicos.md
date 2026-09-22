@@ -261,16 +261,17 @@ quer um fluxo **direto e presencial** (físico) de adesão:
 - **Rate limit** (`@nestjs/throttler@^6`, peer compatível com Nest 12): global **100 req/min por IP** via `ThrottlerModule.forRootAsync` + `APP_GUARD: ThrottlerGuard` (`back/src/app.module.ts`); **`@Throttle` 10/min** em `POST /auth/*` (todo o controller — `force bruta/enumeration`) e `POST /l/:slug/pedidos` (`spam de pedido`). `app.set('trust proxy', 1)` obrigatório no Render (senão todo mundo vira um IP só). `THROTTLE_DISABLED=true` desativa via `skipIf` (só p/ smoke local/e2e — **nunca em prod**). **Smoke**: 10×200 no `/auth/verificar-email`, 11ª e 12ª → **429**.
 - **JWT da app**: validação no boot — `APP_JWT_SECRET` ausente ou < 32 bytes → **`throw` em produção** com mensagem clara (comando p/ gerar inclusa); em dev, `Logger.warn` (o `exchange` já falha fechado quando a chave é vazia).
 - **Auditoria (sem mudança necessária)**: front renderiza 100% com interpolação `{{ }}` (zero `innerHTML`/`bypassSecurityTrust`); `registrarLog`/`ErroLogFilter`/scripts nunca gravam/imprimem `chavePix`/`brCodePix`/telefone/documento; único `$queryRawUnsafe` já é parametrizado (`$1`); validação de entrada segue o padrão manual do projeto.
+- **Endurecimento pós-auditoria (2026-09-22, commit pós-F8.9)**: `requerSuper` em `criarAdmin`/`atualizarAdmin`/`removerAdmin`/`updatePlataforma` (admin humano recebe 403 mesmo via API); `GET /admin-sistema/lanchonetes/:id` mascara `chavePix` (`null`) para quem não é raiz; `THROTTLE_DISABLED=true` **derruba o boot em produção** (`main.ts`); `@Throttle` **5/min** em `/auth/verificar-email` (enumeração) e **30/min** nos GET públicos de lojas; CORS do WS espelhado (`FRONT_URL`+`CORS_ORIGINS` lidos via `process.env`, sem header `Origin` → libera); `jwtVerify` legado da Neon com `algorithms: ['EdDSA']` explícito; **removido** `configurarEmailPadrao` (o e-mail público do raiz não vira contato da home de graça — fica `null` até configurar); front esconde aba Configurações para não-super. Back `npm test` = **83** (+5: Forbidden p/ não-raiz ×3 e máscara de `chavePix` ×2).
 
 ### Passo a passo (para o dono, depois do deploy)
 
 1. No `.env` do Render: `FRONT_URL=https://<seu-domínio-do-front>` e `CORS_ORIGINS=https://<seu-domínio>` (se houver mais de uma origem — ex.: preview da Vercel). Refletir também no console da Neon (`FRONT_URL`/origins de OAuth) se usarem Google sign-in.
 2. `APP_JWT_SECRET` ≥ 32 bytes aleatórios (gerar com o comando do `.env.example`).
-3. `THROTTLE_DISABLED` fica `false`/ausente em produção.
+3. `THROTTLE_DISABLED` fica `false`/ausente em produção — o bootstrap **derruba a app** se estiver `true` com `NODE_ENV=production`.
 
 ### Verificação
 
-- `npm run lint` (0), `npm test` (**78**), `npm run e2e` (1 — o unhandled error do `PedidosMaintService` no e2e é pré-existente: tenta conectar no banco sem `DATABASE_URL`), `npm run build` — todos OK.
+- `npm run lint` (0), `npm test` (**83**; eram 78), `npm run e2e` (1 — o unhandled error do `PedidosMaintService` no e2e é pré-existente: tenta conectar no banco sem `DATABASE_URL`), `npm run build` — todos OK.
 - Smokes do dia (feitos com `node dist/main` local): headers de segurança presentes, CORS externo bloqueado, 429 na 11ª chamada do `/auth/verificar-email`.
 
 ---

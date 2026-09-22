@@ -64,6 +64,12 @@ async function bootstrap() {
     new Logger('Bootstrap').warn(mensagem);
   }
 
+  // THROTTLE_DISABLED serve só para smokes locais/e2e — nunca pode desligar o
+  // rate limit em produção.
+  if (config.get('THROTTLE_DISABLED') === 'true' && emProducao) {
+    throw new Error('THROTTLE_DISABLED não pode ser true em produção.');
+  }
+
   app.useGlobalFilters(new ErroLogFilter(app.get(PrismaService)));
   await app.listen(process.env.PORT ?? 3000);
 }
