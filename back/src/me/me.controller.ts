@@ -16,6 +16,7 @@ import {
   MeService,
   type AtualizaPerfilInput,
   type CriaEnderecoInput,
+  type RegistraConsentimentoInput,
 } from './me.service.js';
 
 @Controller('me')
@@ -34,6 +35,14 @@ export class MeController {
     @Body() body: AtualizaPerfilInput,
   ) {
     return this.meService.atualizarPerfil(user, body);
+  }
+
+  @Post('consentimento')
+  registrarConsentimento(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: RegistraConsentimentoInput,
+  ) {
+    return this.meService.registrarConsentimento(user, body);
   }
 
   @Get('enderecos')

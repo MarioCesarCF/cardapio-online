@@ -1,8 +1,10 @@
 <div class="cardapio" [style]="theme()">
   <header class="cabecalho-topo">
     <h1>Cardápio</h1>
-    @if (logado()) {
-      <a class="topo-home" [routerLink]="'/home'"> <i class="pi pi-home"></i> Página principal </a>
+    @if (rotaPerfil(); as destino) {
+      <a class="topo-home" [routerLink]="destino.rota">
+        <i class="pi pi-home"></i> {{ destino.rotulo }}
+      </a>
     }
   </header>
   @if (loading()) {

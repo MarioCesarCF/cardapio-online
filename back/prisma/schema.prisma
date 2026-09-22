@@ -27,6 +27,8 @@ model Lanchonete {
   notifPainel  Boolean  @default(true)
   notifWhatsapp Boolean @default(false)
   situacao     String   @default("pendente") // pendente | ativa | pausada
+  plano        String   @default("trial") // trial | pago
+  planoExpira  DateTime? // trial: fim dos 30d; pago: null (sem expiração até o gateway)
   horarios     Json? // [{dia 0-6, aberto, inicio "HH:MM", fim "HH:MM"}] — dia 0 = domingo (Date.getDay())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -277,4 +279,16 @@ model ConfigPlataforma {
   updatedAt    DateTime @updatedAt
 
   @@map("config_plataforma")
+}
+
+// Aceite do termo único (Termos de Uso + Política de Privacidade/LGPD) por
+// usuário. usuarioId = id no schema neon_auth (uuid). Aceite repetido da mesma
+// versão não altera a data do 1º consentimento (registro da primeira adesão).
+model TermoAceite {
+  usuarioId String   @db.Uuid
+  versao    String
+  aceitoEm  DateTime @default(now())
+
+  @@id([usuarioId, versao])
+  @@map("termos_aceite")
 }

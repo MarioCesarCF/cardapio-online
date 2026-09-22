@@ -53,7 +53,12 @@ async function garantirLanchonete(donoId, dados) {
     return existente;
   }
   const lanchonete = await prisma.lanchonete.create({
-    data: { donoId, ...dados },
+    data: {
+      donoId,
+      ...dados,
+      plano: 'trial',
+      planoExpira: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
   });
   console.log(`  Lanchonete criada: ${dados.nome} (/${dados.slug}) [${dados.situacao}]`);
   return lanchonete;

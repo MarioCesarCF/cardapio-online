@@ -89,6 +89,16 @@ export class PedidosService {
       );
     }
 
+    if (
+      lanchonete.plano === 'trial' &&
+      lanchonete.planoExpira !== null &&
+      lanchonete.planoExpira < new Date()
+    ) {
+      throw new BadRequestException(
+        'O período de teste desta lanchonete expirou. Entre em contato para assinar um plano.',
+      );
+    }
+
     const enderecoEntrega =
       tipoEntrega === 'entrega' ? await this.resolveEndereco(user, body) : null;
     const produtos = await this.carregaProdutos(itens, lanchonete.id);

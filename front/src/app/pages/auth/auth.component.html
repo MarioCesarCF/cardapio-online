@@ -4,7 +4,34 @@
     <p class="marca__apoio">Seu pedido começa aqui</p>
   </header>
 
-  @if (tela() === 'login' && checando()) {
+  @if (tela() === 'termos') {
+    <div class="cartao superficie termos-consent">
+      <h2>{{ titulo }}</h2>
+      <p class="suave">
+        Para continuar usando sua conta, leia e aceite os
+        <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a>
+        e a
+        <a href="/termos#privacidade" target="_blank" rel="noopener">Política de Privacidade</a>
+        do Peditto.
+      </p>
+      <label class="termos-check">
+        <input type="checkbox" [checked]="aceiteTela()" (change)="alternarAceiteTela()" />
+        <span>Li e aceito os Termos de Uso e a Política de Privacidade.</span>
+      </label>
+      @if (termosErro(); as erro) {
+        <p-message severity="error" [text]="erro" class="bloco" />
+      }
+      <p-button
+        label="Aceitar e continuar"
+        [loading]="submitting()"
+        (onClick)="aceitarTermos()"
+        class="bloco"
+      />
+      <button type="button" class="link link--central" (click)="sairConta()">
+        Sair desta conta
+      </button>
+    </div>
+  } @else if (tela() === 'login' && checando()) {
     <div class="cartao superficie form">
       <p class="suave"><i class="pi pi-spinner pi-spin"></i> Verificando sessão…</p>
     </div>
@@ -146,6 +173,26 @@
                 acima são os dados da pessoa responsável.
               }
             </p>
+          </div>
+
+          <div class="termos-aceite">
+            <input
+              class="termos-aceite__input"
+              type="checkbox"
+              id="termos-cadastro"
+              [checked]="formularioAceite()"
+              (change)="alternarAceiteFormulario()"
+            />
+            <div class="termos-aceite__texto">
+              <label for="termos-cadastro" class="termos-aceite__rotulo">Li e aceito os</label>
+              <span>
+                <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a
+                <a href="/termos#privacidade" target="_blank" rel="noopener">
+                  Política de Privacidade
+                </a>
+                .
+              </span>
+            </div>
           </div>
         }
 

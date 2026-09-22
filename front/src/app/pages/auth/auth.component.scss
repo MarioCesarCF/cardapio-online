@@ -158,6 +158,69 @@
   }
 }
 
+.termos-aceite {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+
+  &__input {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.18rem;
+    accent-color: var(--p-primary-color);
+    cursor: pointer;
+  }
+
+  &__texto {
+    display: grid;
+    gap: 0.15rem;
+    font-size: 0.88rem;
+    color: var(--app-texto-suave);
+    line-height: 1.45;
+  }
+
+  &__rotulo {
+    font-size: 0.88rem;
+    color: var(--app-texto);
+    cursor: pointer;
+  }
+}
+
+.termos-consent {
+  display: grid;
+  gap: 1rem;
+
+  h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 1.3rem;
+  }
+
+  .suave {
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.termos-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  color: var(--app-texto);
+  line-height: 1.45;
+  cursor: pointer;
+
+  input {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.18rem;
+    accent-color: var(--p-primary-color);
+    cursor: pointer;
+  }
+}
+
 .link {
   border: 0;
   background: transparent;

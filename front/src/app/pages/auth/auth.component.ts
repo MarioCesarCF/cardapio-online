@@ -8,6 +8,7 @@ import { Message } from 'primeng/message';
 import { SelectButton } from 'primeng/selectbutton';
 import { AuthError, AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
+import { TERMO_VERSAO_ATUAL } from '../../services/termos';
 
 interface MeResponse {
   user: { id: string; name?: string | null; email?: string | null };
@@ -16,6 +17,7 @@ interface MeResponse {
   enderecos: unknown[];
   adminSistema: boolean;
   adminSistemaFuncao: string | null;
+  termoAceite: { versao: string; aceitoEm: string } | null;
 }
 
 const LEMBRAR_KEY = 'auth.lembrar';
@@ -24,7 +26,7 @@ const SENHA_SALVA_KEY = 'auth.senha-salva';
 const MODO_CADASTRO_KEY = 'auth.modo-cadastro';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-type Tela = 'login' | 'recuperar' | 'redefinir';
+type Tela = 'login' | 'recuperar' | 'redefinir' | 'termos';
 type TipoConta = 'cliente' | 'lojista';
 
 @Component({
@@ -65,6 +67,10 @@ export class AuthComponent implements OnInit {
   readonly cadastroEmail = signal('');
   readonly cadastroSenha = signal('');
   readonly tipoConta = signal<TipoConta>('cliente');
+  readonly formularioAceite = signal(false);
+
+  readonly aceiteTela = signal(false);
+  readonly termosErro = signal<string | null>(null);
 
   readonly emailRecuperar = signal('');
   readonly enviandoRecuperar = signal(false);
@@ -113,7 +119,7 @@ export class AuthComponent implements OnInit {
       try {
         const me = await this.carregarMe();
         if (this.tela() === 'login') {
-          await this.posLogin(me);
+          await this.aposAutenticar(me, false);
         }
       } catch {
         // erro já exibido por carregarMe
@@ -139,9 +145,72 @@ export class AuthComponent implements OnInit {
     }
   }
 
+  private async aposAutenticar(me: MeResponse, assinouNoFormulario: boolean): Promise<void> {
+    if (this.temTermoAceito(me)) {
+      await this.posLogin(me);
+      return;
+    }
+    if (assinouNoFormulario) {
+      try {
+        await this.registrarConsentimento();
+        await this.posLogin(me);
+        return;
+      } catch {
+        // cai na tela de termos para tentar de novo
+      }
+    }
+    this.termosErro.set(null);
+    this.aceiteTela.set(false);
+    this.tela.set('termos');
+  }
+
+  private temTermoAceito(me: MeResponse): boolean {
+    return me.termoAceite?.versao === TERMO_VERSAO_ATUAL;
+  }
+
+  private async registrarConsentimento(): Promise<void> {
+    await firstValueFrom(
+      this.api.post<{ ok: boolean }>('/me/consentimento', {
+        versao: TERMO_VERSAO_ATUAL,
+      }),
+    );
+  }
+
+  async aceitarTermos(): Promise<void> {
+    if (this.submitting() || !this.aceiteTela()) return;
+    this.submitting.set(true);
+    this.termosErro.set(null);
+    try {
+      await this.registrarConsentimento();
+      const me = await this.carregarMe();
+      await this.posLogin(me);
+    } catch {
+      this.termosErro.set('Não foi possível registrar seu consentimento. Tente novamente.');
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  async sairConta(): Promise<void> {
+    await this.auth.signOut();
+    this.mode.set('login');
+    this.formularioAceite.set(false);
+    this.aceiteTela.set(false);
+    this.termosErro.set(null);
+    this.error.set(null);
+    this.tela.set('login');
+    this.checando.set(false);
+  }
+
   get titulo(): string {
-    if (this.tela() !== 'login') {
-      return this.tela() === 'recuperar' ? 'Recuperar senha' : 'Definir nova senha';
+    if (this.tela() === 'recuperar') {
+      return 'Recuperar senha';
+    }
+    if (this.tela() === 'redefinir') {
+      return 'Definir nova senha';
+    }
+    if (this.tela() === 'termos') {
+      return 'Aceite os Termos de Uso';
     }
     return this.mode() === 'login' ? 'Entrar' : 'Criar conta';
   }
@@ -157,6 +226,7 @@ export class AuthComponent implements OnInit {
       this.cadastroEmail.set('');
       this.cadastroSenha.set('');
       this.tipoConta.set('cliente');
+      this.formularioAceite.set(false);
     }
     this.error.set(null);
     this.sucesso.set(null);
@@ -202,7 +272,21 @@ export class AuthComponent implements OnInit {
     }
   }
 
+  alternarAceiteFormulario(): void {
+    this.formularioAceite.set(!this.formularioAceite());
+  }
+
+  alternarAceiteTela(): void {
+    this.aceiteTela.set(!this.aceiteTela());
+  }
+
   async submit(): Promise<void> {
+    if (this.mode() === 'cadastro' && !this.formularioAceite()) {
+      this.error.set(
+        'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar uma conta.',
+      );
+      return;
+    }
     this.submitting.set(true);
     this.error.set(null);
     this.sucesso.set(null);
@@ -222,7 +306,7 @@ export class AuthComponent implements OnInit {
         }
       }
       const me = await this.carregarMe();
-      await this.posLogin(me);
+      await this.aposAutenticar(me, this.mode() === 'cadastro');
     } catch (error) {
       if (error instanceof AuthError) {
         this.error.set(this.mensagemDeErro(error));
@@ -257,7 +341,7 @@ export class AuthComponent implements OnInit {
     try {
       await this.auth.signInGoogle();
       const me = await this.carregarMe();
-      await this.posLogin(me);
+      await this.aposAutenticar(me, false);
     } catch (error) {
       if (error instanceof AuthError) {
         this.error.set(error.message);

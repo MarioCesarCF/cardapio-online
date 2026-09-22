@@ -9,6 +9,9 @@ export interface LanchonetePainel {
   tipo: string | null;
   logoUrl: string | null;
   situacao: string;
+  plano: string | null;
+  planoExpira: string | null;
+  planoExpirado: boolean;
   createdAt: string;
   donoNome: string | null;
   donoEmail: string | null;
@@ -52,6 +55,9 @@ export interface LanchoneteConsulta {
   notifPainel: boolean;
   notifWhatsapp: boolean;
   situacao: string;
+  plano: string | null;
+  planoExpira: string | null;
+  planoExpirado: boolean;
   createdAt: string;
   updatedAt: string;
   donoNome: string | null;
@@ -141,6 +147,15 @@ export class PainelAdminService {
   alterarSituacao(id: string, situacao: string): Promise<LanchonetePainel> {
     return firstValueFrom(
       this.api.patch<LanchonetePainel>(`/admin-sistema/lanchonetes/${id}/situacao`, { situacao }),
+    );
+  }
+
+  alterarPlano(id: string, plano: string): Promise<{ id: string; plano: string; planoExpira: string | null }> {
+    return firstValueFrom(
+      this.api.patch<{ id: string; plano: string; planoExpira: string | null }>(
+        `/admin-sistema/lanchonetes/${id}/plano`,
+        { plano },
+      ),
     );
   }
 

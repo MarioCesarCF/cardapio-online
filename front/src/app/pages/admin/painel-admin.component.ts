@@ -147,6 +147,25 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                     (onClick)="reativar(l)"
                   />
                 }
+                @if (l.plano === 'pago') {
+                  <p-button
+                    label="Marcar como teste"
+                    icon="pi pi-refresh"
+                    size="small"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="trocarPlanoParaTrial(l)"
+                  />
+                } @else {
+                  <p-button
+                    label="Marcar como pago"
+                    icon="pi pi-dollar"
+                    size="small"
+                    severity="success"
+                    [outlined]="true"
+                    (onClick)="trocarPlanoParaPago(l)"
+                  />
+                }
                 <p-button
                   label="Fechar"
                   icon="pi pi-times"
@@ -164,6 +183,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
               @if (consultaDados(); as dados) {
                 <div class="pa__consulta-dados">
                   <span><strong>Situação:</strong> {{ rotuloSituacao(dados.situacao) }}</span>
+                  <span><strong>Plano:</strong> {{ rotuloPlano(dados) }}</span>
                   <span><strong>Tipo:</strong> {{ rotuloTipo(dados.tipo) }}</span>
                   <span
                     ><strong>Dono:</strong> {{ dados.donoNome || '—' }} ({{
@@ -344,6 +364,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                     <span>Dono</span>
                     <span>Conteúdo</span>
                     <span>Criada em</span>
+                    <span>Plano</span>
                     <span>Status</span>
                     <span>Ações</span>
                   </div>
@@ -366,6 +387,12 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                         {{ l.totalPedidos }} ped.
                       </span>
                       <span>{{ dataDe(l.createdAt) }}</span>
+                      <span>
+                        <p-tag
+                          [value]="rotuloPlano(l)"
+                          [severity]="planoSeverity(l)"
+                        />
+                      </span>
                       <span>
                         <p-tag
                           [value]="rotuloSituacao(l.situacao)"
@@ -773,7 +800,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
     }
     .pa__linha {
       display: grid;
-      grid-template-columns: 2fr 1.3fr 1fr 1fr 0.7fr 1.6fr;
+      grid-template-columns: 2fr 1.3fr 1fr 1fr 1fr 0.7fr 1.6fr;
       gap: 10px;
       align-items: center;
       padding: 10px 12px;
@@ -1323,6 +1350,29 @@ export class PainelAdminComponent {
     return 'danger';
   }
 
+  rotuloPlano(l: {
+    plano: string | null;
+    planoExpira: string | null;
+    planoExpirado: boolean;
+  }): string {
+    if (l.plano === 'pago') return 'Pago';
+    if (l.plano === 'trial') {
+      if (l.planoExpirado) return 'Trial expirado';
+      return l.planoExpira ? `Trial · até ${this.dataDe(l.planoExpira)}` : 'Trial';
+    }
+    return '—';
+  }
+
+  planoSeverity(l: {
+    plano: string | null;
+    planoExpirado: boolean;
+  }): 'success' | 'info' | 'danger' | 'secondary' {
+    if (l.plano === 'pago') return 'success';
+    if (l.planoExpirado) return 'danger';
+    if (l.plano === 'trial') return 'info';
+    return 'secondary';
+  }
+
   labelStatus(status: string): string {
     return labelStatusPedido(status);
   }
@@ -1379,6 +1429,36 @@ export class PainelAdminComponent {
       const consultando = this.consultando();
       if (consultando && consultando.id === l.id) {
         this.consultando.set({ ...consultando, situacao });
+      }
+    } catch (error) {
+      this.mensagem.set(this.mensagemDe(error));
+    }
+  }
+
+  async trocarPlanoParaPago(l: LanchonetePainel): Promise<void> {
+    await this.trocarPlano(l, 'pago');
+  }
+
+  async trocarPlanoParaTrial(l: LanchonetePainel): Promise<void> {
+    await this.trocarPlano(l, 'trial');
+  }
+
+  private async trocarPlano(l: LanchonetePainel, plano: 'trial' | 'pago'): Promise<void> {
+    this.mensagem.set(null);
+    try {
+      const atualizado = await this.painel.alterarPlano(l.id, plano);
+      await this.carregarLanchonetes();
+      const consultando = this.consultando();
+      if (consultando && consultando.id === l.id) {
+        this.consultando.set({
+          ...consultando,
+          plano: atualizado.plano,
+          planoExpira: atualizado.planoExpira,
+          planoExpirado:
+            atualizado.plano === 'trial' &&
+            atualizado.planoExpira !== null &&
+            new Date(atualizado.planoExpira) < new Date(),
+        });
       }
     } catch (error) {
       this.mensagem.set(this.mensagemDe(error));

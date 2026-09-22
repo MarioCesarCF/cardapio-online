@@ -47,6 +47,29 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
           </div>
         }
 
+        @if (c.plano === 'pago') {
+          <div class="banner">
+            <p-tag value="pago" severity="success" />
+            <span>Plano ativo — sem data de vencimento.</span>
+          </div>
+        } @else {
+          <div class="banner">
+            @if (c.planoExpirado) {
+              <p-tag value="expirado" severity="danger" />
+              <span>
+                O período de teste da sua lanchonete expirou — você não pode mais receber pedidos.
+                Entre em contato com a plataforma para assinar um plano.
+              </span>
+            } @else {
+              <p-tag value="trial" severity="warn" />
+              <span>
+                Período de teste válido até {{ dataPlano(c.planoExpira) }}. Depois dessa data, para
+                continuar recebendo pedidos será preciso assinar um plano.
+              </span>
+            }
+          </div>
+        }
+
         <h2>Dados do proprietário</h2>
         <div class="grid2">
           <label class="campo">
@@ -617,6 +640,11 @@ export class AdminConfigComponent {
       inicio: null,
       fim: null,
     }));
+  }
+
+  dataPlano(data: string | null): string {
+    if (!data) return 'sem data';
+    return new Date(data).toLocaleDateString('pt-BR');
   }
 
   setHorario(dia: number, campo: 'aberto' | 'inicio' | 'fim', valor: unknown): void {

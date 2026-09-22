@@ -49,6 +49,15 @@ export class AdminSistemaController {
     return this.adminSistemaService.alterarSituacao(id, body, user);
   }
 
+  @Patch('lanchonetes/:id/plano')
+  alterarPlano(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminSistemaService.alterarPlano(id, body, user);
+  }
+
   @Delete('lanchonetes/:id')
   removerLanchonete(
     @Param('id') id: string,

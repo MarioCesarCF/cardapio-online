@@ -33,6 +33,9 @@ export interface LanchoneteConfig {
   horarios: HorarioDia[] | null;
   situacao: SituacaoLanchonete;
   ativa: boolean;
+  plano: string | null;
+  planoExpira: string | null;
+  planoExpirado: boolean;
 }
 
 export interface OpcaoAdmin {

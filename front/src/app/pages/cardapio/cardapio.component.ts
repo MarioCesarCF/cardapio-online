@@ -11,6 +11,7 @@ import { Textarea } from 'primeng/textarea';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { MarcaService } from '../../services/marca.service';
+import { PerfilService } from '../../services/perfil.service';
 import { CartService, type CartItem } from '../../services/cart.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
 import { dentroDoHorario, horarioResumo, type HorarioDia } from '../../services/horarios';
@@ -115,6 +116,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
+  private readonly perfil = inject(PerfilService);
   private readonly marca = inject(MarcaService);
   private readonly host = inject(ElementRef<HTMLElement>);
   readonly cart = inject(CartService);
@@ -129,7 +131,19 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly cardapio = signal<CardapioResponse | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
-  readonly logado = computed(() => this.auth.isAuthenticated());
+  readonly rotaPerfil = computed(() => {
+    const principal = this.perfil.perfilPrincipal();
+    if (principal === 'admin-sistema') {
+      return { rotulo: 'Painel da plataforma', rota: '/painel-admin' };
+    }
+    if (principal === 'dono') {
+      return { rotulo: 'Painel do dono', rota: '/admin' };
+    }
+    if (principal === 'cliente') {
+      return { rotulo: 'Página principal', rota: '/home' };
+    }
+    return null;
+  });
 
   readonly theme = computed(() => {
     const c = this.config();
@@ -196,6 +210,9 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.load(slug);
     });
     this.timerRef = setInterval(() => this.refreshPedidoStatus(), 20000);
+    if (this.auth.isAuthenticated()) {
+      void this.perfil.carregar(true);
+    }
   }
 
   ngOnDestroy(): void {

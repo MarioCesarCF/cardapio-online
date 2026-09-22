@@ -17,6 +17,9 @@ import { formataPedido } from '../pedidos/pedidos.types.js';
 export const SITUACOES_LANCHONETE = ['pendente', 'ativa', 'pausada'] as const;
 export type SituacaoLanchonete = (typeof SITUACOES_LANCHONETE)[number];
 
+export const PLANOS_LANCHONETE = ['trial', 'pago'] as const;
+export type PlanoLanchonete = (typeof PLANOS_LANCHONETE)[number];
+
 export interface AdminSistemaDados {
   id: string;
   nome: string | null;
@@ -100,6 +103,8 @@ export class AdminSistemaService implements OnModuleInit {
         logoUrl: true,
         situacao: true,
         donoId: true,
+        plano: true,
+        planoExpira: true,
         createdAt: true,
         _count: { select: { categorias: true, pedidos: true } },
       },
@@ -143,6 +148,12 @@ export class AdminSistemaService implements OnModuleInit {
         totalCategorias: l._count.categorias,
         totalProdutos: produtosPorId.get(l.id) ?? 0,
         totalPedidos: l._count.pedidos,
+        plano: l.plano,
+        planoExpira: l.planoExpira,
+        planoExpirado:
+          l.plano === 'trial' &&
+          l.planoExpira !== null &&
+          l.planoExpira < new Date(),
       };
     });
   }
@@ -178,6 +189,48 @@ export class AdminSistemaService implements OnModuleInit {
         lanchoneteNome: atual.nome,
         situacaoAnterior: atual.situacao,
         situacaoNova: situacao,
+      },
+    );
+
+    return atualizada;
+  }
+
+  async alterarPlano(
+    id: string,
+    body: Record<string, unknown>,
+    user: AuthenticatedUser,
+  ) {
+    const atual = await this.prisma.lanchonete.findUnique({ where: { id } });
+    if (!atual) throw new NotFoundException('Lanchonete não encontrada.');
+
+    const plano = this.planoValido(body.plano);
+    if (plano === atual.plano) {
+      throw new BadRequestException(
+        `A lanchonete já está no plano ${this.rotuloPlano(plano)}.`,
+      );
+    }
+
+    // Sem gateway ainda: "pago" não expira (planoExpira = null); voltar a
+    // "trial" reinicia os 30 dias a partir de agora (renovação manual).
+    const planoExpira =
+      plano === 'pago' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const atualizada = await this.prisma.lanchonete.update({
+      where: { id },
+      data: { plano, planoExpira },
+      select: { id: true, nome: true, slug: true, plano: true, planoExpira: true },
+    });
+
+    await this.registrarLog(
+      user,
+      'info',
+      'acao',
+      'Plano de assinatura alterado',
+      {
+        lanchoneteId: atual.id,
+        lanchoneteNome: atual.nome,
+        planoAnterior: atual.plano,
+        planoNovo: plano,
       },
     );
 
@@ -240,6 +293,12 @@ export class AdminSistemaService implements OnModuleInit {
       notifPainel: lanchonete.notifPainel,
       notifWhatsapp: lanchonete.notifWhatsapp,
       situacao: lanchonete.situacao,
+      plano: lanchonete.plano,
+      planoExpira: lanchonete.planoExpira,
+      planoExpirado:
+        lanchonete.plano === 'trial' &&
+        lanchonete.planoExpira !== null &&
+        lanchonete.planoExpira < new Date(),
       createdAt: lanchonete.createdAt,
       updatedAt: lanchonete.updatedAt,
       donoNome: dono?.nome ?? null,
@@ -592,6 +651,24 @@ export class AdminSistemaService implements OnModuleInit {
       throw new BadRequestException('Situação inválida.');
     }
     return value as SituacaoLanchonete;
+  }
+
+  private planoValido(value: unknown): PlanoLanchonete {
+    if (
+      typeof value !== 'string' ||
+      !PLANOS_LANCHONETE.includes(value as PlanoLanchonete)
+    ) {
+      throw new BadRequestException('Plano inválido.');
+    }
+    return value as PlanoLanchonete;
+  }
+
+  private rotuloPlano(plano: PlanoLanchonete): string {
+    const rotulos: Record<PlanoLanchonete, string> = {
+      trial: 'de teste',
+      pago: 'pago',
+    };
+    return rotulos[plano];
   }
 
   private rotuloSituacao(situacao: SituacaoLanchonete): string {

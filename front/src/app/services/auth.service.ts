@@ -3,6 +3,7 @@ import { createAuthClient } from '@neondatabase/neon-js/auth';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ApiService } from './api.service';
+import { PerfilService } from './perfil.service';
 
 export interface SessionUser {
   id: string;
@@ -32,6 +33,7 @@ export class AuthError extends Error {
 export class AuthService {
   private readonly client = createAuthClient(environment.neonAuthUrl);
   private readonly api = inject(ApiService);
+  private readonly perfil = inject(PerfilService);
 
   readonly session = signal<SessionState>({ user: null, token: null });
   readonly isAuthenticated = computed(() => this.session().token != null);
@@ -110,6 +112,7 @@ export class AuthService {
       await this.client.signOut();
     } finally {
       this.session.set({ user: null, token: null });
+      this.perfil.limpar();
     }
   }
 

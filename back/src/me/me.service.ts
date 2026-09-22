@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthenticatedUser } from '../auth/authenticated-user.js';
+import { TERMO_VERSAO_ATUAL } from './termo.js';
 
 export interface CriaEnderecoInput {
   rua: string;
@@ -24,6 +25,10 @@ export interface AtualizaPerfilInput {
   telefone?: string;
 }
 
+export interface RegistraConsentimentoInput {
+  versao?: string;
+}
+
 type EnderecoDados = CriaEnderecoInput & {
   complemento: string | null;
   cep: string | null;
@@ -38,7 +43,7 @@ export class MeService {
 
   async getMe(user: AuthenticatedUser) {
     await this.ensureCliente(user);
-    const [lanchonetes, cliente, enderecos, adminSistema, conta] =
+    const [lanchonetes, cliente, enderecos, adminSistema, conta, termoAceite] =
       await Promise.all([
         this.prisma.lanchonete.findMany({
           where: { donoId: user.id },
@@ -58,6 +63,10 @@ export class MeService {
           WHERE id = ${user.id}::uuid
           LIMIT 1
         `,
+        this.prisma.termoAceite.findFirst({
+          where: { usuarioId: user.id },
+          orderBy: { aceitoEm: 'desc' },
+        }),
       ]);
     const dadosConta = conta[0];
 
@@ -75,7 +84,39 @@ export class MeService {
       enderecos,
       adminSistema: Boolean(adminSistema),
       adminSistemaFuncao: adminSistema?.funcao ?? null,
+      termoAceite: termoAceite
+        ? { versao: termoAceite.versao, aceitoEm: termoAceite.aceitoEm }
+        : null,
     };
+  }
+
+  async registrarConsentimento(
+    user: AuthenticatedUser,
+    body: RegistraConsentimentoInput,
+  ) {
+    const versao = typeof body?.versao === 'string' ? body.versao.trim() : '';
+    if (versao !== TERMO_VERSAO_ATUAL) {
+      throw new BadRequestException('Versão do termo inválida.');
+    }
+    await this.prisma.termoAceite.upsert({
+      where: { usuarioId_versao: { usuarioId: user.id, versao } },
+      create: { usuarioId: user.id, versao },
+      // Mantém a data do 1º consentimento (a 2ª adesão da mesma versão não reescreve).
+      update: {},
+    });
+    return {
+      ok: true,
+      versao,
+      aceitoEm: await this.obterAceite(user.id, versao),
+    };
+  }
+
+  private async obterAceite(usuarioId: string, versao: string) {
+    const aceite = await this.prisma.termoAceite.findUnique({
+      where: { usuarioId_versao: { usuarioId, versao } },
+      select: { aceitoEm: true },
+    });
+    return aceite?.aceitoEm ?? new Date();
   }
 
   async atualizarPerfil(user: AuthenticatedUser, body: AtualizaPerfilInput) {

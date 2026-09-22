@@ -10,24 +10,34 @@ import { MeusPedidosComponent } from './pages/meus-pedidos/meus-pedidos.componen
 import { OnboardingComponent } from './pages/onboarding/onboarding.component';
 import { PainelAdminComponent } from './pages/admin/painel-admin.component';
 import { HomeComponent } from './pages/home/home.component';
-import { authGuard } from './guards/auth.guard';
+import { TermosComponent } from './pages/termos/termos.component';
+import { onboardingGuard, perfilGuard } from './guards/perfil.guard';
 
 export const routes: Routes = [
   { path: '', component: AuthComponent },
   { path: 'auth', component: AuthComponent },
-  { path: 'minhas-pedidos', component: MeusPedidosComponent, canActivate: [authGuard] },
-  { path: 'home', component: HomeComponent, canActivate: [authGuard] },
-  { path: 'onboarding', component: OnboardingComponent, canActivate: [authGuard] },
-  { path: 'painel-admin', component: PainelAdminComponent, canActivate: [authGuard] },
+  { path: 'termos', component: TermosComponent },
+  {
+    path: 'minhas-pedidos',
+    component: MeusPedidosComponent,
+    canActivate: [perfilGuard(['cliente'])],
+  },
+  { path: 'home', component: HomeComponent, canActivate: [perfilGuard(['cliente'])] },
+  { path: 'onboarding', component: OnboardingComponent, canActivate: [onboardingGuard] },
+  {
+    path: 'painel-admin',
+    component: PainelAdminComponent,
+    canActivate: [perfilGuard(['admin-sistema'])],
+  },
   {
     path: 'admin',
     component: AdminHomeComponent,
-    canActivate: [authGuard],
+    canActivate: [perfilGuard(['dono'])],
   },
   {
     path: 'admin/:slug',
     component: AdminShellComponent,
-    canActivate: [authGuard],
+    canActivate: [perfilGuard(['dono'])],
     children: [
       { path: '', redirectTo: 'config', pathMatch: 'full' },
       { path: 'config', component: AdminConfigComponent },

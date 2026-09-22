@@ -126,6 +126,8 @@ export class AdminService {
           corPrincipal,
           logoUrl,
           tipo,
+          plano: 'trial',
+          planoExpira: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
         select: { id: true, nome: true, slug: true, logoUrl: true, tipo: true },
       });
@@ -1021,6 +1023,12 @@ export class AdminService {
       horarios: lanchonete.horarios,
       situacao: lanchonete.situacao,
       ativa: lanchonete.situacao === 'ativa',
+      plano: lanchonete.plano,
+      planoExpira: lanchonete.planoExpira,
+      planoExpirado:
+        lanchonete.plano === 'trial' &&
+        lanchonete.planoExpira !== null &&
+        lanchonete.planoExpira < new Date(),
     };
   }
 
