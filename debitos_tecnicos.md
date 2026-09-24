@@ -283,24 +283,30 @@ quer um fluxo **direto e presencial** (físico) de adesão:
 
 ---
 
-## Lembrar de mim grava senha no localStorage — decisão do dono (2026-09-21)
+## "Lembrar de mim" agora guarda SÓ o e-mail (senha removida — 2026-09-23)
 
-**Status**: ✅ concluído (implementado desta forma por pedido explícito do dono)
-**Quem resolve**: assinado — mas registrar o tradeoff para revisão futura
+**Status**: ✅ resolvido (decisão de segurança do dono, junto com a sessão).
+**Quem resolve**: assinado — não voltar a gravar senha no `localStorage`.
 
-### Contexto
+### O que mudou
 
-O "Lembrar de mim" passou a salvar **também a senha** (chave `auth.senha-salva` no `localStorage`, junto do
-`auth.email-salvo`). Foi pedido explícito do dono. Isso **fragiliza a postura de segurança** descrita no
-AGENTS.md (a política atual é manter segredos fora do `localStorage` — o JWT da app, por ex., vive só em
-memória). O cookie do Neon Auth continua `HttpOnly`.
+Antes (2026-09-21, pedido antigo do dono), o "Lembrar de mim" guardava **também a senha**
+(chave `auth.senha-salva` no `localStorage`) — tradeoff frágil de segurança. Em 2026-09-23 o dono
+pediu para **remover** e o front foi ajustado:
 
-### Passo a passo (se um dia revisarmos)
+- A senha **nunca mais é gravada** em `localStorage` (nem na troca do checkbox, nem no submit).
+- A chave legada `auth.senha-salva` de quem já tinha é **apagada ao carregar a página** (limpeza
+  retroativa — `auth.component.ts` `ngOnInit`/`alternarLembrar`/submit → `removeItem`).
+- Continua salvo **apenas o e-mail** (`auth.email-salvo`) — e-mail não é segredo; a senha fica só
+  na memória (e o JWT da app continua apenas em memória; cookie do Neon Auth segue `HttpOnly`).
 
-- Marcar/clara senha ao deslogar? (hoje fica até o dono desmarcar o checkbox)
-- Ou evoluir para "logar mantendo a sessão" via cookie de sessão longa da Neon (sem guardar a senha) —
-  mais seguro e equivalente na prática.
+### Como manter
+
+- Conveniência: e-mail vem preenchido; o usuário digita só a senha.
+- Sessão persistente: o próprio Neon Auth ("Lembrar de mim" → `rememberMe` da Neon) mantém o cookie
+  de sessão por muito tempo **sem** senha em disco — é isso que evita relogar a cada visita.
 
 ### Verificação
 
-- `auth.component.ts`: `alternarLembrar()` grava `SENHA_SALVA_KEY`; `ngOnInit` restaura senha junto do e-mail.
+- `front/src/app/pages/auth/auth.component.ts`: `SENHA_SALVA_KEY` só em `removeItem` (nunca
+  `setItem`); `EMAIL_SALVO_KEY` continua gravando/restaurando o e-mail. Front build OK.

@@ -22,7 +22,7 @@ interface MeResponse {
 
 const LEMBRAR_KEY = 'auth.lembrar';
 const EMAIL_SALVO_KEY = 'auth.email-salvo';
-const SENHA_SALVA_KEY = 'auth.senha-salva';
+const SENHA_SALVA_KEY = 'auth.senha-salva'; // legado: mantido só para APAGAR dados antigos — nunca mais reescrevemos
 const MODO_CADASTRO_KEY = 'auth.modo-cadastro';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -90,10 +90,9 @@ export class AuthComponent implements OnInit {
       if (salvo) {
         this.email.set(salvo);
       }
-      const senhaSalva = localStorage.getItem(SENHA_SALVA_KEY);
-      if (senhaSalva) {
-        this.password.set(senhaSalva);
-      }
+      // Segurança (decisão do dono): a senha NÃO é mais guardada no dispositivo.
+      // Aqui apagamos a chave legada (quem tinha "lembrar" ativo antes desta mudança).
+      localStorage.removeItem(SENHA_SALVA_KEY);
     }
     this.route.queryParamMap.subscribe((params) => {
       const destino = params.get('redirect');
@@ -263,9 +262,8 @@ export class AuthComponent implements OnInit {
     if (valor && this.email()) {
       localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
     }
-    if (valor && this.password()) {
-      localStorage.setItem(SENHA_SALVA_KEY, this.password());
-    }
+    // Segurança (decisão do dono): a senha nunca é salva — só limpamos a chave legada.
+    localStorage.removeItem(SENHA_SALVA_KEY);
     if (!valor) {
       localStorage.removeItem(EMAIL_SALVO_KEY);
       localStorage.removeItem(SENHA_SALVA_KEY);
@@ -295,7 +293,7 @@ export class AuthComponent implements OnInit {
         await this.auth.signIn(this.email(), this.password(), this.lembrar());
         if (this.lembrar()) {
           localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
-          localStorage.setItem(SENHA_SALVA_KEY, this.password());
+          localStorage.removeItem(SENHA_SALVA_KEY);
         }
       } else {
         await this.auth.signUp(this.cadastroNome(), this.cadastroEmail(), this.cadastroSenha());
