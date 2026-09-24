@@ -49,6 +49,8 @@ const CONFIG_FIELDS = [
   'notifPainel',
   'notifWhatsapp',
   'horarios',
+  'cobraTaxaEntrega',
+  'taxaEntrega',
 ] as const;
 
 // Dia 0 = domingo (bate com Date.getDay()). dias fechados guardam inicio/fim null.
@@ -169,6 +171,10 @@ export class AdminService {
         ) as unknown as Prisma.LanchoneteUpdateInput['horarios'];
       } else if (field === 'chavePix') {
         data.chavePix = this.validaChavePix(value);
+      } else if (field === 'cobraTaxaEntrega') {
+        data.cobraTaxaEntrega = Boolean(value);
+      } else if (field === 'taxaEntrega') {
+        data.taxaEntrega = this.requiredDecimal(value, 'taxaEntrega');
       } else {
         (data as unknown as Record<string, unknown>)[field] =
           value === '' ? null : value;
@@ -1021,6 +1027,8 @@ export class AdminService {
       notifPainel: lanchonete.notifPainel,
       notifWhatsapp: lanchonete.notifWhatsapp,
       horarios: lanchonete.horarios,
+      cobraTaxaEntrega: lanchonete.cobraTaxaEntrega,
+      taxaEntrega: Number(lanchonete.taxaEntrega),
       situacao: lanchonete.situacao,
       ativa: lanchonete.situacao === 'ativa',
       plano: lanchonete.plano,

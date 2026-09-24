@@ -213,6 +213,10 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                 </div>
               }
               <footer>
+                @if (pedido.taxaEntrega > 0) {
+                  <span>Subtotal: {{ pedido.subtotal | currency: 'BRL' }}</span>
+                  <span>Taxa de entrega: + {{ pedido.taxaEntrega | currency: 'BRL' }}</span>
+                }
                 <span>Total</span>
                 <strong>{{ pedido.total | currency: 'BRL' }}</strong>
               </footer>

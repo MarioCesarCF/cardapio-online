@@ -187,6 +187,27 @@ header {
     font-weight: 600;
   }
 
+  .totais {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.85rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px dashed var(--app-borda);
+
+    .linha {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--app-texto-suave);
+
+      strong {
+        color: var(--app-texto);
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
   .rodape {
     display: flex;
     justify-content: space-between;

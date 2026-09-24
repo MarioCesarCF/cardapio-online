@@ -30,6 +30,8 @@ model Lanchonete {
   plano        String   @default("trial") // trial | pago
   planoExpira  DateTime? // trial: fim dos 30d; pago: null (sem expiração até o gateway)
   horarios     Json? // [{dia 0-6, aberto, inicio "HH:MM", fim "HH:MM"}] — dia 0 = domingo (Date.getDay())
+  cobraTaxaEntrega Boolean   @default(false) // se as entregas (tipo "entrega") cobram taxa
+  taxaEntrega       Decimal  @default(0) @db.Decimal(10, 2) // valor fixo da taxa de entrega
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -181,6 +183,7 @@ model Pedido {
   status          String   @default("recebido")
   tipoEntrega     String   @default("entrega") // entrega | retirar | consumir
   subtotal        Decimal  @db.Decimal(10, 2)
+  taxaEntrega     Decimal  @default(0) @db.Decimal(10, 2)
   total           Decimal  @db.Decimal(10, 2)
   formaPagamento  String   @default("pix")
   brCodePix       String?

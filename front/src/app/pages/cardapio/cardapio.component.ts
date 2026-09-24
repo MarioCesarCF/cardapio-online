@@ -34,6 +34,8 @@ interface Lanchonete {
   emailContato: string | null;
   enderecoLoja: string | null;
   horarios: HorarioDia[] | null;
+  cobraTaxaEntrega: boolean;
+  taxaEntrega: number;
 }
 
 interface Opcao {
@@ -92,6 +94,8 @@ interface PedidoConfirmado {
   numero: number;
   status: string;
   tipoEntrega: string;
+  subtotal: number;
+  taxaEntrega: number;
   total: number;
   brCodePix: string;
 }
@@ -421,6 +425,16 @@ export class CardapioComponent implements OnInit, OnDestroy {
   mostrarEndereco(): boolean {
     return this.tipoPedido() === 'entrega';
   }
+
+  readonly taxaEntrega = computed(() => {
+    if (this.tipoPedido() !== 'entrega') return 0;
+    const l = this.config();
+    return l?.cobraTaxaEntrega ? (l.taxaEntrega ?? 0) : 0;
+  });
+
+  readonly totalComTaxa = computed(() =>
+    Math.round((this.cart.total() + this.taxaEntrega()) * 100) / 100,
+  );
 
   avisoPagamento(): string | null {
     if (this.formaPagamento() === 'pix') return null;

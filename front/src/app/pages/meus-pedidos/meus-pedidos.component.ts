@@ -37,6 +37,7 @@ interface Pedido {
   tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
+  taxaEntrega: number;
   total: number;
   formaPagamento: string;
   brCodePix: string | null;

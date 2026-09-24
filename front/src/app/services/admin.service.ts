@@ -31,6 +31,8 @@ export interface LanchoneteConfig {
   notifPainel: boolean;
   notifWhatsapp: boolean;
   horarios: HorarioDia[] | null;
+  cobraTaxaEntrega: boolean;
+  taxaEntrega: number;
   situacao: SituacaoLanchonete;
   ativa: boolean;
   plano: string | null;

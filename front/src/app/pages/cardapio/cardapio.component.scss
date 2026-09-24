@@ -429,6 +429,27 @@
   }
 }
 
+.valores {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.9rem 0 0;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px dashed var(--app-borda);
+}
+
+.linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.92rem;
+  color: var(--app-texto-suave);
+
+  strong {
+    color: var(--app-texto);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .total {
   display: flex;
   justify-content: space-between;
@@ -467,6 +488,14 @@
   padding: 0;
   text-align: center;
   line-height: 1.45;
+}
+
+.pix-taxa {
+  margin: -0.5rem 0 0;
+  padding: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--app-texto-suave);
 }
 
 .pix-pill {

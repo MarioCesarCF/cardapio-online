@@ -20,6 +20,7 @@ export interface PedidoPainel {
   tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
+  taxaEntrega: number;
   total: number;
   formaPagamento: string;
   enderecoEntrega: unknown;
@@ -47,6 +48,7 @@ export function formataPedido(p: PedidoComSnapshots): PedidoPainel {
     tipoEntrega: p.tipoEntrega,
     justificativaCancelamento: p.justificativaCancelamento ?? null,
     subtotal: Number(p.subtotal),
+    taxaEntrega: Number(p.taxaEntrega),
     total: Number(p.total),
     formaPagamento: p.formaPagamento,
     enderecoEntrega: p.enderecoEntrega,

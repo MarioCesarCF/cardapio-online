@@ -36,6 +36,8 @@ export class LojasService {
         emailContato: true,
         enderecoLoja: true,
         horarios: true,
+        cobraTaxaEntrega: true,
+        taxaEntrega: true,
       },
     });
 
@@ -54,6 +56,8 @@ export class LojasService {
       emailContato: lanchonete.emailContato,
       enderecoLoja: lanchonete.enderecoLoja,
       horarios: lanchonete.horarios,
+      cobraTaxaEntrega: lanchonete.cobraTaxaEntrega,
+      taxaEntrega: Number(lanchonete.taxaEntrega),
     };
   }
 
@@ -104,6 +108,8 @@ export class LojasService {
         whatsapp: lanchonete.whatsapp,
         emailContato: lanchonete.emailContato,
         enderecoLoja: lanchonete.enderecoLoja,
+        cobraTaxaEntrega: lanchonete.cobraTaxaEntrega,
+        taxaEntrega: Number(lanchonete.taxaEntrega),
       },
       categorias: lanchonete.categorias.map((categoria) => ({
         id: categoria.id,

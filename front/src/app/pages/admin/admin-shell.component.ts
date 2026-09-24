@@ -16,7 +16,7 @@ import { AuthService } from '../../services/auth.service';
         <h1>{{ nome() }}</h1>
         <div class="shell__acoes">
           <a class="shell__ver" [href]="'/' + slug()" target="_blank">
-            Ver página <i class="pi pi-external-link"></i>
+            Ver cardápio público <i class="pi pi-external-link"></i>
           </a>
           <p-button
             label="Sair"

@@ -72,18 +72,6 @@ interface ModalOpcao {
   template: `
     <div class="cardapio">
       <p class="aviso" *ngIf="mensagem">{{ mensagem }}</p>
-      <div class="topo-acoes">
-        <p-button
-          label="Recarregar"
-          icon="pi pi-refresh"
-          severity="secondary"
-          [outlined]="true"
-          (onClick)="recarregar()"
-        />
-        <a class="ver" [href]="'/' + slug()" target="_blank">
-          Ver cardápio público <i class="pi pi-external-link"></i>
-        </a>
-      </div>
 
       <!-- CATEGORIAS / PRODUTOS -->
       <section class="bloco">
@@ -189,6 +177,40 @@ interface ModalOpcao {
             </button>
           </div>
         </article>
+      </section>
+
+      <!-- TAXA DE ENTREGA -->
+      <section class="bloco">
+        <h2>Taxa de entrega</h2>
+        <p class="dica">Cobrar uma taxa nas entregas (pedidos do tipo "Entrega").</p>
+        <div class="taxa-form">
+          <label class="chk">
+            <input type="checkbox" [(ngModel)]="taxaEntCobra" name="teCobra" />
+            Cobrar taxa de entrega
+          </label>
+          <div class="taxa-itens" *ngIf="taxaEntCobra">
+            <label class="f taxa-valor">
+              <span>Valor da taxa (R$) *</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                [(ngModel)]="taxaEntValor"
+                name="teValor"
+                [class.erro]="!!taxaEntErros['valor']"
+                placeholder="0,00"
+              />
+              <small class="erro-txt" *ngIf="taxaEntErros['valor']">{{ taxaEntErros['valor'] }}</small>
+            </label>
+            <button type="button" [disabled]="salvandoTaxa" (click)="salvarTaxaEntrega()">
+              <i class="pi pi-check"></i> Salvar taxa
+            </button>
+          </div>
+          <small class="salvo" *ngIf="taxaEntSalvo && !taxaEntErros['geral']">{{ taxaEntSalvo }}</small>
+          <small class="erro-txt" *ngIf="taxaEntErros['geral']">
+            <i class="pi pi-exclamation-circle"></i> {{ taxaEntErros['geral'] }}
+          </small>
+        </div>
       </section>
     </div>
 
@@ -535,6 +557,16 @@ interface ModalOpcao {
         </p>
       </ng-template>
     </p-dialog>
+
+    <div class="acoes-fim">
+      <p-button
+        label="Recarregar"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="recarregar()"
+      />
+    </div>
   `,
   styles: `
     .cardapio {
@@ -709,6 +741,34 @@ interface ModalOpcao {
     .nova-opcao {
       padding-top: 10px;
       border-top: 1px dashed var(--app-borda);
+    }
+    .dica {
+      color: var(--app-texto-suave);
+      font-size: 0.82rem;
+      margin: 0 0 10px;
+    }
+    .taxa-form {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .taxa-form button {
+      align-self: flex-end;
+    }
+    .taxa-itens {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .taxa-valor {
+      width: 180px;
+    }
+    .salvo {
+      color: var(--p-green-600, #16a34a);
+      font-size: 0.8rem;
+      font-weight: 600;
     }
     .novo-produto {
       padding-top: 10px;
@@ -958,6 +1018,12 @@ export class AdminCardapioComponent {
   };
   opcaoErros: Record<string, string> = {};
 
+  taxaEntCobra = false;
+  taxaEntValor = 0;
+  taxaEntErros: Record<string, string> = {};
+  taxaEntSalvo = '';
+  salvandoTaxa = false;
+
   constructor() {
     (this.route.parent?.paramMap ?? this.route.paramMap).subscribe((params) =>
       this.carregar(params.get('slug') ?? ''),
@@ -967,9 +1033,57 @@ export class AdminCardapioComponent {
   private async carregar(slug: string) {
     this.slug.set(slug);
     try {
-      this.data.set(await this.admin.getCardapio(slug));
+      const cardapio = await this.admin.getCardapio(slug);
+      this.data.set(cardapio);
+      this.sincronizarTaxa();
     } catch {
       await this.router.navigate(['/admin']);
+    }
+  }
+
+  private sincronizarTaxa() {
+    const l = this.data()?.lanchonete;
+    this.taxaEntCobra = l?.cobraTaxaEntrega ?? false;
+    this.taxaEntValor = l?.taxaEntrega ?? 0;
+    this.taxaEntErros = {};
+    this.taxaEntSalvo = '';
+  }
+
+  async salvarTaxaEntrega() {
+    if (this.salvandoTaxa) return;
+    this.taxaEntErros = {};
+    this.taxaEntSalvo = '';
+    if (this.taxaEntCobra) {
+      const valor = Number(this.taxaEntValor);
+      if (!Number.isFinite(valor) || valor < 0) {
+        this.taxaEntErros['valor'] = 'Informe um valor maior ou igual a zero.';
+        return;
+      }
+      this.taxaEntValor = Math.round(valor * 100) / 100;
+    }
+    this.salvandoTaxa = true;
+    try {
+      await this.admin.updateConfig(this.slug(), {
+        cobraTaxaEntrega: this.taxaEntCobra,
+        taxaEntrega: this.taxaEntCobra ? this.taxaEntValor : 0,
+      });
+      this.data.update((d) =>
+        d
+          ? {
+              ...d,
+              lanchonete: {
+                ...d.lanchonete,
+                cobraTaxaEntrega: this.taxaEntCobra,
+                taxaEntrega: this.taxaEntCobra ? this.taxaEntValor : 0,
+              },
+            }
+          : d,
+      );
+      this.taxaEntSalvo = 'Taxa de entrega salva.';
+    } catch (error) {
+      this.taxaEntErros['geral'] = this.erroMsg(error, 'Falha ao salvar a taxa de entrega.');
+    } finally {
+      this.salvandoTaxa = false;
     }
   }
 

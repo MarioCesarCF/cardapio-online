@@ -266,6 +266,7 @@ export class MeService {
       tipoEntrega: p.tipoEntrega,
       justificativaCancelamento: p.justificativaCancelamento ?? null,
       subtotal: Number(p.subtotal),
+      taxaEntrega: Number(p.taxaEntrega),
       total: Number(p.total),
       formaPagamento: p.formaPagamento,
       brCodePix: p.brCodePix,

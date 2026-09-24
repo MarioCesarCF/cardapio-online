@@ -117,6 +117,19 @@
           </section>
         }
 
+        @if (pedido.taxaEntrega > 0) {
+          <div class="totais">
+            <div class="linha">
+              <span>Subtotal</span>
+              <strong>{{ pedido.subtotal | currency: 'BRL' }}</strong>
+            </div>
+            <div class="linha">
+              <span>Taxa de entrega</span>
+              <strong>{{ pedido.taxaEntrega | currency: 'BRL' }}</strong>
+            </div>
+          </div>
+        }
+
         <div class="rodape">
           <div class="pagamento">
             <span>{{ rotuloPagamento(pedido.formaPagamento) }}</span>

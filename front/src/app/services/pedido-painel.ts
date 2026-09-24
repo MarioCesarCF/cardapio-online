@@ -13,6 +13,7 @@ export interface PedidoPainel {
   tipoEntrega: string;
   justificativaCancelamento: string | null;
   subtotal: number;
+  taxaEntrega: number;
   total: number;
   formaPagamento: string;
   enderecoEntrega: {

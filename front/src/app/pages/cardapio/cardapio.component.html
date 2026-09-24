@@ -499,8 +499,21 @@
       }
     }
 
+    @if (taxaEntrega() > 0) {
+      <div class="valores">
+        <div class="linha">
+          <span>Subtotal</span>
+          <strong>{{ cart.total() | currency: 'BRL' }}</strong>
+        </div>
+        <div class="linha">
+          <span>Taxa de entrega</span>
+          <strong>+ {{ taxaEntrega() | currency: 'BRL' }}</strong>
+        </div>
+      </div>
+    }
+
     <div class="total">
-      Total <strong>{{ cart.total() | currency: 'BRL' }}</strong>
+      Total <strong>{{ totalComTaxa() | currency: 'BRL' }}</strong>
     </div>
 
     @if (erroPedido(); as erro) {
@@ -534,6 +547,12 @@
           <p class="pix-status">
             Para confirmar, faça o PIX de <strong>{{ p.total | currency: 'BRL' }}</strong> abaixo.
           </p>
+          @if (p.taxaEntrega > 0) {
+            <p class="pix-taxa">
+              Inclui taxa de entrega de {{ p.taxaEntrega | currency: 'BRL' }} (subtotal
+              {{ p.subtotal | currency: 'BRL' }}).
+            </p>
+          }
           @if (qrUrl(); as url) {
             <img class="pix-qr" [src]="url" alt="QR Code PIX" />
           } @else {

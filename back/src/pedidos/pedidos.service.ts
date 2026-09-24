@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { gerarBrCode } from './pix.js';
 import { formataPedido } from './pedidos.types.js';
 import { estaDentroDoHorario, type HorarioDia } from './horarios.js';
+import { calculaTaxaEntrega, calculaTotalPedido } from './taxa-entrega.js';
 import { PedidosGateway } from './pedidos.gateway.js';
 import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
 import type { AuthenticatedUser } from '../auth/authenticated-user.js';
@@ -104,10 +105,20 @@ export class PedidosService {
     const produtos = await this.carregaProdutos(itens, lanchonete.id);
     const { itensMontados, subtotal } = this.montaItens(itens, produtos);
 
+    // Taxa de entrega: só vale para pedidos com entrega, quando a lanchonete
+    // configura a cobrança. Snapshot no pedido (mudanças futuras da taxa não
+    // alteram pedidos já criados).
+    const taxaEntrega = calculaTaxaEntrega(
+      tipoEntrega,
+      lanchonete.cobraTaxaEntrega,
+      Number(lanchonete.taxaEntrega),
+    );
+    const total = calculaTotalPedido(subtotal, taxaEntrega);
+
     await this.ensureCliente(user, telefone);
 
     const brCodePix =
-      formaPagamento === 'pix' ? this.geraPix(lanchonete, subtotal) : null;
+      formaPagamento === 'pix' ? this.geraPix(lanchonete, total) : null;
     const numero = await this.proximoNumero(lanchonete.id);
 
     const pedido = await this.prisma.$transaction(async (tx) => {
@@ -119,7 +130,8 @@ export class PedidosService {
           status: 'recebido',
           tipoEntrega,
           subtotal,
-          total: subtotal,
+          taxaEntrega,
+          total,
           formaPagamento,
           brCodePix,
           clienteTelefone: telefone,
@@ -199,6 +211,8 @@ export class PedidosService {
       tipoEntrega: pedido.tipoEntrega,
       formaPagamento: pedido.formaPagamento,
       pagamentoInfo: pedido.pagamentoInfo,
+      subtotal: Number(pedido.subtotal),
+      taxaEntrega: Number(pedido.taxaEntrega),
       total: Number(pedido.total),
       brCodePix: pedido.brCodePix,
     };
