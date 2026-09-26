@@ -7,6 +7,7 @@ import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { AdminService, CardapioAdmin } from '../../services/admin.service';
 import { GaleriaService, GaleriaImagem, GaleriaCategoria } from '../../services/galeria.service';
+import { formatarMoeda, formatarValor } from '../../services/moeda';
 
 interface GrupoEdit {
   id: string;
@@ -84,7 +85,9 @@ interface ModalOpcao {
 
         <article class="card" *ngFor="let cat of data()?.categorias ?? []; trackBy: catTrackBy">
           <div class="grupo-topo">
-            <strong>{{ cat.nome }} <span class="qtd">({{ cat.produtos.length }})</span></strong>
+            <strong
+              >{{ cat.nome }} <span class="qtd">({{ cat.produtos.length }})</span></strong
+            >
             <img *ngIf="cat.imagemUrl" class="thumb" [src]="cat.imagemUrl" alt="" />
             <span class="badge" *ngIf="!cat.ativa">inativa</span>
             <div class="acoes">
@@ -106,8 +109,10 @@ interface ModalOpcao {
                 >
               </span>
               <div class="acoes">
-                <span class="prod-preco">R$ {{ produto.preco.toFixed(2) }}</span>
-                <button class="btn-neutro" (click)="abrirProdEditar(cat.id, produto)">Editar</button>
+                <span class="prod-preco">{{ formatarMoeda(produto.preco) }}</span>
+                <button class="btn-neutro" (click)="abrirProdEditar(cat.id, produto)">
+                  Editar
+                </button>
                 <button class="btn-excluir" (click)="excluirProduto(produto.id)">
                   <i class="pi pi-trash"></i>
                 </button>
@@ -157,7 +162,7 @@ interface ModalOpcao {
                   opcao.remove
                     ? 'remover'
                     : opcao.precoAdicional > 0
-                      ? '+' + opcao.precoAdicional.toFixed(2)
+                      ? '+' + formatarValor(opcao.precoAdicional)
                       : 'grátis'
                 }}
               </span>
@@ -200,13 +205,17 @@ interface ModalOpcao {
                 [class.erro]="!!taxaEntErros['valor']"
                 placeholder="0,00"
               />
-              <small class="erro-txt" *ngIf="taxaEntErros['valor']">{{ taxaEntErros['valor'] }}</small>
+              <small class="erro-txt" *ngIf="taxaEntErros['valor']">{{
+                taxaEntErros['valor']
+              }}</small>
             </label>
             <button type="button" [disabled]="salvandoTaxa" (click)="salvarTaxaEntrega()">
               <i class="pi pi-check"></i> Salvar taxa
             </button>
           </div>
-          <small class="salvo" *ngIf="taxaEntSalvo && !taxaEntErros['geral']">{{ taxaEntSalvo }}</small>
+          <small class="salvo" *ngIf="taxaEntSalvo && !taxaEntErros['geral']">{{
+            taxaEntSalvo
+          }}</small>
           <small class="erro-txt" *ngIf="taxaEntErros['geral']">
             <i class="pi pi-exclamation-circle"></i> {{ taxaEntErros['geral'] }}
           </small>
@@ -426,10 +435,7 @@ interface ModalOpcao {
 
         <fieldset class="grupos-sel">
           <legend>Grupos de opções</legend>
-          <label
-            class="chk"
-            *ngFor="let g of data()?.grupos ?? []; trackBy: grupoTrackBy"
-          >
+          <label class="chk" *ngFor="let g of data()?.grupos ?? []; trackBy: grupoTrackBy">
             <input
               type="checkbox"
               name="pg{{ g.id }}"
@@ -958,6 +964,8 @@ export class AdminCardapioComponent {
   private readonly galeriaSvc = inject(GaleriaService);
 
   private readonly router = inject(Router);
+  readonly formatarMoeda = formatarMoeda;
+  readonly formatarValor = formatarValor;
   readonly slug = signal('');
   readonly data = signal<CardapioAdmin | null>(null);
   mensagem = '';

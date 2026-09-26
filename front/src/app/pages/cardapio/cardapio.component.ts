@@ -8,11 +8,13 @@ import { Dialog } from 'primeng/dialog';
 import { Drawer } from 'primeng/drawer';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
+import { MessageService } from 'primeng/api';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { MarcaService } from '../../services/marca.service';
 import { PerfilService } from '../../services/perfil.service';
 import { CartService, type CartItem } from '../../services/cart.service';
+import { formatarMoeda } from '../../services/moeda';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
 import { dentroDoHorario, horarioResumo, type HorarioDia } from '../../services/horarios';
 import {
@@ -22,6 +24,15 @@ import {
   tipoEntregaLabel,
   type PedidoStatus,
 } from '../../services/pedido-painel';
+
+/**
+ * Os overlays do cardápio usam `appendTo="self"` (sem `p-overlay` no body) para
+ * herdar a cor da lanchonete, que fica restrita à subárvore da página. Nesse modo
+ * o PrimeNG não gerencia z-index, então o app bar fixo (`position: sticky`,
+ * z-index 900) cobria o topo dos painéis — no drawer isso escondia o botão de
+ * fechar. Por isso todos recebem um z-index próprio acima do app bar.
+ */
+const Z_OVERLAY = 1000;
 
 interface Lanchonete {
   id: string;
@@ -97,7 +108,9 @@ interface PedidoConfirmado {
   subtotal: number;
   taxaEntrega: number;
   total: number;
+  formaPagamento: string;
   brCodePix: string;
+  pixConfirmado: boolean;
 }
 
 @Component({
@@ -123,6 +136,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   private readonly perfil = inject(PerfilService);
   private readonly marca = inject(MarcaService);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly msg = inject(MessageService);
   readonly cart = inject(CartService);
 
   private timerRef: ReturnType<typeof setInterval> | null = null;
@@ -130,6 +144,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly rotuloStatus = labelStatus;
   readonly rotuloTipo = tipoEntregaLabel;
   readonly tipoCurto = tipoEntregaCurto;
+  readonly zOverlay = Z_OVERLAY;
 
   readonly config = signal<Lanchonete | null>(null);
   readonly cardapio = signal<CardapioResponse | null>(null);
@@ -183,6 +198,15 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly pedidoPainelAberto = signal(false);
   readonly qrUrl = signal<string | null>(null);
   readonly formaPedido = signal<'pix' | 'cartao' | 'dinheiro' | null>(null);
+
+  /** Barra fixa da sacola: some com a sacola vazia, com o drawer aberto e durante o checkout. */
+  readonly mostrarBarraSacola = computed(
+    () =>
+      this.cart.totalItens() > 0 &&
+      !this.cartAberto() &&
+      !this.checkoutAberto() &&
+      !this.pedidoPainelAberto(),
+  );
 
   readonly enderecos = signal<Endereco[]>([]);
   readonly enderecoSelecionadoId = signal<string | null>(null);
@@ -346,11 +370,21 @@ export class CardapioComponent implements OnInit, OnDestroy {
       opcoes,
     });
     this.fecharProduto();
-    this.cartAberto.set(true);
+    this.msg.add({
+      severity: 'success',
+      summary: 'Adicionado à sacola',
+      detail: produto.nome,
+      life: 2500,
+    });
   }
 
   setQtd(item: CartItem, qtd: number): void {
     this.cart.setQtd(item.chave, qtd);
+  }
+
+  /** Fecha o drawer da sacola (botão X do topo e "Continuar escolhendo" do rodapé). */
+  fecharSacola(): void {
+    this.cartAberto.set(false);
   }
 
   async irFinalizar(): Promise<void> {
@@ -432,8 +466,8 @@ export class CardapioComponent implements OnInit, OnDestroy {
     return l?.cobraTaxaEntrega ? (l.taxaEntrega ?? 0) : 0;
   });
 
-  readonly totalComTaxa = computed(() =>
-    Math.round((this.cart.total() + this.taxaEntrega()) * 100) / 100,
+  readonly totalComTaxa = computed(
+    () => Math.round((this.cart.total() + this.taxaEntrega()) * 100) / 100,
   );
 
   avisoPagamento(): string | null {
@@ -450,7 +484,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
         return 'Forma de pagamento: Cartão de crédito/débito';
       case 'dinheiro':
         return this.precisaTroco()
-          ? `Forma de pagamento: Dinheiro (troco para R$ ${Number(this.trocoPara().replace(',', '.')).toFixed(2)})`
+          ? `Forma de pagamento: Dinheiro (troco para ${formatarMoeda(Number(this.trocoPara().replace(',', '.')))})`
           : 'Forma de pagamento: Dinheiro';
       default:
         return 'Forma de pagamento: Pix';
@@ -552,7 +586,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.pedido.set(pedido);
       this.formaPedido.set(this.formaPagamento());
       this.qrUrl.set(null);
-      if (this.formaPagamento() === 'pix') {
+      if (this.formaPagamento() === 'pix' && pedido.brCodePix) {
         try {
           this.qrUrl.set(await QRCode.toDataURL(pedido.brCodePix, { width: 240, margin: 1 }));
         } catch {
@@ -590,7 +624,16 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   precisaPagar(status: string): boolean {
-    return STATUS_COM_PIX.has(status as PedidoStatus) && this.formaPedido() === 'pix';
+    return (
+      STATUS_COM_PIX.has(status as PedidoStatus) &&
+      this.formaPedido() === 'pix' &&
+      !this.pixConfirmado()
+    );
+  }
+
+  /** A lanchonete já confirmou o recebimento: o QR some para o cliente. */
+  pixConfirmado(): boolean {
+    return this.pedido()?.pixConfirmado === true;
   }
 
   pagamentoRotulo(): string {
@@ -615,11 +658,18 @@ export class CardapioComponent implements OnInit, OnDestroy {
     if (!pedido) return;
     try {
       const pedidos = await firstValueFrom(
-        this.api.get<{ id: string; status: string }[]>('/me/pedidos'),
+        this.api.get<{ id: string; status: string; pixConfirmado: boolean }[]>('/me/pedidos'),
       );
       const atual = pedidos.find((p) => p.id === pedido.id);
-      if (atual && atual.status !== pedido.status) {
-        this.pedido.update((p) => (p ? { ...p, status: atual.status } : p));
+      if (!atual) return;
+      if (
+        atual.status !== pedido.status ||
+        Boolean(atual.pixConfirmado) !== Boolean(pedido.pixConfirmado)
+      ) {
+        this.pedido.update((p) =>
+          p ? { ...p, status: atual.status, pixConfirmado: Boolean(atual.pixConfirmado) } : p,
+        );
+        if (atual.pixConfirmado) this.qrUrl.set(null);
       }
     } catch {
       // Sem sessão ou rede — mantém o status atual.

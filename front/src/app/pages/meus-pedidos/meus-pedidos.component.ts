@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import QRCode from 'qrcode';
@@ -41,6 +41,8 @@ interface Pedido {
   total: number;
   formaPagamento: string;
   brCodePix: string | null;
+  pixConfirmado: boolean;
+  pixConfirmadoEm: string | null;
   enderecoEntrega: {
     rua: string;
     numero: string;
@@ -63,11 +65,15 @@ interface Pedido {
   templateUrl: './meus-pedidos.component.html',
   styleUrl: './meus-pedidos.component.scss',
 })
-export class MeusPedidosComponent implements OnInit {
+export class MeusPedidosComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly cart = inject(CartService);
   private readonly router = inject(Router);
+
+  /** Reavalia a lista a cada 20s: o QR some sozinho quando a lanchonete confirma. */
+  private readonly RELOAD_MS = 20000;
+  private timerRef: ReturnType<typeof setInterval> | null = null;
 
   readonly pedidos = signal<Pedido[]>([]);
   readonly historico = signal(false);
@@ -94,16 +100,35 @@ export class MeusPedidosComponent implements OnInit {
     }
   }
 
+  /** QR Code some quando a lanchonete confirma o recebimento do pagamento. */
   mostraPix(pedido: Pedido): boolean {
     return (
       pedido.formaPagamento === 'pix' &&
       !!pedido.brCodePix &&
+      !pedido.pixConfirmado &&
       STATUS_COM_PIX.has(pedido.status as PedidoStatus)
     );
   }
 
+  /** Pedido PIX já confirmado pela lanchonete (aviso, sem QR). */
+  pixConfirmado(pedido: Pedido): boolean {
+    return pedido.formaPagamento === 'pix' && pedido.pixConfirmado;
+  }
+
   ngOnInit(): void {
     void this.carregar();
+    this.timerRef = setInterval(() => {
+      void this.recarregarSilencioso();
+    }, this.RELOAD_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerRef) clearInterval(this.timerRef);
+  }
+
+  /** Botão "Atualizar" — recarrega a lista sem apagar a tela. */
+  atualizar(): void {
+    void this.recarregarSilencioso();
   }
 
   private async carregar(): Promise<void> {
@@ -112,14 +137,12 @@ export class MeusPedidosComponent implements OnInit {
     await this.auth.init();
     if (!this.auth.isAuthenticated()) {
       await this.router.navigate(['/auth'], {
-        queryParams: { redirect: '/minhas-pedidos' },
+        queryParams: { redirect: '/meus-pedidos' },
       });
       return;
     }
     try {
-      const pedidos = await firstValueFrom(
-        this.api.get<Pedido[]>(`/me/pedidos${this.historico() ? '?historico=1' : ''}`),
-      );
+      const pedidos = await this.buscarPedidos();
       this.pedidos.set(pedidos);
       await this.gerarQrs(pedidos);
     } catch {
@@ -129,6 +152,24 @@ export class MeusPedidosComponent implements OnInit {
     }
   }
 
+  /** Reconsulta a lista em segundo plano (timer + botão Atualizar). */
+  private async recarregarSilencioso(): Promise<void> {
+    if (!this.auth.isAuthenticated()) return;
+    try {
+      const pedidos = await this.buscarPedidos();
+      this.pedidos.set(pedidos);
+      await this.gerarQrs(pedidos);
+    } catch {
+      // Sem sessão ou rede — mantém a tela como está.
+    }
+  }
+
+  private buscarPedidos(): Promise<Pedido[]> {
+    return firstValueFrom(
+      this.api.get<Pedido[]>(`/me/pedidos${this.historico() ? '?historico=1' : ''}`),
+    );
+  }
+
   alternarHistorico(): void {
     this.historico.update((v) => !v);
     void this.carregar();
@@ -136,16 +177,26 @@ export class MeusPedidosComponent implements OnInit {
 
   private async gerarQrs(pedidos: Pedido[]): Promise<void> {
     const mapa = { ...this.qrUrls() };
+    let mudou = false;
     for (const p of pedidos) {
       if (p.brCodePix && this.mostraPix(p) && !mapa[p.id]) {
         try {
           mapa[p.id] = await QRCode.toDataURL(p.brCodePix, { width: 220, margin: 1 });
+          mudou = true;
         } catch {
           // QR indisponível; segue sem ele
         }
       }
     }
-    this.qrUrls.set(mapa);
+    // Libera o QR de pedidos que saíram do estado "aguardando pagamento".
+    const visiveis = new Set(pedidos.filter((p) => this.mostraPix(p)).map((p) => p.id));
+    for (const id of Object.keys(mapa)) {
+      if (!visiveis.has(id)) {
+        delete mapa[id];
+        mudou = true;
+      }
+    }
+    if (mudou) this.qrUrls.set(mapa);
   }
 
   podeRepetir(pedido: Pedido): boolean {

@@ -11,8 +11,19 @@
   border-bottom: 1px solid var(--p-surface-700);
 
   &__logo {
-    display: block;
-    height: 1.9rem;
-    width: auto;
+    display: flex;
+    align-items: center;
+    border-radius: 0.4rem;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    img {
+      display: block;
+      height: 1.9rem;
+      width: auto;
+    }
   }
 }

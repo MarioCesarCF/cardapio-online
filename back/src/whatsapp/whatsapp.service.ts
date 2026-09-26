@@ -58,7 +58,10 @@ export class WhatsAppService {
     };
     if (params.length > 0) {
       template.components = [
-        { type: 'body', parameters: params.map((p) => ({ type: 'text', text: p })) },
+        {
+          type: 'body',
+          parameters: params.map((p) => ({ type: 'text', text: p })),
+        },
       ];
     }
     const payload = {
@@ -77,9 +80,9 @@ export class WhatsAppService {
       },
       body: JSON.stringify(payload),
     });
-    const corpo = (await resposta
-      .json()
-      .catch(() => null)) as { error?: { message?: string } } | null;
+    const corpo = (await resposta.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
     if (!resposta.ok || corpo?.error) {
       throw new Error(
         `Falha ao enviar WhatsApp (HTTP ${resposta.status}): ${

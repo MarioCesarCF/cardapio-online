@@ -23,7 +23,8 @@ async function bootstrap() {
 
   // CORS restrito por origem (Vercel/front). A origem nunca é usada como
   // autorização — é apenas defesa em profundidade; o front autentica via Bearer.
-  const frontUrl = origemValida(config.get('FRONT_URL')) ?? 'http://localhost:4200';
+  const frontUrl =
+    origemValida(config.get('FRONT_URL')) ?? 'http://localhost:4200';
   const extrasRaw = origemValida(config.get('CORS_ORIGINS'));
   const extras = extrasRaw
     ? extrasRaw

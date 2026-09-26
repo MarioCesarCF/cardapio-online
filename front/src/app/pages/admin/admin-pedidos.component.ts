@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Button } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Dialog } from 'primeng/dialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { AdminService } from '../../services/admin.service';
@@ -15,6 +18,7 @@ import {
   PedidoPainel,
   podeCancelar as podeCancelarStatus,
   proximoStatus as proximo,
+  rotuloPagamento,
   tipoEntregaCurto as rotularTipoCurto,
 } from '../../services/pedido-painel';
 
@@ -22,7 +26,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
 
 @Component({
   selector: 'app-admin-pedidos',
-  imports: [CurrencyPipe, DatePipe, FormsModule, Button, Tag, Textarea],
+  imports: [CurrencyPipe, DatePipe, FormsModule, Button, Tag, Textarea, ConfirmDialog, Dialog],
+  providers: [ConfirmationService],
   template: `
     <div class="pedidos">
       @if (indisponivel(); as msg) {
@@ -136,6 +141,15 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
               <p class="cliente">
                 <strong>{{ pedido.cliente?.nome ?? 'Cliente' }}</strong>
               </p>
+              @if (pedido.clienteTelefone; as telefone) {
+                <p class="whats">
+                  <i class="pi pi-whatsapp"></i>
+                  <span class="whats__numero">{{ telefoneWhatsapp(telefone) }}</span>
+                  <button type="button" class="whats__link" (click)="abrirContato(pedido)">
+                    Entre em contato
+                  </button>
+                </p>
+              }
               <ul class="itens">
                 @for (item of pedido.itens; track item.id) {
                   <li>
@@ -165,10 +179,38 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
                   · {{ end.bairro }} — {{ end.cidade }}/{{ end.uf }}
                 </p>
               }
-              @if (pedido.pagamentoInfo) {
+              @if (pedido.pagamentoInfo || pagamentoVisivel(pedido)) {
                 <p class="obs obs--pagamento">
-                  <i class="pi pi-wallet"></i> {{ pedido.pagamentoInfo }}
+                  <i class="pi pi-wallet"></i>
+                  @if (pedido.pagamentoInfo) {
+                    {{ pedido.pagamentoInfo }}
+                  } @else {
+                    Pagamento: {{ rotuloPagamento(pedido.formaPagamento) }}
+                  }
                 </p>
+              }
+              @if (pagamentoVisivel(pedido)) {
+                @if (pedido.pixConfirmado) {
+                  <p class="obs obs--pix-ok">
+                    <i class="pi pi-check-circle"></i>
+                    Pagamento confirmado em {{ pedido.pixConfirmadoEm | date: 'dd/MM/yyyy HH:mm' }}
+                    <button
+                      type="button"
+                      class="link-acao"
+                      (click)="confirmarPagamento(pedido.id, false)"
+                    >
+                      Desfazer
+                    </button>
+                  </p>
+                } @else {
+                  <p-button
+                    label="Confirmar pagamento"
+                    icon="pi pi-check-circle"
+                    size="small"
+                    [outlined]="true"
+                    (onClick)="perguntarConfirmacao(pedido)"
+                  />
+                }
               }
               @if (pedido.observacao) {
                 <p class="obs">Obs.: {{ pedido.observacao }}</p>
@@ -225,6 +267,36 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         }
       }
     </div>
+
+    <p-confirmdialog />
+
+    <p-dialog
+      header="Entre em contato"
+      [visible]="contatoAberto()"
+      (visibleChange)="fecharContato()"
+      [modal]="true"
+      [draggable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: 'min(94vw, 26rem)' }"
+    >
+      <p class="contato__texto">
+        <i class="pi pi-whatsapp"></i>
+        <span>
+          Conversa por WhatsApp com
+          <strong>{{ contatoPedido()?.cliente?.nome ?? 'o cliente' }}</strong>
+          @if (contatoPedido()?.clienteTelefone; as tel) {
+            ({{ telefoneWhatsapp(tel) }})
+          }
+        </span>
+      </p>
+      <p class="contato__texto">
+        A comunicação direta por WhatsApp ainda será implementada. Por enquanto, copie o número
+        acima e use o seu aplicativo de WhatsApp para falar com o cliente.
+      </p>
+      <ng-template #footer>
+        <p-button label="Entendi" size="small" (onClick)="fecharContato()" />
+      </ng-template>
+    </p-dialog>
   `,
   styles: `
     .pedidos {
@@ -362,6 +434,72 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
         font-size: 0.72rem;
       }
     }
+    .obs.obs--pix-ok {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      color: var(--p-green-600, #16a34a);
+      font-weight: 600;
+
+      i {
+        font-size: 0.78rem;
+      }
+    }
+    .link-acao {
+      border: 0;
+      background: none;
+      padding: 0;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--p-primary-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .whats {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--app-texto-suave);
+
+      i {
+        color: #25d366;
+        font-size: 0.85rem;
+      }
+    }
+    .whats__numero {
+      letter-spacing: 0.02em;
+    }
+    .whats__link {
+      border: 0;
+      background: none;
+      padding: 0;
+      font: inherit;
+      font-size: 0.8rem;
+      color: var(--p-primary-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .contato__texto {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+      color: var(--app-texto-suave);
+
+      i {
+        color: #25d366;
+      }
+
+      strong {
+        color: var(--app-texto);
+      }
+    }
     .cancel {
       display: grid;
       gap: 8px;
@@ -462,6 +600,8 @@ export class AdminPedidosComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly admin = inject(AdminService);
+  private readonly confirmacao = inject(ConfirmationService);
+  private readonly msg = inject(MessageService);
   readonly realtime = inject(PedidosRealtimeService);
 
   readonly slug = signal('');
@@ -476,6 +616,11 @@ export class AdminPedidosComponent implements OnDestroy {
   readonly justificativa = signal('');
   readonly salvandoCancelamento = signal(false);
   readonly erroCancelamento = signal<string | null>(null);
+
+  /** Confirmação de pagamento (Sim/Não) e modal do WhatsApp. */
+  readonly contatoAberto = signal(false);
+  readonly contatoPedido = signal<PedidoPainel | null>(null);
+  readonly salvandoPagamento = signal(false);
 
   readonly statuses = PEDIDO_STATUSES;
   readonly filtrados = computed(() => {
@@ -566,6 +711,10 @@ export class AdminPedidosComponent implements OnDestroy {
     return rotularTipoCurto(tipo);
   }
 
+  rotuloPagamento(forma: string): string {
+    return rotuloPagamento(forma);
+  }
+
   proximoStatus(status: string): string | null {
     return proximo(status);
   }
@@ -632,5 +781,71 @@ export class AdminPedidosComponent implements OnDestroy {
     } finally {
       this.salvandoCancelamento.set(false);
     }
+  }
+
+  // ---------- Confirmação de pagamento ----------
+
+  /** Botão/aviso de confirmação só faz sentido em pedido pago via PIX. */
+  pagamentoVisivel(pedido: PedidoPainel): boolean {
+    return pedido.formaPagamento === 'pix';
+  }
+
+  perguntarConfirmacao(pedido: PedidoPainel): void {
+    this.confirmacao.confirm({
+      header: `Pagamento do pedido #${pedido.numero}`,
+      message: 'Você confirma o recebimento do pagamento?',
+      icon: 'pi pi-check-circle',
+      acceptLabel: 'Sim',
+      rejectLabel: 'Não',
+      acceptButtonProps: { severity: 'success' },
+      rejectButtonProps: { severity: 'secondary', outlined: true },
+      accept: () => void this.confirmarPagamento(pedido.id, true),
+    });
+  }
+
+  /** Confirma (true) ou desfaz (false) o recebimento do PIX. */
+  async confirmarPagamento(id: string, confirmado: boolean): Promise<void> {
+    if (this.salvandoPagamento()) return;
+    this.salvandoPagamento.set(true);
+    this.erro.set(null);
+    try {
+      const atualizado = await this.admin.confirmarPagamento(id, confirmado);
+      this.pedidos.update((lista) => lista.map((p) => (p.id === atualizado.id ? atualizado : p)));
+      this.msg.add({
+        severity: confirmado ? 'success' : 'info',
+        summary: confirmado ? 'Pagamento confirmado' : 'Confirmação desfeita',
+        detail: confirmado
+          ? `Pedido #${atualizado.numero}: o cliente não vê mais o QR Code.`
+          : `Pedido #${atualizado.numero}: o QR Code do PIX voltou a aparecer.`,
+        life: 3500,
+      });
+    } catch (error) {
+      this.erro.set(
+        (error as { error?: { message?: string } }).error?.message ??
+          'Falha ao confirmar o pagamento.',
+      );
+    } finally {
+      this.salvandoPagamento.set(false);
+    }
+  }
+
+  // ---------- WhatsApp do cliente ----------
+
+  abrirContato(pedido: PedidoPainel): void {
+    this.contatoPedido.set(pedido);
+    this.contatoAberto.set(true);
+  }
+
+  fecharContato(): void {
+    this.contatoAberto.set(false);
+    this.contatoPedido.set(null);
+  }
+
+  /** Formata o telefone do cliente como (00) 00000-0000 para leitura. */
+  telefoneWhatsapp(telefone: string): string {
+    const d = telefone.replace(/\D/g, '');
+    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return telefone;
   }
 }

@@ -270,6 +270,8 @@ export class MeService {
       total: Number(p.total),
       formaPagamento: p.formaPagamento,
       brCodePix: p.brCodePix,
+      pixConfirmado: p.pixConfirmado,
+      pixConfirmadoEm: p.pixConfirmadoEm,
       enderecoEntrega: p.enderecoEntrega,
       observacao: p.observacao,
       pagamentoInfo: p.pagamentoInfo ?? null,

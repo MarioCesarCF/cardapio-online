@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 // Mantém o acervo de pedidos enxuto:
@@ -11,7 +16,9 @@ const IDADE_DE_ARQUIVAR_MS = 24 * 60 * 60 * 1000; // 24h
 const IDADE_DE_REMOVER_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 
 @Injectable()
-export class PedidosMaintService implements OnApplicationBootstrap, OnModuleDestroy {
+export class PedidosMaintService
+  implements OnApplicationBootstrap, OnModuleDestroy
+{
   private readonly logger = new Logger(PedidosMaintService.name);
   private timer: ReturnType<typeof setInterval> | null = null;
 

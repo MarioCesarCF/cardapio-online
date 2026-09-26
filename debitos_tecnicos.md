@@ -283,6 +283,66 @@ quer um fluxo **direto e presencial** (físico) de adesão:
 
 ---
 
+## "Entre em contato" do painel do dono ainda não abre o WhatsApp (2026-09-26)
+
+**Status**: `pendente`
+**Quem resolve**: assistente (sob demanda do dono)
+
+### Contexto
+
+No painel de pedidos do dono (`front/src/app/pages/admin/admin-pedidos.component.ts`) o número do
+WhatsApp do cliente aparece logo abaixo do nome (`rotuloWhatsapp()` — E.164 com `+55`, snapshot
+`Pedido.clienteTelefone` com fallback para o perfil) e ao lado há o link discreto **"Entre em contato"**.
+Hoje ele abre só uma `p-dialog` informativa: **é um placeholder**, não abre conversa real.
+
+### Passo a passo
+
+1. Trocar o `(onClick)` do botão por um `window.open` de `https://wa.me/<numero>`, com mensagem
+   pré-preenchida e `encodeURIComponent` (ex.: número + resumo do pedido: nº, itens, total, forma
+   de pagamento, endereço quando for entrega).
+2. Manter o número sempre no formato E.164 sem `+` na URL do `wa.me` (o `+` faz parte da query
+   `?text=`, não do path).
+3. Decidir o texto por perfil: conversa com o cliente sobre **pagamento** é o caso principal, mas o
+   mesmo link serve para entrega/retirada.
+4. Abrir em nova aba (`_blank`) e cuidar do popup blocker (o `window.open` no clique é permitido).
+5. Se o dono quiser, evoluir para mensagem variável com link de tracking — fora do escopo atual.
+
+### Verificação
+
+- No painel do dono, clicar em "Entre em contato" abre o WhatsApp Web/app com o número do cliente e o
+  texto já preenchido; o placeholder `p-dialog` some do template.
+
+---
+
+## Confirmação manual do PIX: sem log de auditoria e sem notificação ao cliente (2026-09-26)
+
+**Status**: `pendente`
+**Quem resolve**: assistente (sob demanda do dono)
+
+### Contexto
+
+`PATCH /admin/pedidos/:idPedido/pagamento` (`back/src/admin/admin.service.ts` → `confirmarPagamento`)
+grava `pixConfirmado`/`pixConfirmadoEm` e emite `pedido:status` no realtime (para o painel recarregar),
+mas **não** chama `registrarLog` do `AdminSistemaService` — então confirmar/desfazer pagamento não
+aparece na aba **Logs** do painel da plataforma, que hoje registra só ações administrativas.
+O cliente descobre a confirmação por **polling de 20s** em `/meus-pedidos` (e no modal do cardápio),
+não por push.
+
+### Passo a passo
+
+1. Injetar/registrar log em `confirmarPagamento`: mensagem "Pagamento confirmado"/"Confirmação de
+   pagamento desfeita" com `{ pedidoId, numero, confirmado }` — **nunca** registrar `chavePix`,
+   `brCodePix` ou qualquer dado do cliente (regra de LGPD/segurança do AGENTS.md).
+2. Se o dono quiser uma UX melhor: avisar o cliente por WhatsApp na confirmação, reaproveitando
+   `WhatsAppService` (que hoje só tem `enviarNovoPedido`) com um novo template Meta — depende da
+   aprovação de template, então entra junto com o item F8.6.
+
+### Verificação
+
+- Confirmar e desfazer um pagamento no painel do dono e ver os 2 eventos na aba **Logs**.
+
+---
+
 ## "Lembrar de mim" agora guarda SÓ o e-mail (senha removida — 2026-09-23)
 
 **Status**: ✅ resolvido (decisão de segurança do dono, junto com a sessão).

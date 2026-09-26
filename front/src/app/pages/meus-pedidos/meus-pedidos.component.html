@@ -1,9 +1,17 @@
 <div class="pedidos">
   <header>
     <h1>Meus pedidos</h1>
-    <a class="voltar" routerLink="/home"
-      ><i class="pi pi-home"></i> Página principal</a
-    >
+    <div class="topo-acoes">
+      <a class="voltar" routerLink="/home"><i class="pi pi-home"></i> Página principal</a>
+      <p-button
+        label="Atualizar"
+        icon="pi pi-refresh"
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="atualizar()"
+      />
+    </div>
   </header>
 
   <div class="abas">
@@ -114,7 +122,19 @@
               [outlined]="true"
               (onClick)="copiarPix(pedido)"
             />
+            <p class="pix-espera">
+              <i class="pi pi-info-circle"></i>
+              Após realizar o pagamento a lanchonete vai confirmar o mesmo. O QR Code some assim que
+              a confirmação for feita.
+            </p>
           </section>
+        } @else if (pixConfirmado(pedido)) {
+          <p class="pix-ok">
+            <i class="pi pi-check-circle"></i> Pagamento confirmado pela lanchonete
+            @if (pedido.pixConfirmadoEm) {
+              em {{ pedido.pixConfirmadoEm | date: 'dd/MM/yyyy HH:mm' }}
+            }
+          </p>
         }
 
         @if (pedido.taxaEntrega > 0) {

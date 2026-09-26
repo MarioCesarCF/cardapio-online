@@ -104,10 +104,19 @@
       </section>
     </main>
   }
-  @if (cart.totalItens() > 0 && !cartAberto()) {
-    <button class="barra-sacola" (click)="cartAberto.set(true)">
-      <i class="pi pi-shopping-bag"></i>
-      Ver sacola ({{ cart.totalItens() }}) · {{ cart.total() | currency: 'BRL' }}
+  @if (mostrarBarraSacola()) {
+    <button type="button" class="barra-sacola" (click)="cartAberto.set(true)">
+      <span class="barra-sacola__conta">
+        <span class="barra-sacola__icone"><i class="pi pi-shopping-bag"></i></span>
+        <span class="barra-sacola__itens">
+          <strong>{{ cart.totalItens() }} {{ cart.totalItens() === 1 ? 'item' : 'itens' }}</strong>
+          <small>na sua sacola</small>
+        </span>
+      </span>
+      <span class="barra-sacola__acao">
+        <span class="barra-sacola__total">{{ cart.total() | currency: 'BRL' }}</span>
+        <span class="barra-sacola__ver">Ver sacola <i class="pi pi-arrow-right"></i></span>
+      </span>
     </button>
   }
   @if (pedido(); as p) {
@@ -126,7 +135,7 @@
             precisaPagar(p.status) ? 'Ver / pagar' : 'Ver pedido'
           }}</span>
         </button>
-        <a class="barra-pedido-acompanhar" routerLink="/minhas-pedidos">Acompanhar</a>
+        <a class="barra-pedido-acompanhar" routerLink="/meus-pedidos">Acompanhar</a>
       </div>
     }
   }
@@ -139,7 +148,7 @@
     [dismissableMask]="true"
     [draggable]="false"
     appendTo="self"
-    [style]="{ width: 'min(94vw, 30rem)' }"
+    [style]="{ width: 'min(94vw, 30rem)', zIndex: zOverlay }"
     styleClass="dialog-produto"
   >
     @if (modalProduto(); as produto) {
@@ -192,12 +201,27 @@
     [visible]="cartAberto()"
     (visibleChange)="cartAberto.set($event)"
     position="right"
-    header="Sacola"
+    [showCloseIcon]="false"
     appendTo="self"
-    [style]="{ width: 'min(92vw, 23rem)' }"
+    [style]="{ width: 'min(92vw, 23rem)', zIndex: zOverlay }"
   >
+    <ng-template #header>
+      <div class="sacola-topo">
+        <strong class="sacola-topo__titulo">Sacola</strong>
+        <p-button
+          icon="pi pi-times"
+          [rounded]="true"
+          [text]="true"
+          severity="secondary"
+          ariaLabel="Fechar sacola"
+          (onClick)="fecharSacola()"
+        />
+      </div>
+    </ng-template>
     @if (cart.linhas().length === 0) {
       <p class="status">Sua sacola está vazia.</p>
+    } @else {
+      <p class="dica sacola-dica">Ajuste as quantidades ou continue escolhendo no cardápio.</p>
     }
     @for (item of cart.linhas(); track item.chave) {
       <div class="sacola-item">
@@ -245,14 +269,40 @@
         <strong class="preco">{{ cart.precoUnit(item) * item.qtd | currency: 'BRL' }}</strong>
       </div>
     }
-    @if (cart.linhas().length > 0) {
-      <div class="sacola-footer">
-        <div class="total">
-          Total <strong>{{ cart.total() | currency: 'BRL' }}</strong>
+    <ng-template #footer>
+      @if (cart.linhas().length > 0) {
+        <div class="sacola-footer">
+          <div class="total">
+            <span>Total</span>
+            <strong>{{ cart.total() | currency: 'BRL' }}</strong>
+          </div>
+          <p-button
+            label="Finalizar pedido"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            class="bloco"
+            (onClick)="irFinalizar()"
+          />
+          <p-button
+            label="Continuar escolhendo"
+            icon="pi pi-arrow-left"
+            [outlined]="true"
+            severity="secondary"
+            class="bloco"
+            (onClick)="fecharSacola()"
+          />
         </div>
-        <p-button label="Finalizar pedido" class="bloco" (onClick)="irFinalizar()" />
-      </div>
-    }
+      } @else {
+        <p-button
+          label="Continuar escolhendo"
+          icon="pi pi-arrow-left"
+          [outlined]="true"
+          severity="secondary"
+          class="bloco"
+          (onClick)="fecharSacola()"
+        />
+      }
+    </ng-template>
   </p-drawer>
 
   <p-dialog
@@ -263,7 +313,7 @@
     [dismissableMask]="true"
     [draggable]="false"
     appendTo="self"
-    [style]="{ width: 'min(94vw, 32rem)' }"
+    [style]="{ width: 'min(94vw, 32rem)', zIndex: zOverlay }"
     styleClass="dialog-checkout"
   >
     <h3>Tipo de pedido</h3>
@@ -536,7 +586,7 @@
     [dismissableMask]="true"
     [draggable]="false"
     appendTo="self"
-    [style]="{ width: 'min(94vw, 30rem)', maxWidth: '94vw' }"
+    [style]="{ width: 'min(94vw, 30rem)', maxWidth: '94vw', zIndex: zOverlay }"
     styleClass="dialog-pix"
   >
     @if (pedido(); as p) {
@@ -565,13 +615,22 @@
             class="bloco"
             (onClick)="copiarPix()"
           />
+          <p class="pix-espera">
+            Após realizar o pagamento a lanchonete vai confirmar o mesmo. O QR Code some assim que a
+            confirmação for feita.
+          </p>
+        } @else if (p.pixConfirmado) {
+          <p class="pix-status">
+            <strong>Pagamento confirmado pela lanchonete.</strong> Este pedido está
+            {{ rotuloStatus(p.status).toLowerCase() }}.
+          </p>
         } @else {
           <p class="pix-status">
             Este pedido está <strong>{{ rotuloStatus(p.status).toLowerCase() }}</strong> — acompanhe
             a entrega nos meus pedidos.
           </p>
         }
-        <a class="pix-link" routerLink="/minhas-pedidos">Acompanhar nos meus pedidos</a>
+        <a class="pix-link" routerLink="/meus-pedidos">Acompanhar nos meus pedidos</a>
       </div>
     }
   </p-dialog>

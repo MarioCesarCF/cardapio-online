@@ -21,6 +21,7 @@ import {
   PedidoConsulta,
 } from '../../services/painel-admin.service';
 import { TIPOS_LANCHONETE } from '../../services/lanchonete-visual';
+import { formatarMoeda } from '../../services/moeda';
 import { labelStatus as labelStatusPedido } from '../../services/pedido-painel';
 
 const SITUACAO_LABELS: Record<string, string> = {
@@ -390,10 +391,7 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                       </span>
                       <span>{{ dataDe(l.createdAt) }}</span>
                       <span>
-                        <p-tag
-                          [value]="rotuloPlano(l)"
-                          [severity]="planoSeverity(l)"
-                        />
+                        <p-tag [value]="rotuloPlano(l)" [severity]="planoSeverity(l)" />
                       </span>
                       <span>
                         <p-tag
@@ -1339,7 +1337,7 @@ export class PainelAdminComponent {
   }
 
   precoDe(valor: number): string {
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return formatarMoeda(valor);
   }
 
   rotuloSituacao(situacao: string): string {

@@ -187,6 +187,10 @@ model Pedido {
   total           Decimal  @db.Decimal(10, 2)
   formaPagamento  String   @default("pix")
   brCodePix       String?
+  // Confirmação manual do recebimento do PIX feita pela lanchonete; enquanto
+  // false, o cliente continua vendo o QR Code para pagar.
+  pixConfirmado     Boolean   @default(false)
+  pixConfirmadoEm   DateTime?
   clienteTelefone String?
   justificativaCancelamento String?
   enderecoEntrega Json?

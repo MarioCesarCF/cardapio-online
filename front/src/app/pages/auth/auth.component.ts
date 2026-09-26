@@ -61,6 +61,8 @@ export class AuthComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly sucesso = signal<string | null>(null);
   readonly redirect = signal<string | null>(null);
+  /** true quando a página atual é o retorno do login social (Google). */
+  readonly viaGoogle = signal(false);
   readonly checando = signal(true);
 
   readonly cadastroNome = signal('');
@@ -99,6 +101,9 @@ export class AuthComponent implements OnInit {
       this.redirect.set(destino && destino.startsWith('/') ? destino : null);
       const token = params.get('token');
       const esqueci = params.get('esqueci');
+      // O login social volta do Google por redirect de página: a query ?via=google
+      // é a marca de que o usuário acabou de tentar entrar por ele.
+      this.viaGoogle.set(params.get('via') === 'google');
       if (token) {
         this.token.set(token);
         this.tela.set('redefinir');
@@ -120,9 +125,19 @@ export class AuthComponent implements OnInit {
         if (this.tela() === 'login') {
           await this.aposAutenticar(me, false);
         }
-      } catch {
-        // erro já exibido por carregarMe
+      } catch (erro) {
+        // Sessão existe mas o perfil não veio. Se o usuário acabou de tentar o
+        // Google, diz isso em linguagem simples; senão volta ao login em silêncio.
+        if (this.viaGoogle()) {
+          this.error.set(
+            (erro as AuthError).status === 429
+              ? this.mensagemDeFalha(429)
+              : 'Não foi possível concluir o login com o Google. Tente novamente.',
+          );
+        }
       }
+    } else if (this.viaGoogle()) {
+      this.error.set('Não foi possível entrar com o Google. Tente novamente.');
     }
     this.checando.set(false);
   }
@@ -329,6 +344,11 @@ export class AuthComponent implements OnInit {
     ) {
       return 'E-mail ou senha inválidos.';
     }
+    if (error.code === 'ME_INDISPONIVEL') {
+      return error.status === 429
+        ? this.mensagemDeFalha(error.status)
+        : 'Não foi possível concluir o login agora. Tente novamente.';
+    }
     return error.message;
   }
 
@@ -342,9 +362,13 @@ export class AuthComponent implements OnInit {
       await this.aposAutenticar(me, false);
     } catch (error) {
       if (error instanceof AuthError) {
-        this.error.set(error.message);
+        this.error.set(
+          error.code === 'ME_INDISPONIVEL' && !this.auth.isAuthenticated()
+            ? 'Não foi possível entrar com o Google. Tente novamente.'
+            : error.message,
+        );
       } else {
-        this.error.set('Não foi possível entrar com o Google.');
+        this.error.set('Não foi possível entrar com o Google. Tente novamente.');
       }
     } finally {
       this.submitting.set(false);
@@ -423,12 +447,39 @@ export class AuthComponent implements OnInit {
     }
   }
 
+  /**
+   * Lê o perfil logado. Um 401 aqui logo após entrar significa que a sessão
+   * ainda não ficou pronta: renovamos uma vez antes de desistir. A mensagem
+   * devolvida é sempre amigável — nada de detalhe interno para o cliente.
+   */
   async carregarMe(): Promise<MeResponse> {
-    try {
-      return await firstValueFrom(this.api.get<MeResponse>('/me'));
-    } catch {
-      this.error.set('Não foi possível carregar seus dados.');
-      throw new AuthError('Não foi possível carregar seus dados.', 0);
+    let ultimoStatus: number | undefined;
+    for (let tentativa = 0; tentativa < 2; tentativa++) {
+      try {
+        return await this.buscarMe();
+      } catch (erro) {
+        ultimoStatus = (erro as { status?: number }).status;
+        // 401 logo após entrar = sessão ainda não pronta: força a renovação.
+        if (ultimoStatus === 401 && tentativa === 0) {
+          await this.auth.refresh();
+        }
+      }
     }
+    throw new AuthError(this.mensagemDeFalha(ultimoStatus), ultimoStatus, 'ME_INDISPONIVEL');
+  }
+
+  /**
+   * Texto de erro para o cliente — nunca "detalhe interno" do sistema.
+   * 429 = limite de tentativas do servidor; o resto é falha genérica.
+   */
+  private mensagemDeFalha(status?: number): string {
+    if (status === 429) {
+      return 'Muitas tentativas seguidas. Aguarde um instante e tente novamente.';
+    }
+    return 'Não foi possível concluir agora. Tente novamente.';
+  }
+
+  private buscarMe(): Promise<MeResponse> {
+    return firstValueFrom(this.api.get<MeResponse>('/me'));
   }
 }

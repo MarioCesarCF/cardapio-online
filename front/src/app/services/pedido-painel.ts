@@ -16,6 +16,9 @@ export interface PedidoPainel {
   taxaEntrega: number;
   total: number;
   formaPagamento: string;
+  pixConfirmado: boolean;
+  pixConfirmadoEm: string | null;
+  clienteTelefone: string | null;
   enderecoEntrega: {
     rua: string;
     numero: string;
@@ -107,4 +110,14 @@ export function tipoEntregaLabel(tipo: string): string {
 
 export function tipoEntregaCurto(tipo: string): string {
   return TIPO_ENTREGA_LABELS_CURTO[tipo] ?? tipo;
+}
+
+const FORMA_PAGAMENTO_LABELS: Record<string, string> = {
+  pix: 'PIX',
+  cartao: 'Cartão',
+  dinheiro: 'Dinheiro',
+};
+
+export function rotuloPagamento(forma: string): string {
+  return FORMA_PAGAMENTO_LABELS[forma] ?? forma;
 }

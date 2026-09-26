@@ -18,6 +18,9 @@ export function calculaTaxaEntrega(
 /**
  * Total do pedido = subtotal + taxa de entrega, arredondado para 2 casas.
  */
-export function calculaTotalPedido(subtotal: number, taxaEntrega: number): number {
+export function calculaTotalPedido(
+  subtotal: number,
+  taxaEntrega: number,
+): number {
   return Math.round((subtotal + taxaEntrega) * 100) / 100;
 }

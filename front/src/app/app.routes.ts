@@ -18,7 +18,7 @@ export const routes: Routes = [
   { path: 'auth', component: AuthComponent },
   { path: 'termos', component: TermosComponent },
   {
-    path: 'minhas-pedidos',
+    path: 'meus-pedidos',
     component: MeusPedidosComponent,
     canActivate: [perfilGuard(['cliente'])],
   },

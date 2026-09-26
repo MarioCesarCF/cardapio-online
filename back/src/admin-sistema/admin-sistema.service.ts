@@ -194,7 +194,13 @@ export class AdminSistemaService implements OnModuleInit {
     const atualizada = await this.prisma.lanchonete.update({
       where: { id },
       data: { plano, planoExpira },
-      select: { id: true, nome: true, slug: true, plano: true, planoExpira: true },
+      select: {
+        id: true,
+        nome: true,
+        slug: true,
+        plano: true,
+        planoExpira: true,
+      },
     });
 
     await this.registrarLog(

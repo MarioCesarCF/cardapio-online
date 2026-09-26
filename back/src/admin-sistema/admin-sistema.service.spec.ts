@@ -209,9 +209,7 @@ describe('AdminSistemaService', () => {
     it('rejeita plano inválido', async () => {
       const prisma = {
         lanchonete: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValue({ id: 'l1', plano: 'trial' }),
+          findUnique: vi.fn().mockResolvedValue({ id: 'l1', plano: 'trial' }),
         },
       };
       const servico = criarServico(prisma);

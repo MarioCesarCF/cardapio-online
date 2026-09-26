@@ -438,7 +438,12 @@ export class AdminService {
 
   // ---------- Pedidos (painel) ----------
 
-  async listPedidos(userId: string, slug: string, status?: string, historico = false) {
+  async listPedidos(
+    userId: string,
+    slug: string,
+    status?: string,
+    historico = false,
+  ) {
     const lanchonete = await this.getLanchoneteOwned(userId, slug);
     if (
       status !== undefined &&
@@ -522,6 +527,65 @@ export class AdminService {
         ...(justificativaCancelamento != null
           ? { justificativaCancelamento }
           : {}),
+      },
+      include: {
+        itens: { include: { opcoes: true } },
+        cliente: { select: { id: true, nome: true, telefone: true } },
+      },
+    });
+    this.gateway.emitirStatusPedido(pedido.lanchonete.id, {
+      id: atualizado.id,
+      numero: atualizado.numero,
+      status: atualizado.status,
+    });
+    return formataPedido({
+      ...atualizado,
+      lanchonete: {
+        id: pedido.lanchonete.id,
+        nome: pedido.lanchonete.nome,
+        slug: pedido.lanchonete.slug,
+      },
+    });
+  }
+
+  // Confirmação manual do recebimento do PIX pelo dono. Enquanto false, o
+  // cliente continua vendo o QR Code; confirmar esconde o QR (desfazer volta).
+  async confirmarPagamento(
+    userId: string,
+    idPedido: string,
+    body: Record<string, unknown>,
+  ) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id: idPedido },
+      include: { lanchonete: true },
+    });
+    if (!pedido || pedido.lanchonete.donoId !== userId) {
+      throw new NotFoundException('Pedido não encontrado');
+    }
+    if (typeof body.confirmado !== 'boolean') {
+      throw new BadRequestException('Informe "confirmado" como true ou false.');
+    }
+    if (pedido.formaPagamento !== 'pix') {
+      throw new BadRequestException(
+        `O pedido #${pedido.numero} não tem pagamento por PIX.`,
+      );
+    }
+    const confirmado = body.confirmado;
+    if (confirmado && pedido.pixConfirmado) {
+      throw new BadRequestException(
+        `O pagamento do pedido #${pedido.numero} já está confirmado.`,
+      );
+    }
+    if (!confirmado && !pedido.pixConfirmado) {
+      throw new BadRequestException(
+        `O pagamento do pedido #${pedido.numero} ainda não foi confirmado.`,
+      );
+    }
+    const atualizado = await this.prisma.pedido.update({
+      where: { id: pedido.id },
+      data: {
+        pixConfirmado: confirmado,
+        pixConfirmadoEm: confirmado ? new Date() : null,
       },
       include: {
         itens: { include: { opcoes: true } },

@@ -23,6 +23,9 @@ export interface PedidoPainel {
   taxaEntrega: number;
   total: number;
   formaPagamento: string;
+  pixConfirmado: boolean;
+  pixConfirmadoEm: string | null;
+  clienteTelefone: string | null;
   enderecoEntrega: unknown;
   observacao: string | null;
   pagamentoInfo: string | null;
@@ -51,6 +54,10 @@ export function formataPedido(p: PedidoComSnapshots): PedidoPainel {
     taxaEntrega: Number(p.taxaEntrega),
     total: Number(p.total),
     formaPagamento: p.formaPagamento,
+    pixConfirmado: p.pixConfirmado,
+    pixConfirmadoEm: p.pixConfirmadoEm?.toISOString() ?? null,
+    // Snapshot do WhatsApp no momento do pedido (o perfil pode ter mudado).
+    clienteTelefone: p.clienteTelefone ?? p.cliente?.telefone ?? null,
     enderecoEntrega: p.enderecoEntrega,
     observacao: p.observacao,
     pagamentoInfo: p.pagamentoInfo ?? null,

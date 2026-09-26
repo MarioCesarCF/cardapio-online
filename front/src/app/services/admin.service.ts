@@ -192,4 +192,13 @@ export class AdminService {
       }),
     );
   }
+
+  /** true = confirma o recebimento (some o QR do cliente); false = desfaz. */
+  confirmarPagamento(idPedido: string, confirmado: boolean): Promise<PedidoPainel> {
+    return firstValueFrom(
+      this.api.patch<PedidoPainel>(`/admin/pedidos/${idPedido}/pagamento`, {
+        confirmado,
+      }),
+    );
+  }
 }

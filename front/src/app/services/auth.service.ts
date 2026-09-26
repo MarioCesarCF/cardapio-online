@@ -65,12 +65,39 @@ export class AuthService {
   }
 
   async signInGoogle(): Promise<void> {
-    await this.run(() =>
-      this.client.signIn.social({
-        provider: 'google',
-        callbackURL: `${window.location.origin}/auth`,
-      }),
-    );
+    const result = await this.client.signIn.social({
+      provider: 'google',
+      // `via=google` marca o retorno do redirect na tela de auth — é o que
+      // permite dar uma mensagem de erro própria nesse caminho.
+      callbackURL: `${window.location.origin}/auth?via=google`,
+    });
+    if (result && typeof result === 'object' && 'error' in result) {
+      const err = (result as { error?: { message?: string } | null }).error;
+      if (err) {
+        throw new AuthError(err.message ?? 'Falha na autenticação');
+      }
+    }
+    // Logo após o OAuth o cookie da sessão pode ainda não estar disponível:
+    // insistimos algumas vezes antes de considerar o login um fracasso.
+    await this.sessaoPronta();
+  }
+
+  /**
+   * Carrega a sessão do Neon Auth repetindo enquanto ela não aparecer.
+   * Sem isso o `signIn.social` resolve antes do cookie ficar legível e a
+   * tela de login acusa falha em um login que deu certo.
+   */
+  private async sessaoPronta(tentativas = 4): Promise<void> {
+    for (let i = 0; i < tentativas; i++) {
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, 300 * i));
+      }
+      const { data } = await this.client.getSession();
+      await this.aplicarSessao(data);
+      if (this.session().token) {
+        return;
+      }
+    }
   }
 
   async verificarEmailCadastrado(email: string): Promise<boolean> {

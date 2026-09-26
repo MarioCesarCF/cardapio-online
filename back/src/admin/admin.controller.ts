@@ -85,6 +85,15 @@ export class AdminController {
     return this.admin.updatePedidoStatus(user.id, idPedido, body);
   }
 
+  @Patch('pedidos/:idPedido/pagamento')
+  confirmarPagamento(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('idPedido') idPedido: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.admin.confirmarPagamento(user.id, idPedido, body);
+  }
+
   @Post('lanchonetes/:slug/categorias')
   createCategoria(
     @CurrentUser() user: AuthenticatedUser,

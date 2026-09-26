@@ -81,18 +81,18 @@ describe('whatsapp.service.ts', () => {
     vi.stubEnv('WA_PHONE_NUMBER_ID', '42');
     const service = new WhatsAppService();
 
-    await expect(service.enviarTemplate('5511999990001', 'hello_world')).rejects.toThrow(
-      /HTTP 400\): Session has expired\./,
-    );
+    await expect(
+      service.enviarTemplate('5511999990001', 'hello_world'),
+    ).rejects.toThrow(/HTTP 400\): Session has expired\./);
   });
 
   it('enviarTemplate lança quando não configurado', async () => {
     vi.stubEnv('WA_GRAPH_TOKEN', '');
     vi.stubEnv('WA_PHONE_NUMBER_ID', '');
     const service = new WhatsAppService();
-    await expect(service.enviarTemplate('5511999990001', 'hello_world')).rejects.toThrow(
-      /WhatsApp não configurado/,
-    );
+    await expect(
+      service.enviarTemplate('5511999990001', 'hello_world'),
+    ).rejects.toThrow(/WhatsApp não configurado/);
   });
 
   it('enviarNovoPedido monta os coringas {1}..{5} e normaliza o número', async () => {
@@ -118,9 +118,11 @@ describe('whatsapp.service.ts', () => {
     expect(corpo.to).toBe('5511999990001');
     expect(corpo.template.name).toBe('pedido_novo');
     expect(corpo.template.language.code).toBe('pt_BR');
-    expect(corpo.template.components[0].parameters.map((p: { text: string }) => p.text)).toEqual(
-      ['Duarte Burguers', '7', 'R$ 42,90', 'Entrega', 'Pix'],
-    );
+    expect(
+      corpo.template.components[0].parameters.map(
+        (p: { text: string }) => p.text,
+      ),
+    ).toEqual(['Duarte Burguers', '7', 'R$ 42,90', 'Entrega', 'Pix']);
   });
 
   it('enviarNovoPedido não chama a API quando a loja não tem whatsapp', async () => {
@@ -132,7 +134,12 @@ describe('whatsapp.service.ts', () => {
 
     await service.enviarNovoPedido(
       { nome: 'Sem Contato', whatsapp: null },
-      { numero: 1, total: 10, tipoEntrega: 'retirar', formaPagamento: 'dinheiro' },
+      {
+        numero: 1,
+        total: 10,
+        tipoEntrega: 'retirar',
+        formaPagamento: 'dinheiro',
+      },
     );
 
     expect(fetchMock).not.toHaveBeenCalled();

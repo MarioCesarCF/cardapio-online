@@ -211,6 +211,7 @@ export class PedidosService {
       tipoEntrega: pedido.tipoEntrega,
       formaPagamento: pedido.formaPagamento,
       pagamentoInfo: pedido.pagamentoInfo,
+      pixConfirmado: pedido.pixConfirmado,
       subtotal: Number(pedido.subtotal),
       taxaEntrega: Number(pedido.taxaEntrega),
       total: Number(pedido.total),
