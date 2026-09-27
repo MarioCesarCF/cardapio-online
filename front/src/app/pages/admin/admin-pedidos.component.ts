@@ -10,7 +10,11 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { AdminService } from '../../services/admin.service';
+import { baixarArquivo } from '../../services/download';
 import { PedidosRealtimeService } from '../../services/pedidos-realtime.service';
+// O gerador da planilha entra por `import()` no clique em exportar: ele só é usado
+// aqui e não vale pesar no bundle inicial (que já está perto do budget).
+import type { OrigemRelatorio } from '../../services/relatorio-pedidos';
 import {
   labelStatus as rotularStatus,
   PEDIDO_STATUSES,
@@ -62,6 +66,32 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             <i class="pi pi-calendar-clock"></i>
             {{ historico() ? 'Atuais' : 'Histórico' }}
           </button>
+        </div>
+
+        <div class="exportar">
+          <p-button
+            label="Exportar esta lista"
+            icon="pi pi-file-excel"
+            severity="secondary"
+            size="small"
+            [outlined]="true"
+            [loading]="exportando()"
+            (onClick)="exportarLista()"
+          />
+          <p-button
+            label="Exportar tudo (atuais + histórico)"
+            icon="pi pi-file-excel"
+            severity="secondary"
+            size="small"
+            [text]="true"
+            [loading]="exportando()"
+            (onClick)="exportarTudo()"
+          />
+          <p class="nota">
+            <i class="pi pi-info-circle"></i>
+            A exportação segue o filtro de status e o botão acima (Histórico/Atuais). O histórico é
+            apagado após 30 dias.
+          </p>
         </div>
 
         @if (erro(); as msg) {
@@ -327,6 +357,26 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     }
     .topo p-button {
       margin-left: auto;
+    }
+    .exportar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: -4px;
+    }
+    .nota {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex: 1 1 16rem;
+      margin: 0;
+      font-size: 0.76rem;
+      color: var(--app-texto-suave);
+
+      i {
+        font-size: 0.72rem;
+      }
     }
     .aviso {
       color: var(--p-red-500, #ef4444);
@@ -605,10 +655,12 @@ export class AdminPedidosComponent implements OnDestroy {
   readonly realtime = inject(PedidosRealtimeService);
 
   readonly slug = signal('');
+  readonly nomeLanchonete = signal('');
   readonly pedidos = signal<PedidoPainel[]>([]);
   readonly filtro = signal<string>('todos');
   readonly historico = signal(false);
   readonly loading = signal(true);
+  readonly exportando = signal(false);
   readonly erro = signal<string | null>(null);
   readonly novoPedido = signal<PedidoPainel | null>(null);
   readonly indisponivel = signal<string | null>(null);
@@ -663,6 +715,7 @@ export class AdminPedidosComponent implements OnDestroy {
     this.loading.set(false);
     try {
       const config = await this.admin.getConfig(slug);
+      this.nomeLanchonete.set(config.nome);
       if (config.situacao !== 'ativa') {
         this.indisponivel.set(
           config.situacao === 'pendente'
@@ -701,6 +754,83 @@ export class AdminPedidosComponent implements OnDestroy {
   recarregar() {
     this.novoPedido.set(null);
     void this.carregar();
+  }
+
+  // ---------- Exportação (planilha Excel) ----------
+
+  /** Exporta o que está na tela: respeita o filtro de status e o chip Histórico/Atuais. */
+  async exportarLista(): Promise<void> {
+    if (this.exportando()) return;
+    this.exportando.set(true);
+    try {
+      await this.exportar(this.historico() ? 'historico' : 'atuais', this.filtrados());
+    } finally {
+      this.exportando.set(false);
+    }
+  }
+
+  /** Exporta atuais + histórico (ignora o filtro de status). */
+  async exportarTudo(): Promise<void> {
+    if (this.exportando()) return;
+    this.exportando.set(true);
+    try {
+      const [atuais, historico] = await Promise.all([
+        this.admin.listPedidos(this.slug()),
+        this.admin.listPedidos(this.slug(), undefined, true),
+      ]);
+      const vistos = new Set<string>();
+      const todos = [...atuais, ...historico].filter((p) => {
+        if (vistos.has(p.id)) return false;
+        vistos.add(p.id);
+        return true;
+      });
+      await this.exportar('ambos', todos);
+    } catch (error) {
+      this.erro.set(
+        (error as { error?: { message?: string } }).error?.message ??
+          'Falha ao buscar os pedidos para exportar.',
+      );
+    } finally {
+      this.exportando.set(false);
+    }
+  }
+
+  private async exportar(origem: OrigemRelatorio, pedidos: PedidoPainel[]): Promise<void> {
+    if (!pedidos.length) {
+      this.msg.add({
+        severity: 'warn',
+        summary: 'Nada para exportar',
+        detail: 'Não há pedidos com os filtros que estão selecionados.',
+        life: 4000,
+      });
+      return;
+    }
+    const itens = pedidos.reduce((acc, p) => acc + p.itens.length, 0);
+    try {
+      const { MIME_XLSX, gerarPlanilhaPedidos, nomeArquivoRelatorio } =
+        await import('../../services/relatorio-pedidos');
+      const planilha = await gerarPlanilhaPedidos({
+        nomeLanchonete: this.nomeLanchonete(),
+        slug: this.slug(),
+        pedidos,
+        origem,
+        filtroStatus: origem === 'ambos' ? 'todos' : this.filtro(),
+      });
+      baixarArquivo(nomeArquivoRelatorio(this.slug(), origem), planilha, MIME_XLSX);
+      this.msg.add({
+        severity: 'success',
+        summary: 'Planilha exportada',
+        detail: `${pedidos.length} pedido(s) e ${itens} item(ns) na planilha.`,
+        life: 4000,
+      });
+    } catch {
+      this.msg.add({
+        severity: 'error',
+        summary: 'Não foi possível exportar',
+        detail: 'Tente novamente em instantes.',
+        life: 4000,
+      });
+    }
   }
 
   labelStatus(status: string): string {

@@ -1,8 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { Button } from 'primeng/button';
 import { AdminService } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
+import { resolveLogo } from '../../services/lanchonete-visual';
 
 @Component({
   selector: 'app-admin-shell',
@@ -178,7 +185,7 @@ export class AdminShellComponent {
       this.slug.set(slug);
       void this.admin.getConfig(slug).then((config) => {
         this.nome.set(config.nome);
-        this.logo.set(config.logoUrl ?? '');
+        this.logo.set(resolveLogo(config.logoUrl, config.tipo) ?? '');
         this.situacao.set(config.situacao ?? '');
       });
     });

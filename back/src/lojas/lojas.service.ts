@@ -38,6 +38,8 @@ export class LojasService {
         horarios: true,
         cobraTaxaEntrega: true,
         taxaEntrega: true,
+        chavePix: true,
+        nomePix: true,
       },
     });
 
@@ -58,6 +60,9 @@ export class LojasService {
       horarios: lanchonete.horarios,
       cobraTaxaEntrega: lanchonete.cobraTaxaEntrega,
       taxaEntrega: Number(lanchonete.taxaEntrega),
+      // Só o booleano sai daqui: a chave em si é dado sensível e nunca é
+      // exposta no endpoint público (o cardápio usa isto para desabilitar o PIX).
+      aceitaPix: Boolean(lanchonete.chavePix),
     };
   }
 

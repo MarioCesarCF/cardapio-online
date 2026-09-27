@@ -1,10 +1,17 @@
 /* Estilos globais — tokens de superfície (claro/escuro) + base do PrimeNG. */
 
 :root {
-  --app-bg: var(--p-surface-100);
+  /* Fundo da página no tema claro.
+     O PrimeNG entrega --p-surface-100 = #f4f4f5 (bem claro). Aqui escurecemos
+     um pouco em direção ao preto, sem mexer no laranja da marca nem nos cards
+     brancos (--app-superficie). Ajuste rápido do dono: 100% = original,
+     96% = o que está hoje (≈3 pontos de luminância), 92% = mais escuro,
+     88% = bem escuro. O tema escuro é definido no bloco .app-dark abaixo. */
+  --app-fundo-claro: color-mix(in srgb, var(--p-surface-100) 96%, #09090b);
+  --app-bg: var(--app-fundo-claro);
   --app-bg-elevada: var(--p-surface-50);
   --app-superficie: var(--p-content-background);
-  --app-superficie-2: var(--p-surface-100);
+  --app-superficie-2: var(--app-fundo-claro);
   --app-borda: var(--p-content-border-color);
   --app-texto: var(--p-text-color);
   --app-texto-suave: var(--p-text-muted-color);
@@ -92,6 +99,54 @@ input[type='radio'] {
   .p-selectbutton .p-togglebutton {
     flex: 1;
   }
+}
+
+/* Telas com overlay de espera (ex.: a travada entre "Finalizar pedido" e o
+   modal do checkout) travam a rolagem do fundo. */
+body.tela-travada {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Overlay de espera: fica acima de tudo (app bar em 900, overlays do PrimeNG em
+   1000) e come os cliques enquanto a tela espera. Vive no global de propósito —
+   o scss do cardápio já está no limite do budget de anyComponentStyle (10 kB). */
+.travando {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--p-surface-950) 65%, transparent);
+  backdrop-filter: blur(2px);
+  touch-action: none;
+}
+
+.travando__caixa {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--app-raio);
+  background: var(--app-superficie);
+  box-shadow: var(--app-sombra);
+  text-align: center;
+}
+
+.travando__caixa .pi-spinner {
+  font-size: 2.1rem;
+  color: var(--p-primary-color);
+}
+
+.travando__caixa p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.travando__caixa small {
+  color: var(--app-texto-suave);
+  font-size: 0.82rem;
 }
 
 ::-webkit-scrollbar {

@@ -66,6 +66,15 @@ export class AdminController {
     return this.admin.getCardapioAdmin(user.id, slug);
   }
 
+  @Post('lanchonetes/:slug/cardapio-modelo')
+  gerarCardapioModelo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('slug') slug: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.admin.gerarCardapioModelo(user.id, slug, body);
+  }
+
   @Get('lanchonetes/:slug/pedidos')
   listPedidos(
     @CurrentUser() user: AuthenticatedUser,

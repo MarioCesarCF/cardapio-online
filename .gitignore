@@ -11,3 +11,5 @@ CREDENCIAIS-TESTE.md
 # Artefatos de dev/verificação
 check-*.mjs
 dev-server.log
+*.out.log
+*.err.log

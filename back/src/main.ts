@@ -46,10 +46,10 @@ async function bootstrap() {
 
   // Chave do JWT da app: exigir secret forte ANTES de subir (o exchange já
   // falha fechado quando a chave é vazia — este check dá o erro cedo e claro).
-  const secret = config.get<string>('APP_JWT_SECRET', '') ?? '';
-  const secretBytes = Buffer.byteLength(secret, 'utf8');
+  const chaveJwt = config.get<string>('APP_JWT_SECRET', '') ?? '';
+  const chaveBytes = Buffer.byteLength(chaveJwt, 'utf8');
   const emProducao = config.get('NODE_ENV') === 'production';
-  if (secretBytes === 0) {
+  if (chaveBytes === 0) {
     const mensagem =
       'APP_JWT_SECRET não configurado: o POST /auth/exchange não vai funcionar. ' +
       `Gere com: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`;
@@ -57,8 +57,8 @@ async function bootstrap() {
       throw new Error(mensagem);
     }
     new Logger('Bootstrap').warn(mensagem);
-  } else if (secretBytes < SECRET_MIN_BYTES) {
-    const mensagem = `APP_JWT_SECRET está configurado com apenas ${secretBytes} bytes (mínimo ${SECRET_MIN_BYTES}). Gere um secret aleatório com pelo menos ${SECRET_MIN_BYTES} bytes.`;
+  } else if (chaveBytes < SECRET_MIN_BYTES) {
+    const mensagem = `APP_JWT_SECRET está configurado com apenas ${chaveBytes} bytes (mínimo ${SECRET_MIN_BYTES}). Gere um secret aleatório com pelo menos ${SECRET_MIN_BYTES} bytes.`;
     if (emProducao) {
       throw new Error(mensagem);
     }

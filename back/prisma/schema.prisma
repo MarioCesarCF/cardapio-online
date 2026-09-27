@@ -288,8 +288,49 @@ model ConfigPlataforma {
   @@map("config_plataforma")
 }
 
+// Questionário de encerramento (exit survey) — resposta estruturada de quem
+// saiu da plataforma, separada por perfil (cliente | lanchonete). O motivo é
+// gravado como slug (nunca texto livre) para virar dashboard; os textos livres
+// têm campos próprios. A lanchonete é só um snapshot: a loja pode ser excluída
+// logo depois da resposta.
+model RespostaEncerramento {
+  id           String  @id @default(cuid()) @db.VarChar(30)
+  perfil       String // cliente | lanchonete
+  usuarioId    String  @db.Uuid // quem respondeu (id no schema neon_auth)
+  lanchoneteId String? @db.VarChar(30) // snapshot — a loja pode sumir depois
+  lanchoneteNome String? @db.VarChar(80)
+  lanchoneteSlug String? @db.VarChar(80)
+  // Motivo principal (slug do catálogo) e fatores secundários (até 3 slugs).
+  motivoPrincipal    String
+  motivosSecundarios String[]
+  // Perguntas condicionais do perfil lanchonete.
+  ajudouPedidos          String? // ajudou_bastante | ajudou_um_pouco | sem_diferenca | nao_consegui | nao_usei_bem
+  precoAdequado          String? // ate_29 | 30_49 | 50_69 | 70_99 | 100_mais | nao_sei
+  funcionalidadeFaltante String?
+  // Avaliação (1..5) e intenção de retorno (sim | talvez | nao).
+  satisfacao Int?
+  voltaria   String?
+  // Contato autorizado para a plataforma falar com quem saiu. `contato` é dado
+  // pessoal: nunca vai para log nem para o dashboard de admins humanos.
+  contatoLiberado Boolean  @default(false)
+  contato         String?  @db.VarChar(120)
+  // Textos livres (todos opcionais).
+  melhorar      String?
+  paraContinuar String?
+  experiencia   String?
+  // Contexto do encerramento, para cruzar motivo com uso real.
+  pedidosRecebidos Int     @default(0)
+  diasAtivo       Int     @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([perfil, motivoPrincipal])
+  @@index([perfil, createdAt])
+  @@index([lanchoneteId])
+  @@map("respostas_encerramento")
+}
+
 // Aceite do termo único (Termos de Uso + Política de Privacidade/LGPD) por
-// usuário. usuarioId = id no schema neon_auth (uuid). Aceite repetido da mesma
+// usuário. usuarioId = id do usuário no schema neon_auth (uuid). Aceite repetido da mesma
 // versão não altera a data do 1º consentimento (registro da primeira adesão).
 model TermoAceite {
   usuarioId String   @db.Uuid

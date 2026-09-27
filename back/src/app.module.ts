@@ -17,6 +17,7 @@ import { GaleriaModule } from './galeria/galeria.module.js';
 import { AdminSistemaModule } from './admin-sistema/admin-sistema.module.js';
 import { FavoritasModule } from './favoritas/favoritas.module.js';
 import { PlataformaModule } from './plataforma/plataforma.module.js';
+import { EncerramentoModule } from './encerramento/encerramento.module.js';
 import { AssetsController } from './assets/assets.controller.js';
 
 @Module({
@@ -47,6 +48,7 @@ import { AssetsController } from './assets/assets.controller.js';
     AdminSistemaModule,
     FavoritasModule,
     PlataformaModule,
+    EncerramentoModule,
   ],
   controllers: [AppController, HealthController, AssetsController],
   providers: [

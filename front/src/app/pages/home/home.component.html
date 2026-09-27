@@ -29,6 +29,12 @@
           <i class="pi pi-pencil"></i> Editar
         </button>
       </div>
+      <p class="saudacao__encerrar">
+        Não usa mais o Peditto?
+        <button type="button" class="link link--perigo" (click)="encerrarConta()">
+          Encerrar conta
+        </button>
+      </p>
     </section>
 
     <section class="card superficie">
@@ -202,7 +208,7 @@
       @for (linha of visiveis(); track linha.id) {
         <article class="lanchonete superficie">
           @if (logoDa(linha); as logo) {
-            <img class="lanchonete__logo" [src]="logo" alt="" />
+            <img class="lanchonete__logo" [src]="logo" alt="" (error)="logoQuebrou(linha)" />
           }
           <div class="lanchonete__info">
             <strong class="lanchonete__nome">{{ linha.nome }}</strong>

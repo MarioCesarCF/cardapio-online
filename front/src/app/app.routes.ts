@@ -10,17 +10,33 @@ import { MeusPedidosComponent } from './pages/meus-pedidos/meus-pedidos.componen
 import { OnboardingComponent } from './pages/onboarding/onboarding.component';
 import { PainelAdminComponent } from './pages/admin/painel-admin.component';
 import { HomeComponent } from './pages/home/home.component';
-import { TermosComponent } from './pages/termos/termos.component';
 import { onboardingGuard, perfilGuard } from './guards/perfil.guard';
 
 export const routes: Routes = [
   { path: '', component: AuthComponent },
   { path: 'auth', component: AuthComponent },
-  { path: 'termos', component: TermosComponent },
+  // Páginas públicas de texto: lazy para não pesar no bundle inicial.
+  {
+    path: 'termos',
+    loadComponent: () => import('./pages/termos/termos.component').then((m) => m.TermosComponent),
+  },
+  {
+    path: 'privacidade',
+    loadComponent: () =>
+      import('./pages/termos/privacidade.component').then((m) => m.PrivacidadeComponent),
+  },
   {
     path: 'meus-pedidos',
     component: MeusPedidosComponent,
     canActivate: [perfilGuard(['cliente'])],
+  },
+  // Encerramento de conta: o questionário é opcional e a página sempre
+  // confirma antes. Lazy para não pesar no bundle inicial.
+  {
+    path: 'encerrar',
+    loadComponent: () =>
+      import('./pages/encerramento/encerramento.component').then((m) => m.EncerramentoComponent),
+    canActivate: [perfilGuard(['cliente', 'dono'])],
   },
   { path: 'home', component: HomeComponent, canActivate: [perfilGuard(['cliente'])] },
   { path: 'onboarding', component: OnboardingComponent, canActivate: [onboardingGuard] },

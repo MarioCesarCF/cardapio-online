@@ -9,7 +9,7 @@ import { AdminService } from '../../services/admin.service';
 import type { LanchoneteResumo } from '../../services/admin.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
 import { MarcaService } from '../../services/marca.service';
-import { FONTES_PADRAO, TIPOS_LANCHONETE, logoPadrao } from '../../services/lanchonete-visual';
+import { FONTES_PADRAO, TIPOS_LANCHONETE } from '../../services/lanchonete-visual';
 
 interface EtapaConf {
   nome: string;
@@ -176,6 +176,7 @@ const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
               <app-header-lanchonete
                 [nome]="conf()!.nome"
                 [logoUrl]="conf()!.logoUrl"
+                [tipo]="conf()!.tipo"
                 [cor]="conf()!.corPrincipal"
                 [fonte]="conf()!.fonte"
               />
@@ -196,6 +197,7 @@ const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
             <app-header-lanchonete
               [nome]="conf()!.nome"
               [logoUrl]="conf()!.logoUrl"
+              [tipo]="conf()!.tipo"
               [cor]="conf()!.corPrincipal"
               [fonte]="conf()!.fonte"
               tamanho="lg"
@@ -453,12 +455,15 @@ export class OnboardingComponent {
     const atual = this.conf();
     if (!atual) return;
     this.erro.set(null);
-    const novo = { ...atual, tipo, logoUrl: logoPadrao(tipo) };
+    // `logoUrl` fica vazio de proposito: sem logo propria o front mostra a do
+    // tipo (ver `resolveLogo`). Gravar a URL do asset congelaria o host da API
+    // do ambiente atual no banco e a logo quebraria em outro lugar.
+    const novo = { ...atual, tipo, logoUrl: null };
     this.conf.set(novo);
     try {
       await this.admin.updateConfig(this.slug(), {
         tipo,
-        logoUrl: logoPadrao(tipo),
+        logoUrl: null,
       });
     } catch (error) {
       this.erro.set(this.mensagemDe(error));

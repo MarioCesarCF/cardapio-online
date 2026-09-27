@@ -11,23 +11,28 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
 import { AdminService, LanchoneteConfig } from '../../services/admin.service';
 import { ApiService } from '../../services/api.service';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
-import {
-  FONTES_PADRAO,
-  TIPOS_LANCHONETE,
-  logoPadrao,
-  type FonteOpcao,
-} from '../../services/lanchonete-visual';
+import { FONTES_PADRAO, TIPOS_LANCHONETE, type FonteOpcao } from '../../services/lanchonete-visual';
 import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horarios';
 
 @Component({
   selector: 'app-admin-config',
-  imports: [FormsModule, HeaderLanchoneteComponent, Button, Dialog, InputText, Select, Tag, ToggleSwitch],
+  imports: [
+    FormsModule,
+    HeaderLanchoneteComponent,
+    Button,
+    Dialog,
+    InputText,
+    Select,
+    Tag,
+    ToggleSwitch,
+  ],
   template: `
     @if (conf(); as c) {
       <form class="config superficie" (ngSubmit)="salvar()" autocomplete="off">
         <app-header-lanchonete
           [nome]="c.nome"
           [logoUrl]="c.logoUrl"
+          [tipo]="c.tipo"
           [cor]="c.corPrincipal"
           [fonte]="c.fonte"
         />
@@ -183,7 +188,6 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
               name="tipo"
               placeholder="—"
               [showClear]="true"
-              (onChange)="usarLogoPadraoSeSemLogo()"
             />
           </label>
         </div>
@@ -365,8 +369,8 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
           />
           <p-button
             type="button"
-            label="Excluir lanchonete"
-            icon="pi pi-trash"
+            label="Encerrar lanchonete"
+            icon="pi pi-sign-out"
             severity="danger"
             [outlined]="true"
             (onClick)="excluir()"
@@ -709,17 +713,17 @@ export class AdminConfigComponent {
     }
   }
 
+  /**
+   * "Padrão" LIMPA o campo `logoUrl` em vez de gravar a URL do asset.
+   * Antes era salvo `${apiUrl}/assets/logo-<tipo>.svg` no banco, congelando o
+   * host da maquina/ambiente em que o botao foi clicado (em dev, `localhost`) --
+   * a logo quebrava no celular do dono e no deploy. Vazia = "sem logo propria",
+   * e o front deriva a do tipo na hora (ver `resolveLogo`).
+   */
   usarLogoPadrao(): void {
     const conf = this.conf();
-    if (!conf?.tipo) return;
-    conf.logoUrl = logoPadrao(conf.tipo);
-  }
-
-  usarLogoPadraoSeSemLogo(): void {
-    const conf = this.conf();
-    if (conf?.tipo && !conf.logoUrl) {
-      conf.logoUrl = logoPadrao(conf.tipo);
-    }
+    if (!conf) return;
+    conf.logoUrl = null;
   }
 
   constructor() {
@@ -823,19 +827,11 @@ export class AdminConfigComponent {
   }
 
   async excluir() {
-    if (
-      !this.conf() ||
-      !confirm('Excluir esta lanchonete e todo o cardápio? Essa ação não pode ser desfeita.')
-    )
-      return;
-    this.salvando = true;
-    try {
-      await this.admin.removeLanchonete(this.slug);
-      await this.router.navigate(['/admin']);
-    } catch (error) {
-      this.mensagem =
-        (error as { error?: { message?: string } }).error?.message ?? 'Falha ao excluir';
-      this.salvando = false;
-    }
+    // A confirmação e o questionário de encerramento ficam na página /encerrar
+    // (duas etapas: confirmar → responder, sempre com a opção de pular). Aqui
+    // só redireciona, sem apagar nada.
+    await this.router.navigate(['/encerrar'], {
+      queryParams: { perfil: 'lanchonete', slug: this.slug },
+    });
   }
 }

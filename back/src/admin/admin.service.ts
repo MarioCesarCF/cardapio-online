@@ -10,6 +10,11 @@ import { PedidosGateway } from '../pedidos/pedidos.gateway.js';
 import { normalizarChavePix } from '../pedidos/pix.js';
 import { formataPedido } from '../pedidos/pedidos.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  ehTipoModelo,
+  modeloDoTipo,
+  resumoDoModelo,
+} from './cardapio-modelo.js';
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
@@ -61,6 +66,9 @@ export interface HorarioDia {
   fim: string | null;
 }
 
+// HH:MM de verdade (00-23 / 00-59). Ancorada nas duas pontas e com classes de
+// caractere limitadas: sem quantificador aninhado, o backtracking é linear —
+// seguro para ReDoS mesmo com entrada do cliente.
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const QUANTIDADE_DIAS = 7;
 
@@ -259,6 +267,113 @@ export class AdminService {
           grupoIds: produto.grupos.map((pg) => pg.grupoId),
         })),
       })),
+    };
+  }
+
+  // ---------- Cadastro automático (cardápio modelo) ----------
+
+  /**
+   * Cria um cardápio completo de exemplo conforme o tipo escolhido
+   * (lanches | pizzaria | acai). Só funciona em cardápio vazio: se a
+   * lanchonete já tem categorias ou grupos, o dono precisa usar o CRUD normal
+   * (evita duplicar/misturar o cardápio com o que ele já montou).
+   */
+  async gerarCardapioModelo(
+    userId: string,
+    slug: string,
+    body: Record<string, unknown>,
+  ) {
+    const lanchonete = await this.getLanchoneteOwned(userId, slug);
+    const tipo = body.tipo;
+    if (!ehTipoModelo(tipo)) {
+      throw new BadRequestException(
+        'Escolha o tipo do cardápio: lanches, pizzaria ou acai.',
+      );
+    }
+    const modelo = modeloDoTipo(tipo);
+
+    const [qtdeCategorias, qtdeGrupos] = await Promise.all([
+      this.prisma.categoria.count({ where: { lanchoneteId: lanchonete.id } }),
+      this.prisma.grupoOpcoes.count({ where: { lanchoneteId: lanchonete.id } }),
+    ]);
+    if (qtdeCategorias > 0 || qtdeGrupos > 0) {
+      throw new BadRequestException(
+        'Esta lanchonete já tem categorias ou grupos cadastrados. O cardápio de exemplo só pode ser criado em um cardápio vazio.',
+      );
+    }
+
+    const idGrupos = new Map<string, string>();
+    let qtdeOpcoes = 0;
+    const vinculos: { produtoId: string; grupoId: string; ordem: number }[] = [];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const grupo of modelo.grupos) {
+        const criado = await tx.grupoOpcoes.create({
+          data: {
+            lanchoneteId: lanchonete.id,
+            nome: grupo.nome,
+            tipo: grupo.tipo,
+            obrigatorio: grupo.obrigatorio,
+            minSelecoes: grupo.minSelecoes,
+            maxSelecoes: grupo.maxSelecoes,
+          },
+          select: { id: true },
+        });
+        idGrupos.set(grupo.nome, criado.id);
+        if (grupo.opcoes.length > 0) {
+          await tx.opcao.createMany({
+            data: grupo.opcoes.map((opcao) => ({
+              grupoId: criado.id,
+              nome: opcao.nome,
+              precoAdicional: opcao.precoAdicional,
+              remove: opcao.remove === true,
+            })),
+          });
+          qtdeOpcoes += grupo.opcoes.length;
+        }
+      }
+
+      let posicao = 0;
+      for (const categoria of modelo.categorias) {
+        const catCriada = await tx.categoria.create({
+          data: {
+            lanchoneteId: lanchonete.id,
+            nome: categoria.nome,
+            posicao: posicao++,
+          },
+          select: { id: true },
+        });
+        for (const produto of categoria.produtos) {
+          const prodCriado = await tx.produto.create({
+            data: {
+              categoriaId: catCriada.id,
+              nome: produto.nome,
+              preco: produto.preco,
+              descricao: produto.descricao ?? null,
+              destaque: produto.destaque === true,
+            },
+            select: { id: true },
+          });
+          (produto.grupos ?? []).forEach((nomeGrupo, ordem) => {
+            const grupoId = idGrupos.get(nomeGrupo);
+            if (grupoId) {
+              vinculos.push({ produtoId: prodCriado.id, grupoId, ordem });
+            }
+          });
+        }
+      }
+
+      if (vinculos.length > 0) {
+        await tx.produtoGrupo.createMany({ data: vinculos });
+      }
+    });
+
+    return {
+      ok: true,
+      tipo,
+      rotulo: modelo.rotulo,
+      ...resumoDoModelo(modelo),
+      vinculos: vinculos.length,
     };
   }
 
@@ -1033,8 +1148,12 @@ export class AdminService {
     return resultado.sort((a, b) => a.dia - b.dia);
   }
 
+  private horaNoFormato(valor: unknown): valor is string {
+    return typeof valor === 'string' && HORA_REGEX.test(valor.trim());
+  }
+
   private obrigatoriaHorario(value: unknown, rotulo: string): string {
-    if (typeof value !== 'string' || !HORA_REGEX.test(value.trim())) {
+    if (!this.horaNoFormato(value)) {
       throw new BadRequestException(
         `Preencha o horário de ${rotulo} no formato HH:MM.`,
       );

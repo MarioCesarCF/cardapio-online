@@ -1,4 +1,5 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { resolveLogo } from '../services/lanchonete-visual';
 
 @Component({
   selector: 'app-header-lanchonete',
@@ -10,8 +11,8 @@ import { Component, input } from '@angular/core';
       [style.--hl-fonte]="fonte() || 'inherit'"
       [style.--hl-cor]="cor() || '#111111'"
     >
-      @if (logoUrl(); as logo) {
-        <img class="hl__logo" [src]="logo" alt="" />
+      @if (logoExibido(); as logo) {
+        <img class="hl__logo" [src]="logo" alt="" (error)="logoQuebrou()" />
       }
       <span class="hl__nome">{{ nome() }}</span>
       @if (resumo()) {
@@ -58,8 +59,27 @@ import { Component, input } from '@angular/core';
 export class HeaderLanchoneteComponent {
   readonly nome = input<string>('');
   readonly logoUrl = input<string | null>(null);
+  /** Tipo da lanchonete: usado no logo padrao e como fallback se a imagem falhar. */
+  readonly tipo = input<string | null>(null);
   readonly cor = input<string | null>(null);
   readonly fonte = input<string | null>(null);
   readonly resumo = input<string | null>(null);
   readonly tamanho = input<'md' | 'lg'>('md');
+
+  private readonly quebrado = signal(false);
+
+  /**
+   * Logo a exibir. `resolveLogo` ignora URL de logo padrao gravada com o host de
+   * outro ambiente (ver `lanchonete-visual`); se a imagem falhar ao carregar,
+   * cai no logo do tipo. Nao entra em loop: com o fallback ja aplicado a URL nao
+   * muda, entao o `error` nao dispara de novo.
+   */
+  readonly logoExibido = computed(() => {
+    if (this.quebrado()) return resolveLogo(null, this.tipo());
+    return resolveLogo(this.logoUrl(), this.tipo());
+  });
+
+  logoQuebrou(): void {
+    this.quebrado.set(true);
+  }
 }

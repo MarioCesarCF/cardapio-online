@@ -1,0 +1,340 @@
+<article class="termos">
+  <header class="termos__cabecalho">
+    <h1>Política de Privacidade</h1>
+    <p class="termos__meta">Versão {{ VERSAO }} · atualizada em {{ ATUALIZADO_EM }}</p>
+  </header>
+
+  <nav class="termos__nav">
+    <a routerLink="/termos">Termos de Uso</a>
+    <span>·</span>
+    <a routerLink="/auth">Voltar para o login</a>
+  </nav>
+
+  <p class="termos__aviso">
+    <i class="pi pi-info-circle"></i>
+    <span>
+      Este documento e os <a routerLink="/termos">Termos de Uso</a> são versionados juntos: o aceite
+      registrado na sua conta vale para os dois. Antes do lançamento comercial este texto ainda
+      passa por revisão de advogado especializado em LGPD.
+    </span>
+  </p>
+
+  <section>
+    <h2>1. Quem trata os seus dados</h2>
+    <p>
+      O controlador dos dados tratados para o funcionamento da conta, da segurança e da plataforma é
+      o <strong>Peditto</strong>, operado por
+      <span class="termos__pendente">[RAZÃO SOCIAL — preencher antes do lançamento]</span>, CNPJ nº
+      <span class="termos__pendente">[CNPJ — preencher]</span>, com sede em
+      <span class="termos__pendente">[ENDEREÇO — preencher]</span>, e com os dados de contato
+      indicados na seção 11.
+    </p>
+    <p>
+      O Peditto também atua como <strong>operador</strong> dos dados que a lanchonete cadastra e usa
+      para atender os próprios clientes: nesse caso, quem decide as finalidades é a lanchonete, que
+      responde pelos dados que coletou dos clientes dela e pelas finalidades do atendimento.
+    </p>
+    <p>
+      Papéis resumidos: <strong>Peditto</strong> = controlador das contas, da autenticação, dos logs
+      de segurança, da cobrança da assinatura da lanchonete e do funcionamento da plataforma;
+      <strong>Peditto</strong> = operador dos dados de pedidos e cadastro das lanchonetes;
+      <strong>lanchonete</strong> = responsável pelos dados que coleta de seus clientes e pelas
+      finalidades do próprio atendimento.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Dados que tratamos</h2>
+    <ul>
+      <li>
+        <strong>Cadastro da conta</strong>: nome, e-mail, senha (armazenada de forma protegida pelo
+        serviço de autenticação) e, para quem anuncia, telefone/WhatsApp do proprietário;
+      </li>
+      <li><strong>Endereços</strong>: os endereços de entrega que você cadastra;</li>
+      <li>
+        <strong>Pedidos</strong>: itens, opções escolhidas, valores, forma de pagamento, status,
+        endereço de entrega, observação, telefone/WhatsApp do cliente e registro de confirmação do
+        PIX;
+      </li>
+      <li>
+        <strong>Cadastro da lanchonete</strong>: nome, endereço, telefone, chave PIX, nome do
+        titular da chave, horários de funcionamento, tipo de lanchonete, logotipo, cor e cardápio;
+      </li>
+      <li>
+        <strong>Preferências</strong>: lanchonetes favoritas, tema da interface, endereço e itens do
+        carrinho guardados no seu navegador;
+      </li>
+      <li><strong>Registro de aceite</strong>: a versão dos Termos aceita e a data do aceite;</li>
+      <li>
+        <strong>Logs técnicos</strong>: endereço IP, data e hora, eventos de segurança, mudanças de
+        status de pedido e erros — sem dados de conteúdo do pedido.
+      </li>
+    </ul>
+    <p>
+      A chave PIX cadastrada pela lanchonete é dado sensível do ponto de vista financeiro: fica
+      visível apenas ao dono da lanchonete, não aparece em relatórios exportados e nunca é gravada
+      em log. Ela é usada apenas para gerar o código de cobrança (BR Code) do pedido e para a
+      lanchonete conferir o recebimento; a lanchonete pode apagar ou trocar a chave a qualquer
+      momento. Ninguém fora a própria lanchonete consegue ver essa chave pelo aplicativo.
+    </p>
+  </section>
+
+  <section>
+    <h2>3. Para que usamos e com que base legal</h2>
+    <p>
+      Não usamos seus dados para publicidade, não vendemos dados pessoais e não usamos decisões
+      automatizadas que produzam efeitos jurídicos para você. Cada tratamento tem uma finalidade e
+      uma base legal:
+    </p>
+    <h3>Execução de contrato</h3>
+    <ul>
+      <li>criar e manter sua conta, autenticar o acesso e registrar o aceite dos Termos;</li>
+      <li>
+        montar, registrar e entregar o pedido — itens, endereço, telefone do cliente, valores e
+        status;
+      </li>
+      <li>
+        manter o cardápio, a configuração e o histórico de pedidos da lanchonete que você cadastrou;
+      </li>
+      <li>enviar à lanchonete as notificações de novo pedido nos canais que ela ativou.</li>
+    </ul>
+    <h3>Obrigação legal ou regulatória</h3>
+    <ul>
+      <li>
+        conservar registros necessários ao cumprimento de obrigações fiscais, contábeis e de defesa
+        em processo;
+      </li>
+      <li>atender requisições de autoridades públicas e obrigações de transparência.</li>
+    </ul>
+    <h3>Legítimo interesse</h3>
+    <ul>
+      <li>
+        segurança da conta e da plataforma: prevenção a fraude e a abuso, limitação de requisições,
+        monitoramento de erros e registro de logs;
+      </li>
+      <li>prevenção e resolução de disputas entre clientes e lanchonetes;</li>
+      <li>comunicações sobre o serviço, melhorias e aviso de indisponibilidade;</li>
+      <li>manutenção técnica, diagnóstico de falhas e segurança do serviço;</li>
+      <li>defesa de direitos em processos administrativos ou judiciais.</li>
+    </ul>
+    <p>
+      Você pode pedir a revogação do tratamento apoiado em legítimo interesse a qualquer momento,
+      pelo canal de contato. Isso não impede o uso da plataforma quando o tratamento for necessário
+      para a execução do contrato ou para uma obrigação legal.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Matriz de tratamento de dados</h2>
+    <div class="matriz">
+      <table>
+        <thead>
+          <tr>
+            <th>Dado</th>
+            <th>Quem fornece</th>
+            <th>Finalidade</th>
+            <th>Quem acessa</th>
+            <th>Retenção</th>
+            <th>Base legal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nome, e-mail e senha da conta</td>
+            <td>Titular</td>
+            <td>Criar e manter a conta, autenticar o acesso</td>
+            <td>Peditto; lanchonete (nome do cliente no pedido)</td>
+            <td>Enquanto a conta existir</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Telefone/WhatsApp do cliente</td>
+            <td>Cliente ou titular do perfil</td>
+            <td>Contato para entrega e confirmação de pagamento</td>
+            <td>Lanchonete do pedido; Peditto (armazenamento)</td>
+            <td>Junto do pedido (ver seção 8)</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Endereço de entrega</td>
+            <td>Cliente</td>
+            <td>Entrega do pedido</td>
+            <td>Lanchonete do pedido; Peditto (armazenamento)</td>
+            <td>Junto do pedido (ver seção 8)</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Itens, opções e valores do pedido</td>
+            <td>Cliente</td>
+            <td>Faturamento, preparo e histórico da lanchonete</td>
+            <td>Lanchonete; Peditto (armazenamento)</td>
+            <td>Junto do pedido (ver seção 8)</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Chave PIX e nome do titular</td>
+            <td>Lanchonete</td>
+            <td>Gerar o código de cobrança do pedido</td>
+            <td>Dono da lanchonete; Peditto (armazenamento)</td>
+            <td>Enquanto a lanchonete existir</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Cardápio, logotipo, cor e horários</td>
+            <td>Lanchonete</td>
+            <td>Exibir a página pública da lanchonete</td>
+            <td>Público; Peditto (armazenamento)</td>
+            <td>Enquanto a lanchonete existir</td>
+            <td>Execução de contrato</td>
+          </tr>
+          <tr>
+            <td>Registro de aceite dos Termos</td>
+            <td>Titular</td>
+            <td>Comprovar que o titular conheceu e aceitou a versão vigente</td>
+            <td>Peditto</td>
+            <td>Enquanto a conta existir, por prazo razoável de prova</td>
+            <td>Obrigação legal</td>
+          </tr>
+          <tr>
+            <td>Logs de acesso, segurança e erros</td>
+            <td>Sistema</td>
+            <td>Prevenção a fraude, diagnóstico e defesa em processo</td>
+            <td>Peditto (administradores)</td>
+            <td>Prazo mínimo necessário à defesa (anos)</td>
+            <td>Legítimo interesse</td>
+          </tr>
+          <tr>
+            <td>Dados de assinatura (plano, vigência)</td>
+            <td>Lanchonete</td>
+            <td>Controlar o acesso e a cobrança do plano</td>
+            <td>Peditto</td>
+            <td>Enquanto a conta existir e por prazo de.obrigação fiscal</td>
+            <td>Execução de contrato</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Com quem compartilhamos</h2>
+    <p>Compartilhamos dados apenas com o necessário para operar o serviço:</p>
+    <ul>
+      <li>
+        <strong>Provedores de infraestrutura</strong>: Neon (banco de dados e autenticação de
+        usuários), Vercel (hospedagem do aplicativo) e Render (hospedagem da API);
+      </li>
+      <li>
+        <strong>Mensageria</strong>: Meta/WhatsApp, quando a lanchonete ativa a notificação de novo
+        pedido — o envio usa apenas o número da loja e o conteúdo do pedido;
+      </li>
+      <li><strong>Login social</strong>: Google, apenas se você escolher entrar com essa opção;</li>
+      <li>
+        <strong>Autoridades públicas</strong>, quando houver requisição legal ou obrigação
+        regulatória;
+      </li>
+      <li>
+        <strong>Lanchonetes</strong>, somente os dados necessários ao atendimento do pedido feito
+        por você naquela loja.
+      </li>
+    </ul>
+    <p>
+      Futuros fornecedores — como gateway de pagamento do plano ou instituições de pagamento para
+      confirmação automática do PIX — serão incluídos nesta lista quando forem contratados, com
+      aviso prévio nesta política.
+    </p>
+  </section>
+
+  <section>
+    <h2>6. Transferência internacional</h2>
+    <p>
+      Nossos fornecedores de nuvem podem processar dados em servidores localizados fora do Brasil.
+      Quando isso ocorre, a transferência é feita para países com nível adequado de proteção ou com
+      garantias contratuais, na forma do artigo 33 da LGPD.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. Segurança da informação</h2>
+    <p>
+      Usamos criptografia do canal de acesso, senhas protegidas por função de derivação, sessão com
+      expiração, limitação de requisições por origem, registro de eventos de segurança e restrição
+      de acesso interno por perfis (dono da lanchonete, administrador da plataforma). Nenhuma medida
+      elimina o risco de incidentes; se um ocorrer com risco relevante, avisamos os afetados e as
+      autoridades, informando o que aconteceu, quais dados foram afetados e as medidas tomadas.
+    </p>
+  </section>
+
+  <section>
+    <h2>8. Por quanto tempo guardamos</h2>
+    <ul>
+      <li>
+        <strong>Conta e cadastro da lanchonete</strong>: enquanto a conta existir. Após o
+        encerramento, exclusão em até 90 dias, exceto registros de guarda obrigatória;
+      </li>
+      <li>
+        <strong>Pedidos</strong>: ficam visíveis na lanchonete como “atuais” por cerca de 24 horas;
+        depois passam ao histórico e são apagados definitivamente em cerca de 30 dias. O
+        <strong>cliente</strong> vê o pedido no aplicativo pelo mesmo período;
+      </li>
+      <li>
+        <strong>Logs de segurança e erros</strong>: pelo prazo necessário à defesa de direitos e ao
+        diagnóstico, tipicamente anos, e depois anonimizados;
+      </li>
+      <li>
+        <strong>Registros fiscais e contratuais</strong>: pelos prazos legais aplicáveis, ainda que
+        após o encerramento da conta.
+      </li>
+    </ul>
+    <p>
+      A lanchonete que quiser manter o histórico de pedidos por mais tempo deve exportar a planilha
+      no painel (a exportação respeita o histórico disponível) e guardar o arquivo por conta
+      própria.
+    </p>
+  </section>
+
+  <section>
+    <h2>9. Direitos do titular</h2>
+    <p>Como titular, você pode a qualquer momento, pelo canal de contato:</p>
+    <ul>
+      <li>confirmer o tratamento dos seus dados e obter acesso a eles;</li>
+      <li>
+        corrigir dados incompletos, inexatos ou desatualizados — isso pode ser feito direto no
+        perfil;
+      </li>
+      <li>solicitar a eliminação, a anonimização ou o bloqueio de dados desnecessários;</li>
+      <li>solicitar a portabilidade dos seus dados;</li>
+      <li>revogar consentimentos e pedir a lista de com quem compartilhamos seus dados;</li>
+      <li>peticionar contra decisões baseadas exclusivamente em tratamento automatizado.</li>
+    </ul>
+    <p>
+      Respondemos em até 15 dias. Parte desses direitos já pode ser exercida por você mesmo no
+      aplicativo (alterar nome e telefone, excluir endereços, apagar lanchonetes favoritas); o
+      restante é atendido por nós, porque ainda não existe na plataforma exclusão de conta
+      automática, download do cadastro completo nem consentimento granular por finalidade.
+    </p>
+  </section>
+
+  <section>
+    <h2>10. Alterações desta política</h2>
+    <p>
+      Quando mudarmos esta política, a versão vigente aparecerá nesta página com número e data. Para
+      mudanças relevantes, pediremos novo aceite no seu próximo acesso, mantendo registrado o aceite
+      anterior com a data original.
+    </p>
+  </section>
+
+  <section>
+    <h2>11. Contato e canal do titular</h2>
+    <p>
+      Dúvidas sobre esta política, sobre seus dados ou incidentes de segurança podem ser enviados
+      pelos canais abaixo. O mesmo canal serve para pedidos de acesso, correção, portabilidade e
+      eliminação de dados.
+    </p>
+    <app-contato-lgpd />
+  </section>
+
+  <footer class="termos__rodape">
+    <p>Peditto — Política de Privacidade, versão {{ VERSAO }}.</p>
+  </footer>
+</article>

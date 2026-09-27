@@ -420,6 +420,11 @@
   }
 }
 
+.opcao--off {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .endereco-opcao.selecionada {
   background: color-mix(in srgb, var(--cardapio-cor) 12%, transparent);
   border-radius: var(--app-raio-sm);

@@ -16,6 +16,7 @@
       <app-header-lanchonete
         [nome]="dados.lanchonete.nome"
         [logoUrl]="dados.lanchonete.logoUrl"
+        [tipo]="dados.lanchonete.tipo"
         [cor]="dados.lanchonete.corPrincipal"
         [fonte]="dados.lanchonete.fonte"
         [resumo]="resumoInfo(dados.lanchonete)"
@@ -490,13 +491,19 @@
     ></textarea>
 
     <h3>Forma de pagamento</h3>
-    <label class="opcao">
+    <label class="opcao" [class.opcao--off]="!aceitaPix()">
       <input
         type="checkbox"
         [checked]="formaPagamento() === 'pix'"
+        [disabled]="!aceitaPix()"
         (change)="definirFormaPagamento('pix', $any($event.target).checked)"
       />
-      <span>Pix</span>
+      <span class="opcao-texto">
+        Pix
+        @if (!aceitaPix()) {
+          <small class="pago-delay">Esta lanchonete ainda não configurou uma chave PIX.</small>
+        }
+      </span>
     </label>
     <label class="opcao">
       <input
@@ -634,4 +641,14 @@
       </div>
     }
   </p-dialog>
+
+  @if (abrindoCheckout()) {
+    <div class="travando" role="status" aria-live="polite">
+      <div class="travando__caixa">
+        <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+        <p>Abrindo o pedido…</p>
+        <small>Só um instante.</small>
+      </div>
+    </div>
+  }
 </div>

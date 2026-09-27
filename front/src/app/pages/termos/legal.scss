@@ -1,0 +1,134 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  padding: 2.5rem 1rem 3rem;
+  background: var(--app-bg);
+}
+
+.termos {
+  max-width: 760px;
+  margin: 0 auto;
+
+  &__cabecalho {
+    margin-bottom: 1rem;
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.6rem;
+    }
+  }
+
+  &__meta {
+    margin: 0;
+    color: var(--app-texto-suave);
+    font-size: 0.85rem;
+  }
+
+  &__nav {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0.75rem 0 1.25rem;
+    font-size: 0.85rem;
+
+    a {
+      color: var(--p-primary-color);
+    }
+  }
+
+  &__aviso {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0 0 1.25rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: var(--app-raio);
+    border: 1px solid var(--app-borda);
+    background: var(--app-superficie-2);
+    color: var(--app-texto-suave);
+    font-size: 0.82rem;
+    line-height: 1.5;
+
+    i {
+      margin-top: 0.15rem;
+      font-size: 0.8rem;
+      color: var(--p-primary-color);
+    }
+  }
+
+  &__pendente {
+    color: var(--p-orange-600, #ea580c);
+    font-weight: 600;
+  }
+
+  section {
+    margin-bottom: 1.75rem;
+    padding: 0 1.5rem 1.5rem;
+    background: var(--app-superficie);
+    border: 1px solid var(--app-borda);
+    border-radius: var(--app-raio);
+    box-shadow: var(--app-sombra);
+  }
+
+  h2 {
+    margin: 1.4rem 0 0.75rem;
+    font-size: 1.15rem;
+  }
+
+  h3 {
+    margin: 1.1rem 0 0.4rem;
+    font-size: 1rem;
+  }
+
+  p {
+    line-height: 1.55;
+    margin: 0.5rem 0;
+  }
+
+  ul {
+    margin: 0.5rem 0;
+    padding-left: 1.35rem;
+    line-height: 1.55;
+  }
+
+  a {
+    color: var(--p-primary-color);
+    word-break: break-word;
+  }
+
+  .matriz {
+    overflow-x: auto;
+    margin: 0.75rem 0 0;
+
+    table {
+      width: 100%;
+      min-width: 640px;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--app-borda);
+      padding: 0.4rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.4;
+    }
+
+    th {
+      background: var(--app-superficie-2);
+      font-weight: 700;
+    }
+  }
+
+  &__rodape {
+    text-align: center;
+    color: var(--app-texto-suave);
+    font-size: 0.85rem;
+
+    a {
+      color: var(--p-primary-color);
+    }
+  }
+}

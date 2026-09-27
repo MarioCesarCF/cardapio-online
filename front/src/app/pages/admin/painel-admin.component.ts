@@ -22,6 +22,12 @@ import {
 } from '../../services/painel-admin.service';
 import { TIPOS_LANCHONETE } from '../../services/lanchonete-visual';
 import { formatarMoeda } from '../../services/moeda';
+import {
+  EncerramentoService,
+  MOTIVOS_CLIENTE,
+  MOTIVOS_LANCHONETE,
+  ResumoEncerramentos,
+} from '../../services/encerramento';
 import { labelStatus as labelStatusPedido } from '../../services/pedido-painel';
 
 const SITUACAO_LABELS: Record<string, string> = {
@@ -40,6 +46,13 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
   rotulo: t.rotulo,
   valor: t.valor,
 }));
+
+const PERIODOS_ENCERRAMENTO = [
+  { rotulo: 'Últimos 30 dias', valor: 30 },
+  { rotulo: 'Últimos 90 dias', valor: 90 },
+  { rotulo: 'Últimos 180 dias', valor: 180 },
+  { rotulo: 'Último ano', valor: 365 },
+];
 
 @Component({
   selector: 'app-painel-admin',
@@ -93,6 +106,14 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
             (click)="trocarAba('logs')"
           >
             Logs
+          </button>
+          <button
+            type="button"
+            class="pa__aba"
+            [class.pa__aba--ativa]="aba() === 'encerramentos'"
+            (click)="trocarAba('encerramentos')"
+          >
+            Encerramentos
           </button>
           @if (eSuper()) {
             <button
@@ -521,6 +542,166 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
                   </div>
                 </div>
               }
+            }
+          }
+
+          @if (aba() === 'encerramentos') {
+            <div class="pa__filtros">
+              <label class="pa__campo">
+                <span>Período</span>
+                <p-select
+                  [options]="periodosEncerramento"
+                  optionLabel="rotulo"
+                  optionValue="valor"
+                  [ngModel]="diasEncerramento()"
+                  (ngModelChange)="trocarPeriodoEncerramento($event)"
+                  name="diasEncerramento"
+                />
+              </label>
+            </div>
+
+            @if (carregandoEncerramentos()) {
+              <p>Carregando encerramentos…</p>
+            } @else if (!resumoEncerramento()) {
+              <p class="pa__vazio">Nada carregado ainda.</p>
+            } @else {
+              <div class="enc-pa__topo">
+                <div class="enc-pa__card">
+                  <span>Encerramentos no período</span>
+                  <strong>{{ resumoEncerramento()?.total }}</strong>
+                  <small>
+                    {{ resumoEncerramento()?.porPerfil?.cliente }} cliente(s) ·
+                    {{ resumoEncerramento()?.porPerfil?.lanchonete }} lanchonete(s)
+                  </small>
+                </div>
+                <div class="enc-pa__card">
+                  <span>Satisfação média</span>
+                  <strong>
+                    {{
+                      resumoEncerramento()?.satisfacaoMedia !== null &&
+                      resumoEncerramento()?.satisfacaoMedia !== undefined
+                        ? resumoEncerramento()?.satisfacaoMedia?.toFixed(1)
+                        : '—'
+                    }}
+                  </strong>
+                  <small>{{ resumoEncerramento()?.avaliacoes }} avaliação(ões)</small>
+                </div>
+              </div>
+
+              @for (grupo of resumoEncerramento()?.motivos ?? []; track grupo.perfil) {
+                <section class="enc-pa__bloco">
+                  <h3>{{ grupo.perfil === 'lanchonete' ? 'Lanchonetes' : 'Clientes' }}</h3>
+                  @if (grupo.motivos.length === 0) {
+                    <p class="pa__vazio">Sem respostas neste perfil.</p>
+                  } @else {
+                    <ul class="enc-pa__lista">
+                      @for (m of grupo.motivos; track m.motivo) {
+                        <li>
+                          <span>{{ m.rotulo }}</span>
+                          <span class="enc-pa__barra">
+                            <i [style.width.%]="m.percentual"></i>
+                          </span>
+                          <strong>{{ m.quantidade }}</strong>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </section>
+              }
+
+              @if ((resumoEncerramento()?.fatores ?? []).length > 0) {
+                <section class="enc-pa__bloco">
+                  <h3>O que mais influenciou (lanchonetes)</h3>
+                  <ul class="enc-pa__tags">
+                    @for (f of resumoEncerramento()!.fatores; track f.fator) {
+                      <li>
+                        {{ f.rotulo }} <strong>{{ f.quantidade }}</strong>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              @if ((resumoEncerramento()?.precoAdequado ?? []).length > 0) {
+                <section class="enc-pa__bloco">
+                  <h3>Preço considerado adequado</h3>
+                  <ul class="enc-pa__tags">
+                    @for (p of resumoEncerramento()!.precoAdequado; track $index) {
+                      <li>
+                        {{ p.rotulo }} <strong>{{ p.quantidade }}</strong>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              @if ((resumoEncerramento()?.voltaria ?? []).length > 0) {
+                <section class="enc-pa__bloco">
+                  <h3>Voltaria a usar</h3>
+                  <ul class="enc-pa__tags">
+                    @for (v of resumoEncerramento()!.voltaria; track $index) {
+                      <li>
+                        {{ v.rotulo }} <strong>{{ v.quantidade }}</strong>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              <section class="enc-pa__bloco">
+                <h3>Contatos autorizados</h3>
+                <p class="enc-pa__dica">
+                  Só lanchonetes podem liberar contato. A lista abaixo aparece somente para o
+                  administrador raiz.
+                </p>
+                @if (!eSuper()) {
+                  <p class="pa__vazio">Você não tem permissão para ver os contatos.</p>
+                } @else if ((resumoEncerramento()?.contatos ?? []).length === 0) {
+                  <p class="pa__vazio">Nenhum contato liberado.</p>
+                } @else {
+                  <ul class="enc-pa__contatos">
+                    @for (c of resumoEncerramento()!.contatos; track c.createdAt + c.perfil) {
+                      <li>
+                        <strong>{{ c.lanchoneteNome ?? '—' }}</strong>
+                        <span>{{ rotuloEncerramento(c.motivoPrincipal) }}</span>
+                        <a [href]="'https://wa.me/' + c.contato" target="_blank" rel="noopener">
+                          {{ c.contato }}
+                        </a>
+                        <small>{{ dataHoraDe(c.createdAt) }}</small>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+
+              <section class="enc-pa__bloco">
+                <h3>Comentários</h3>
+                @if ((resumoEncerramento()?.falas ?? []).length === 0) {
+                  <p class="pa__vazio">Nenhum comentário enviado.</p>
+                } @else {
+                  <ul class="enc-pa__falas">
+                    @for (f of resumoEncerramento()!.falas; track f.createdAt + f.perfil) {
+                      <li>
+                        <strong>
+                          {{
+                            f.perfil === 'lanchonete'
+                              ? (f.lanchoneteNome ?? 'Lanchonete')
+                              : 'Cliente'
+                          }}
+                        </strong>
+                        <span>{{ rotuloEncerramento(f.motivoPrincipal) }}</span>
+                        @if (f.melhorar) {
+                          <p>“{{ f.melhorar }}”</p>
+                        }
+                        @if (f.experiencia) {
+                          <p>“{{ f.experiencia }}”</p>
+                        }
+                        <small>{{ dataHoraDe(f.createdAt) }}</small>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
             }
           }
 
@@ -1137,6 +1318,113 @@ const TIPOS_FILTROS = TIPOS_LANCHONETE.map((t) => ({
         grid-template-columns: 1fr;
       }
     }
+    .enc-pa__topo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .enc-pa__card {
+      display: grid;
+      gap: 2px;
+      padding: 14px 16px;
+      border: 1px solid var(--app-borda);
+      border-radius: 12px;
+      background: var(--app-superficie);
+      span {
+        font-size: 0.8rem;
+        color: var(--app-texto-suave);
+      }
+      strong {
+        font-size: 1.6rem;
+        line-height: 1.1;
+      }
+      small {
+        font-size: 0.75rem;
+        color: var(--app-texto-suave);
+      }
+    }
+    .enc-pa__bloco {
+      margin: 22px 0;
+      h3 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+      }
+    }
+    .enc-pa__dica {
+      margin: 0 0 10px;
+      font-size: 0.8rem;
+      color: var(--app-texto-suave);
+    }
+    .enc-pa__lista {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      li {
+        display: grid;
+        grid-template-columns: minmax(8rem, 16rem) 1fr auto;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.88rem;
+      }
+    }
+    .enc-pa__barra {
+      height: 8px;
+      border-radius: 99px;
+      background: var(--app-superficie-2);
+      overflow: hidden;
+      i {
+        display: block;
+        height: 100%;
+        border-radius: 99px;
+        background: var(--p-primary-color);
+      }
+    }
+    .enc-pa__tags {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      li {
+        padding: 6px 12px;
+        border: 1px solid var(--app-borda);
+        border-radius: 99px;
+        font-size: 0.82rem;
+        background: var(--app-superficie);
+      }
+    }
+    .enc-pa__contatos,
+    .enc-pa__falas {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      li {
+        display: grid;
+        gap: 2px;
+        padding: 12px 14px;
+        border: 1px solid var(--app-borda);
+        border-radius: 12px;
+        background: var(--app-superficie);
+        font-size: 0.88rem;
+        span {
+          color: var(--app-texto-suave);
+          font-size: 0.8rem;
+        }
+        small {
+          color: var(--app-texto-suave);
+          font-size: 0.75rem;
+        }
+        p {
+          margin: 4px 0 0;
+        }
+      }
+    }
   `,
 })
 export class PainelAdminComponent {
@@ -1144,8 +1432,13 @@ export class PainelAdminComponent {
   private readonly painel = inject(PainelAdminService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly encerramento = inject(EncerramentoService);
 
-  readonly aba = signal<'lanchonetes' | 'admins' | 'logs' | 'config'>('lanchonetes');
+  readonly periodosEncerramento = PERIODOS_ENCERRAMENTO;
+
+  readonly aba = signal<'lanchonetes' | 'admins' | 'logs' | 'config' | 'encerramentos'>(
+    'lanchonetes',
+  );
   readonly lanchonetes = signal<LanchonetePainel[]>([]);
   readonly admins = signal<AdminPainel[]>([]);
   readonly carregando = signal(true);
@@ -1192,6 +1485,10 @@ export class PainelAdminComponent {
   readonly carregandoLogs = signal(false);
   readonly filtroNivel = signal<string | null>(null);
   readonly filtroCategoria = signal<string | null>(null);
+
+  readonly resumoEncerramento = signal<ResumoEncerramentos | null>(null);
+  readonly carregandoEncerramentos = signal(false);
+  readonly diasEncerramento = signal(90);
   readonly filtrosNivel = [
     { rotulo: 'erro', valor: 'erro' },
     { rotulo: 'info', valor: 'info' },
@@ -1285,12 +1582,36 @@ export class PainelAdminComponent {
     }
   }
 
-  trocarAba(aba: 'lanchonetes' | 'admins' | 'logs' | 'config') {
+  trocarAba(aba: 'lanchonetes' | 'admins' | 'logs' | 'config' | 'encerramentos') {
     this.fecharConsulta();
     this.aba.set(aba);
     if (aba === 'logs') {
       void this.carregarLogs();
     }
+    if (aba === 'encerramentos') {
+      void this.carregarEncerramentos();
+    }
+  }
+
+  async carregarEncerramentos(): Promise<void> {
+    this.carregandoEncerramentos.set(true);
+    try {
+      this.resumoEncerramento.set(await this.encerramento.resumo(this.diasEncerramento()));
+    } catch (error) {
+      this.mensagem.set(this.mensagemDe(error));
+    } finally {
+      this.carregandoEncerramentos.set(false);
+    }
+  }
+
+  trocarPeriodoEncerramento(dias: number): void {
+    this.diasEncerramento.set(dias);
+    void this.carregarEncerramentos();
+  }
+
+  rotuloEncerramento(motivo: string): string {
+    const todos = [...MOTIVOS_CLIENTE, ...MOTIVOS_LANCHONETE];
+    return todos.find((m) => m.valor === motivo)?.rotulo ?? this.capitalizar(motivo);
   }
 
   async sair(): Promise<void> {

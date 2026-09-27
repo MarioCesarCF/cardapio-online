@@ -4,12 +4,12 @@ import { TERMO_VERSAO_ATUAL, TERMO_ATUALIZADO_EM } from '../../services/termos';
 import { ContatoLgpdComponent } from './contato-lgpd.component';
 
 @Component({
-  selector: 'app-termos',
+  selector: 'app-privacidade',
   imports: [RouterLink, ContatoLgpdComponent],
-  templateUrl: './termos.component.html',
+  templateUrl: './privacidade.component.html',
   styleUrl: './legal.scss',
 })
-export class TermosComponent {
+export class PrivacidadeComponent {
   readonly VERSAO = TERMO_VERSAO_ATUAL;
   readonly ATUALIZADO_EM = TERMO_ATUALIZADO_EM;
 }

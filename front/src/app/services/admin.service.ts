@@ -84,6 +84,34 @@ export interface CardapioAdmin {
   categorias: CategoriaAdmin[];
 }
 
+/** Tipos com cardápio modelo pronto no back. */
+export type TipoCardapioModelo = 'lanches' | 'pizzaria' | 'acai';
+
+export const ROTULOS_CARDAPIO_MODELO: { tipo: TipoCardapioModelo; rotulo: string }[] = [
+  { tipo: 'lanches', rotulo: 'Lanchonete' },
+  { tipo: 'pizzaria', rotulo: 'Pizzaria' },
+  { tipo: 'acai', rotulo: 'Açaíteria' },
+];
+
+export interface ResultadoCardapioModelo {
+  ok: boolean;
+  tipo: TipoCardapioModelo;
+  rotulo: string;
+  categorias: number;
+  produtos: number;
+  grupos: number;
+  opcoes: number;
+  vinculos: number;
+}
+
+/** Tipo da lanchonete → modelo sugerido (sorvetes usa o de açaíteria). */
+export function modeloSugerido(tipoDaLoja: string | null | undefined): TipoCardapioModelo {
+  if (tipoDaLoja === 'pizzaria' || tipoDaLoja === 'acai' || tipoDaLoja === 'sorvetes') {
+    return tipoDaLoja === 'pizzaria' ? 'pizzaria' : 'acai';
+  }
+  return 'lanches';
+}
+
 type Body = Record<string, unknown>;
 
 @Injectable({ providedIn: 'root' })
@@ -112,6 +140,18 @@ export class AdminService {
 
   getCardapio(slug: string): Promise<CardapioAdmin> {
     return firstValueFrom(this.api.get<CardapioAdmin>(`/admin/lanchonetes/${slug}/cardapio`));
+  }
+
+  /** Cria um cardápio de exemplo (só funciona se o cardápio estiver vazio). */
+  criarCardapioModelo(
+    slug: string,
+    tipo: TipoCardapioModelo,
+  ): Promise<ResultadoCardapioModelo> {
+    return firstValueFrom(
+      this.api.post<ResultadoCardapioModelo>(`/admin/lanchonetes/${slug}/cardapio-modelo`, {
+        tipo,
+      }),
+    );
   }
 
   createCategoria(slug: string, body: Body): Promise<CategoriaAdmin> {

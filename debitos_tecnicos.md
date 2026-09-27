@@ -370,3 +370,198 @@ pediu para **remover** e o front foi ajustado:
 
 - `front/src/app/pages/auth/auth.component.ts`: `SENHA_SALVA_KEY` só em `removeItem` (nunca
   `setItem`); `EMAIL_SALVO_KEY` continua gravando/restaurando o e-mail. Front build OK.
+
+---
+
+## Termos/Privacidade — dados reais + revisão jurídica + promessas comerciais (pendente)
+
+**Status**: `pendente` (bloqueia o lançamento comercial, **não** o desenvolvimento)
+**Quem resolve**: dono (dados e decisão comercial) + advogado (revisão) + assistente (aplicar)
+
+### O que já está pronto (versão 1.0, 2026-09-27)
+
+- `/termos` e `/privacidade` públicas (`front/src/app/pages/termos/`, lazy, sem guard), com
+  `legal.scss` compartilhado e o bloco `ContatoLgpdComponent` (e-mail de `GET /plataforma/email-lojista`).
+- Termos (13 seções) cobre: papel do Peditto (plataforma ≠ relação de consumo), cadastro, uso como
+  lanchonete, **PIX (confirmação manual hoje / provedores e automática só no futuro; e que o PIX fica
+  indisponível no checkout enquanto a loja não tiver chave)**, cartão e dinheiro, cancelamento,
+  responsabilidades, assinatura (**R$ 99,90/mês**, adesão presencial, sem
+  cobrança automática), disponibilidade, alterações, segurança, encerramento, foro.
+- Política (11 seções) cobre: papéis (controlador/operador), dados tratados, **finalidades por base
+  legal** (execução de contrato / obrigação legal / legítimo interesse), **matriz de tratamento**
+  (Dado | Quem fornece | Finalidade | Quem acessa | Retenção | Base legal), compartilhamentos
+  (Neon, Vercel, Render, Meta/WhatsApp, Google, autoridades), transferência internacional (art. 33),
+  segurança, **retenção** (conta/90 dias, pedidos ~24h atual + ~30d histórico, logs, fiscais),
+  **dereitos do titular** (resposta em 15 dias; registramos também o que ainda **não** existe: exclusão de conta
+  automática, download do cadastro, consentimento granular), alterações e contato.
+- `TERMO_VERSAO_ATUAL = '1.0'` em `back/src/me/termo.ts` **e** `front/src/app/services/termos.ts`
+  (manter em sincronia).
+- **Decisão de 2026-09-27 (dono)**: o Peditto **ainda não está em produção**, então o texto é
+  revisado **dentro da 1.0** — não há mais bump de versão por ajuste de redação. Ficou um registro
+  `1.1` no banco de uma conta que aceitou na janela do bump (2026-09-27 13:05); é lixo inofensivo,
+  o `termos_aceite` é `@@id([usuarioId, versao])` e o `upsert` com `update: {}` preserva a data do
+  1º aceite. **Na virada para produção** a versão deve subir para 1.1 de verdade (ou o que o
+  advogado definir), com data nova e aviso ao dono.
+- Smoke validado: 13/11 seções, matriz 6 col × 9 linhas, aceite gravado no banco
+  (`termos_aceite`) e tela de aceite aparecendo para quem não tem a versão vigente.
+
+### Pendências
+
+1. **Placeholders** — substituir em `termos.component.html` (seções 1 e 13) e `privacidade.component.html`
+   (seção 1): `[RAZÃO SOCIAL — preencher antes do lançamento]`, `[CNPJ — preencher]`,
+   `[ENDEREÇO — preencher]`. Buscar por `termos__pendente`.
+2. **Revisão jurídica** — todo o texto é redigido por assistente, **sem** advogado. Pedir revisão de
+   LGPD + CDC antes de divulgar os links.
+3. **Confirmar as promessas comerciais** escritas no texto (o dono precisa validar cada uma):
+   - período de teste de **30 dias**;
+   - "sem fidelidade e sem multa" no cancelamento + acesso até o fim do período pago;
+   - exclusão dos dados da lanchonete em até **90 dias** após o encerramento;
+   - resposta a pedidos de titular em até **15 dias**;
+   - aviso de mudança de preço com **30 dias** de antecedência;
+   - **trial expirado bloqueia novos pedidos** (o back bloqueia — `pedidos.service.ts`);
+   - **loja sem chave PIX não recebe pedido por PIX** (o back bloqueia — `geraPix`).
+4. **Se mudar a versão**: subir `TERMO_VERSAO_ATUAL` nos **dois** arquivos e a data em
+   `TERMO_ATUALIZADO_EM`; avisar o dono que todos logados verão a tela de aceite de novo.
+
+### Verificação
+
+- `/termos` e `/privacidade` abrem sem sessão, com versão 1.0 e sem `termos__pendente` aparecendo.
+- `GET /me` traz `termoAceite.versao === '1.0'` depois do aceite; a data do 1º aceite não muda.
+
+---
+
+## Exportação de pedidos: confirmar retenção e compatibilidade no celular (2026-09-27)
+
+**Status**: `parcial` — formato resolvido (virou `.xlsx` de verdade em 2026-09-27); falta a
+decisão do dono sobre retenção
+**Quem resolve**: dono (retenção) + assistente (ajustes)
+
+### Contexto
+
+A exportação para planilha é feita no front (sem back novo): `relatorio-pedidos.ts` gera um
+**`.xlsx` (OOXML) de verdade** com 3 abas (Itens/Pedidos/Informações), baixado via Blob. O botão
+"Exportar esta lista" respeita o filtro de status + Histórico/Atuais; "Exportar tudo" busca
+atuais + histórico. A aba **Informações** avisa que o histórico some ~30 dias depois do pedido.
+
+**Troca de formato (2026-09-27, segunda rodada)**: era **SpreadsheetML 2003** (`.xml`), que só
+abre no Office — o Google Sheets do Android não importa. Agora é `.xlsx` (o mesmo pacote que o
+Excel salva), gerado **sem lib externa**: `zip.ts` monta o ZIP (CRC-32 próprio + `deflate-raw` do
+`CompressionStream`, com fallback para "store" se o navegador não tiver) e `relatorio-pedidos.ts`
+escreve os XMLs (`[Content_Types].xml`, `_rels/.rels`, `docProps/*`, `xl/workbook.xml`,
+`xl/_rels/workbook.xml.rels`, `xl/styles.xml`, `xl/worksheets/sheet1..3.xml`). Melhora em relação
+ao XML antigo: data vira **número com formato** (`dd/mm/yyyy hh:mm`), valores são **números
+somáveis** (`R$` no formato da célula, não no texto), cabeçalho **congelado** e **autofiltro**,
+texto com escape de XML. Nomes de arquivo `.xlsx`. Nada disso entra no bundle inicial: o
+componente faz `await import('../../services/relatorio-pedidos')` no clique (chunk de ~14 kB).
+
+### Pendências
+
+1. ~~**Testar no celular / formato alternativo**~~ → **resolvido**: é `.xlsx` agora, que é o
+   formato que o Google Sheets do Android, o WPS e o Excel abrem. Validado abrindo o arquivo
+   gerado no LibreOffice headless (converteu sem erro) e conferindo o ZIP/XML célula a célula.
+   Falta só o dono abrir no celular dele para o visto final.
+2. **Retenção**: hoje o histórico some sozinho (~24h atual, ~30d histórico — `PedidosMaintService`).
+   Se o dono quiser preservar mais, o caminho é o download automático do arquivo para um bucket (R2) ou
+   aumentar a janela em `pedidos-maint.service.ts` (impacta custo de banco e privacidade).
+3. Ao mudar a retenção, **atualizar a seção 8 da Política de Privacidade** e o texto da aba
+   Informações do relatório (para não divergir do que a política promete).
+
+---
+
+## Encerramento de conta: LGPD, retenção e o que ainda não existe (2026-09-27)
+
+**Status**: `parcial` (fluxo entregue; falta decidir retenção do questionário e export de dados)
+**Quem resolve**: dono (política de retenção) + dono/advogado (texto) + assistente (ajustes)
+
+### O que foi entregue
+
+- `RespostaEncerramento` (migração `20260927161029_m19_encerramento`): questionário **opcional**
+  gravado com motivo estruturado (slugs), contexto de uso (`pedidosRecebidos`, `diasAtivo`) e o
+  contato **só quando a lanchonete autoriza**.
+- Duas entradas: **cliente** (home → "Encerrar conta") e **lanchonete** (admin-config → "Encerrar
+  lanchonete"). Em ambas a página `/encerrar` confirma primeiro e sempre dá para pular o questionário.
+- Painel da plataforma: aba **Encerramentos** (`/admin-sistema/encerramentos?dias=`) com motivos em
+  %, fatores, preço considerado adequado, satisfação média, comentários e contatos.
+- `DELETE /me/conta` (`MeService.excluirConta`): favorites → pedidos → termo de aceite → cliente →
+  conta no Neon Auth, tudo best-effort na parte do Neon.
+
+### Decisões que o dono precisa revisar
+
+1. **Bloqueio com pedido em andamento** (decisão do assistente em 2026-09-27, o dono não foi
+   consultado): se o cliente tem pedido em `recebido|em_preparo|enviado|saiu_para_entrega`, o
+   encerramento é **recusado** — a lanchonete precisa do telefone/endereço para entregar. Se o
+   dono preferir permitir, o caminho é apagar/anomizar o pedido também (mas aí a entrega quebra).
+2. **Anonimização**: `clienteId`, `clienteTelefone` e `enderecoEntrega` vão para `NULL` nos pedidos do
+   cliente. O histórico do pedido **continua na lanchonete** (ela precisa do histórico de vendas).
+3. O contato liberado pela lanchonete é **dado pessoal**: só o admin **raiz** enxerga (admin humano
+   recebe `null` no payload). Decisão do dono: **não** há notificação nem e-mail — só o painel.
+
+### Pendências
+
+1. **Retenção do questionário**: `RespostaEncerramento` não tem prazo de expurgo hoje. A Política de
+   Privacidade promete retenção genérica; se o dono quiser, definir prazo (ex.: 24 meses) e um
+   `PedidosMaintService`-like para limpar, **e** atualizar a seção de retenção da política.
+2. **Direitos do titular que ainda não existem**: download do cadastro, exclusão de conta
+   automática (hoje é na mão) e consentimento granular — já listados como "não existe" na
+   `/privacidade`; se algum for implementado, atualizar o texto.
+3. **Feedback de vitória**: não foi implementado (o dono marcou como fora do escopo). Continua só o
+   encerramento.
+4. Ao mudar qualquer texto do fluxo (terminos/privacidade), lembrar que a versão do termo é `1.0` e
+   revisão de texto **não** sobe a versão antes de produção.
+
+### Verificação
+
+- Back: `npm run lint` (0), `npm test` (**132**), `npm run build`; front `npm run build`.
+- Smoke de API (cliente + lanchonete + resumo + 403 de não-admin) e smoke de UI no Chrome headless
+  (as 2 etapas renderizam, 5 notas, botões de pular/enviar).
+- `cliente.teste@teste.dev` continua existindo (nenhum smoke rodou o botão destrutivo).
+
+---
+
+## AGPL transitivo no `front` (`@triplit/client`, `ua-parser-js` 2.x) — aceito, revisar na virada (2026-09-27)
+
+**Status**: `aceito com justificativa` (nada a fazer no código agora; reavaliar se o front parar de usar o SDK da Neon)
+**Quem resolve**: assistente (revisar quando a `@neondatabase/neon-js` sair da beta)
+
+### Contexto
+
+O scan de segurança (GitGuard/Syft) apontou licença **AGPL-3.0** em duas entradas do
+`front/package-lock.json`. A cadeia é esta:
+
+```
+front -> @neondatabase/neon-js@0.7.0-beta
+      -> @neondatabase/auth@0.5.0-beta
+      -> @neondatabase/auth-ui@0.3.0-beta   (biblioteca de componentes REACT — não usamos)
+      -> @daveyplate/better-auth-ui@3.4.0
+         -> peer opcional: @triplit/client 1.0.50  (AGPL-3.0-only)  -> @triplit/react
+         -> dep:          ua-parser-js 2.0.10     (AGPL-3.0-or-later)
+```
+
+Pontos que fecham o caso:
+
+- Ambos entram no lock como **`"peer": true`** — são *peers* auto-instalados de uma lib React que o
+  app **nunca importa** (a autenticação usa `createAuthClient` de `@neondatabase/neon-js/auth` direto;
+  `auth-ui` é só a casca de UI da Neon).
+- **Não vão para o bundle**: conferido no build real (`front/dist/front/browser/*.js`) — zero
+  ocorrência de `triplit` / `ua-parser`. Nenhum código AGPL é distribuído ao usuário, logo a
+  obrigação de copyleft (que é sobre *conveying*) não é acionada.
+- `ua-parser-js` 0.7.41 (o do `karma`, **MIT**) continua no lock normalmente — o AGPL é só a cópia
+  aninhada da `auth-ui`.
+- `@neondatabase/auth` está na **última versão beta** (0.5.0-beta) — não há upgrade que remova isso.
+
+### Passo a passo (se/quando mexer nisso)
+
+1. Conferir de novo: `Select-String -Path front/dist/front/browser/*.js -Pattern "triplit|ua-parser"`.
+2. Se a `@neondatabase/neon-js` sair da beta, ver se a `auth-ui` deixou de arrastar os peers AGPL e
+   atualizar o `front/package-lock.json`.
+3. Se o AGPL passar a entrar no bundle, aí sim é caso jurídico — as saídas são:
+   (a) pedir licença comercial à Triplit, (b) trocar a lib de UI por uma MIT, ou (c) manter e
+   assumir o risco (não recomendado para produto fechado).
+4. Alternativa mais limpa de longo prazo: trocar `@neondatabase/neon-js` (que hoje é um pacote "full",
+   com CLI + postgrest + auth-ui) pelo SDK de auth enxuto. **Não é prioridade** — funciona e é da Neon.
+
+### Verificação
+
+- `npm ls @triplit/client ua-parser-js` no `front` — esperado: 2 cópias, ambas sob
+  `node_modules/@neondatabase/auth-ui/`.
+- Bundle sem nenhuma das strings.

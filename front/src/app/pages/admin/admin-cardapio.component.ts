@@ -5,7 +5,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
-import { AdminService, CardapioAdmin } from '../../services/admin.service';
+import { MessageService } from 'primeng/api';
+import {
+  AdminService,
+  CardapioAdmin,
+  ROTULOS_CARDAPIO_MODELO,
+  modeloSugerido,
+  type TipoCardapioModelo,
+} from '../../services/admin.service';
 import { GaleriaService, GaleriaImagem, GaleriaCategoria } from '../../services/galeria.service';
 import { formatarMoeda, formatarValor } from '../../services/moeda';
 
@@ -73,6 +80,19 @@ interface ModalOpcao {
   template: `
     <div class="cardapio">
       <p class="aviso" *ngIf="mensagem">{{ mensagem }}</p>
+
+      <!-- CADASTRO AUTOMÁTICO (só em cardápio vazio) -->
+      <section class="bloco modelo" *ngIf="podeUsarModelo()">
+        <h2>Comece mais rápido</h2>
+        <p class="dica">
+          Seu cardápio está vazio. Crie uma estrutura pronta de categorias,
+          produtos, adicionais e removíveis e depois ajuste nomes, preços e
+          imagens. Nada é publicado antes de você salvar.
+        </p>
+        <button type="button" class="btn-modelo" (click)="abrirModelo()">
+          <i class="pi pi-bolt"></i> Cadastrar cardápio automaticamente
+        </button>
+      </section>
 
       <!-- CATEGORIAS / PRODUTOS -->
       <section class="bloco">
@@ -564,6 +584,54 @@ interface ModalOpcao {
       </ng-template>
     </p-dialog>
 
+    <!-- MODAL CARDÁPIO MODELO -->
+    <p-dialog
+      [(visible)]="modeloModal.aberto"
+      header="Cadastrar cardápio automaticamente"
+      [modal]="true"
+      [dismissableMask]="!gerandoModelo"
+      [closable]="!gerandoModelo"
+      [style]="{ width: 'min(480px, 95vw)' }"
+    >
+      <div class="modal-form">
+        <p class="dica">
+          Escolha o tipo da sua lanchonete. Vamos criar categorias, produtos e
+          grupos de adicionais e removíveis para você editar em seguida.
+        </p>
+
+        <div class="modelo-opcoes">
+          <button
+            type="button"
+            class="modelo-opt"
+            *ngFor="let op of modelos"
+            [class.modelo-opt--ativa]="modeloModal.tipo === op.tipo"
+            (click)="modeloModal.tipo = op.tipo"
+          >
+            <strong>{{ op.rotulo }}</strong>
+            <small>{{ descricaoModelo(op.tipo) }}</small>
+          </button>
+        </div>
+
+        <p class="erro-txt erro-txt--bloco" *ngIf="modeloErro">
+          <i class="pi pi-exclamation-circle"></i> {{ modeloErro }}
+        </p>
+
+        <div class="modal-acoes">
+          <button type="button" [disabled]="gerandoModelo" (click)="criarModelo()">
+            {{ gerandoModelo ? 'Criando…' : 'Criar cardápio' }}
+          </button>
+          <button
+            type="button"
+            class="btn-neutro"
+            [disabled]="gerandoModelo"
+            (click)="modeloModal.aberto = false"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </p-dialog>
+
     <div class="acoes-fim">
       <p-button
         label="Recarregar"
@@ -850,6 +918,44 @@ interface ModalOpcao {
       border-radius: 5px;
     }
 
+    /* ---------- Cardápio modelo ---------- */
+    .modelo {
+      border: 1px solid color-mix(in srgb, var(--p-primary-color) 45%, transparent);
+      border-radius: var(--app-raio);
+      padding: 14px;
+      background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    }
+    .modelo h2 {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .btn-modelo {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .modelo-opcoes {
+      display: grid;
+      gap: 8px;
+    }
+    .modelo-opt {
+      display: grid;
+      gap: 2px;
+      text-align: left;
+      background: var(--app-superficie-2);
+      color: var(--app-texto);
+      border: 1px solid var(--app-borda);
+    }
+    .modelo-opt small {
+      font-weight: 400;
+      font-size: 0.78rem;
+      opacity: 0.8;
+    }
+    .modelo-opt--ativa {
+      border-color: var(--p-primary-color);
+      box-shadow: 0 0 0 1px var(--p-primary-color) inset;
+    }
+
     /* ---------- Modais ---------- */
     .modal-form {
       display: grid;
@@ -962,10 +1068,12 @@ export class AdminCardapioComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly admin = inject(AdminService);
   private readonly galeriaSvc = inject(GaleriaService);
+  private readonly msg = inject(MessageService);
 
   private readonly router = inject(Router);
   readonly formatarMoeda = formatarMoeda;
   readonly formatarValor = formatarValor;
+  readonly modelos = ROTULOS_CARDAPIO_MODELO;
   readonly slug = signal('');
   readonly data = signal<CardapioAdmin | null>(null);
   mensagem = '';
@@ -1032,6 +1140,10 @@ export class AdminCardapioComponent {
   taxaEntSalvo = '';
   salvandoTaxa = false;
 
+  modeloModal = { aberto: false, tipo: 'lanches' as TipoCardapioModelo };
+  modeloErro = '';
+  gerandoModelo = false;
+
   constructor() {
     (this.route.parent?.paramMap ?? this.route.paramMap).subscribe((params) =>
       this.carregar(params.get('slug') ?? ''),
@@ -1097,6 +1209,51 @@ export class AdminCardapioComponent {
 
   recarregar() {
     void this.carregar(this.slug());
+  }
+
+  // ---------- Cardápio modelo (cadastro automático) ----------
+
+  /** Botão só existe em cardápio realmente vazio (o back exige o mesmo). */
+  podeUsarModelo(): boolean {
+    const d = this.data();
+    return !!d && d.categorias.length === 0 && d.grupos.length === 0;
+  }
+
+  descricaoModelo(tipo: TipoCardapioModelo): string {
+    if (tipo === 'pizzaria') {
+      return 'Pizzas salgadas e doces, bebidas, combos, tamanhos, bordas e adicionais.';
+    }
+    if (tipo === 'acai') {
+      return 'Açaí por tamanho, complementos, frutas, cremes e removíveis.';
+    }
+    return 'X-saladas, hambúrgueres, porções, combos, bebidas e molhos.';
+  }
+
+  abrirModelo() {
+    this.modeloModal.tipo = modeloSugerido(this.data()?.lanchonete.tipo);
+    this.modeloErro = '';
+    this.modeloModal.aberto = true;
+  }
+
+  async criarModelo() {
+    if (this.gerandoModelo) return;
+    this.modeloErro = '';
+    this.gerandoModelo = true;
+    try {
+      const r = await this.admin.criarCardapioModelo(this.slug(), this.modeloModal.tipo);
+      this.modeloModal.aberto = false;
+      this.msg.add({
+        severity: 'success',
+        summary: `Cardápio de ${r.rotulo} criado`,
+        detail: `${r.categorias} categorias, ${r.produtos} produtos, ${r.grupos} grupos e ${r.opcoes} opções. Ajuste os preços e as imagens.`,
+        life: 6000,
+      });
+      await this.carregar(this.slug());
+    } catch (error) {
+      this.modeloErro = this.erroMsg(error, 'Não foi possível criar o cardápio.');
+    } finally {
+      this.gerandoModelo = false;
+    }
   }
 
   private erroMsg(error: unknown, fallback: string): string {

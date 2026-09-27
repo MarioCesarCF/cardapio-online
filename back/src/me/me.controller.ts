@@ -82,4 +82,10 @@ export class MeController {
   ) {
     return this.meService.listarPedidos(user, historico === '1');
   }
+
+  /** Encerramento da conta do cliente (apaga os dados, anonimiza o histórico). */
+  @Delete('conta')
+  excluirConta(@CurrentUser() user: AuthenticatedUser) {
+    return this.meService.excluirConta(user);
+  }
 }

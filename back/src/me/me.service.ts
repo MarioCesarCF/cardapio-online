@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthenticatedUser } from '../auth/authenticated-user.js';
 import { TERMO_VERSAO_ATUAL } from './termo.js';
@@ -342,6 +343,108 @@ export class MeService {
       create: { id: user.id, nome: user.name, email: user.email },
       update: { nome: user.name ?? undefined, email: user.email ?? undefined },
     });
+  }
+
+  /**
+   * Encerramento da conta do cliente. Anonimiza, não destrói histórico: o
+   * pedido continua na lanchonete (com `clienteId` nulo) porque é registro
+   * fiscal do lojista, mas tudo que identifica a pessoa sai daqui — nome,
+   * telefone, e-mail, endereços, favoritas, aceite do termo e a conta no
+   * Neon Auth.
+   */
+  async excluirConta(user: AuthenticatedUser) {
+    const admin = await this.prisma.adminSistema.findUnique({
+      where: { id: user.id },
+      select: { id: true },
+    });
+    if (admin) {
+      throw new BadRequestException(
+        'Contas de administrador da plataforma não podem ser encerradas por aqui.',
+      );
+    }
+
+    const lanchonetes = await this.prisma.lanchonete.count({
+      where: { donoId: user.id },
+    });
+    if (lanchonetes > 0) {
+      throw new BadRequestException(
+        'Você ainda tem lanchonete cadastrada. Encerre a lanchonete antes de encerrar a conta.',
+      );
+    }
+
+    // Pedido em andamento ainda precisa do telefone/endereço para a lanchonete
+    // entregar — encerrar a conta agora deixaria o pedido sem contato.
+    // `saiu_para_entrega` é o nome legado de `enviado` (ainda existe em pedido
+    // antigo no banco) e entra junto para não deixar pedido órfão.
+    const emAndamento = await this.prisma.pedido.count({
+      where: {
+        clienteId: user.id,
+        status: { in: ['recebido', 'em_preparo', 'enviado', 'saiu_para_entrega'] },
+      },
+    });
+    if (emAndamento > 0) {
+      throw new BadRequestException(
+        `Você tem ${emAndamento} pedido(s) em andamento. Aguarde a conclusão ou peça o cancelamento antes de encerrar a conta.`,
+      );
+    }
+
+    const pedidos = await this.prisma.pedido.count({
+      where: { clienteId: user.id },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      // `lanchonetes_favoritas` é ON DELETE RESTRICT — sai antes da conta.
+      await tx.lanchoneteFavorita.deleteMany({ where: { clienteId: user.id } });
+      // O banco já faz SET NULL, mas explicitamos para não depender do default.
+      // `clienteTelefone` e `enderecoEntrega` são snapshots com dado pessoal: vão
+      // para NULL para o histórico realmente não identificar mais a pessoa (o
+      // histórico do pedido em si continua com a lanchonete).
+      await tx.pedido.updateMany({
+        where: { clienteId: user.id },
+        data: {
+          clienteId: null,
+          clienteTelefone: null,
+          enderecoEntrega: Prisma.DbNull,
+        },
+      });
+      await tx.termoAceite.deleteMany({ where: { usuarioId: user.id } });
+      // `enderecos` cai por cascade.
+      await tx.cliente.deleteMany({ where: { id: user.id } });
+    });
+
+    await this.apagarContaNeon(user.id);
+
+    await this.prisma.logSistema.create({
+      data: {
+        nivel: 'info',
+        categoria: 'acao',
+        mensagem: 'Conta do cliente encerrada',
+        // Sem nome/e-mail/telefone: só o id e o volume de pedidos.
+        detalhes: { usuarioId: user.id, pedidosDesvinculados: pedidos },
+        usuarioId: user.id,
+      },
+    });
+
+    return { ok: true, pedidosDesvinculados: pedidos };
+  }
+
+  /**
+   * Apaga a conta no Neon Auth (sessões e credenciais). Vai numa transaction
+   * separada: se a Neon recusar, o encerramento no nosso banco já foi concluído
+   * e o front desloga a pessoa de qualquer forma.
+   */
+  private async apagarContaNeon(usuarioId: string): Promise<void> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`DELETE FROM neon_auth."session" WHERE "userId" = ${usuarioId}::uuid`;
+        await tx.$executeRaw`DELETE FROM neon_auth."account" WHERE "userId" = ${usuarioId}::uuid`;
+        await tx.$executeRaw`DELETE FROM neon_auth."user" WHERE id = ${usuarioId}::uuid`;
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Não foi possível apagar a conta no Neon Auth: ${error instanceof Error ? error.message : 'erro desconhecido'}`,
+      );
+    }
   }
 
   private obrigatoria(value: unknown, campo: string, max: number): string {

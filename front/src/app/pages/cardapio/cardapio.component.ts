@@ -34,6 +34,14 @@ import {
  */
 const Z_OVERLAY = 1000;
 
+/**
+ * Abertura do modal de checkout: entra a tela travada e só sai com o modal no
+ * ar (ou com erro). O watchdog abaixo é a rede de segurança — se a sessão ou o
+ * `GET /me` ficarem pendurados (rede travada), a tela é liberada com aviso em
+ * vez de deixar o cliente preso num loading eterno.
+ */
+const TEMPO_MAXIMO_CHECKOUT = 15000;
+
 interface Lanchonete {
   id: string;
   nome: string;
@@ -47,6 +55,7 @@ interface Lanchonete {
   horarios: HorarioDia[] | null;
   cobraTaxaEntrega: boolean;
   taxaEntrega: number;
+  aceitaPix: boolean;
 }
 
 interface Opcao {
@@ -140,6 +149,9 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly cart = inject(CartService);
 
   private timerRef: ReturnType<typeof setInterval> | null = null;
+  private timerCheckout: ReturnType<typeof setTimeout> | null = null;
+  /** Gera a tentativa corrente: descarta o retorno de um clique antigo/travado. */
+  private checkoutTentativa = 0;
 
   readonly rotuloStatus = labelStatus;
   readonly rotuloTipo = tipoEntregaLabel;
@@ -194,6 +206,8 @@ export class CardapioComponent implements OnInit, OnDestroy {
 
   readonly cartAberto = signal(false);
   readonly checkoutAberto = signal(false);
+  /** Tela travada entre o clique em "Finalizar pedido" e a abertura do modal. */
+  readonly abrindoCheckout = signal(false);
   readonly pedido = signal<PedidoConfirmado | null>(null);
   readonly pedidoPainelAberto = signal(false);
   readonly qrUrl = signal<string | null>(null);
@@ -205,6 +219,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.cart.totalItens() > 0 &&
       !this.cartAberto() &&
       !this.checkoutAberto() &&
+      !this.abrindoCheckout() &&
       !this.pedidoPainelAberto(),
   );
 
@@ -224,12 +239,21 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly enviando = signal(false);
   readonly erroPedido = signal<string | null>(null);
 
+  /**
+   * A lanchonete sem chave PIX não consegue gerar BR Code (o back responde 400),
+   * então o checkout oferece Cartão/Dinheiro. `?? true` mantém o comportamento
+   * atual se o campo vier ausente de um back antigo.
+   */
+  readonly aceitaPix = computed(() => this.config()?.aceitaPix ?? true);
+
   private slug = '';
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const slug = params.get('slug') ?? '';
       this.slug = slug;
+      this.checkoutTentativa++;
+      this.fecharTelaTravada();
       this.pedido.set(null);
       this.qrUrl.set(null);
       this.pedidoPainelAberto.set(false);
@@ -245,6 +269,8 @@ export class CardapioComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.timerRef) clearInterval(this.timerRef);
+    this.desarmarWatchdog();
+    this.travandoTela(false);
   }
 
   private load(slug: string): void {
@@ -388,19 +414,78 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   async irFinalizar(): Promise<void> {
-    await this.auth.init();
-    if (!this.auth.isAuthenticated()) {
-      await this.router.navigate(['/auth'], { queryParams: { redirect: `/${this.slug}` } });
-      return;
+    if (this.abrindoCheckout()) return;
+    const tentativa = ++this.checkoutTentativa;
+
+    this.abrindoCheckout.set(true);
+    this.travandoTela(true);
+    this.armarWatchdog(tentativa);
+
+    try {
+      await this.auth.init();
+      if (tentativa !== this.checkoutTentativa) return;
+      if (!this.auth.isAuthenticated()) {
+        await this.router.navigate(['/auth'], { queryParams: { redirect: `/${this.slug}` } });
+        return;
+      }
+      this.cartAberto.set(false);
+      await this.abrirCheckout(tentativa);
+    } catch {
+      if (tentativa !== this.checkoutTentativa) return;
+      this.msg.add({
+        severity: 'error',
+        summary: 'Não foi possível abrir o pedido',
+        detail: 'Tente novamente em instantes.',
+        life: 5000,
+      });
+    } finally {
+      if (tentativa === this.checkoutTentativa) this.fecharTelaTravada();
     }
-    this.cartAberto.set(false);
-    await this.abrirCheckout();
   }
 
-  private async abrirCheckout(): Promise<void> {
+  /**
+   * Rede de segurança: se sessão/`GET /me` não responderem em
+   * {@link TEMPO_MAXIMO_CHECKOUT}, libera a tela com aviso e invalida a tentativa
+   * pendente (senão ela abriria o modal por cima de um clique novo do cliente).
+   */
+  private armarWatchdog(tentativa: number): void {
+    this.desarmarWatchdog();
+    this.timerCheckout = setTimeout(() => {
+      this.timerCheckout = null;
+      if (tentativa !== this.checkoutTentativa || !this.abrindoCheckout()) return;
+      this.checkoutTentativa++;
+      this.fecharTelaTravada();
+      this.msg.add({
+        severity: 'warn',
+        summary: 'Isso demorou mais que o esperado',
+        detail: 'Não foi possível abrir o pedido. Tente novamente.',
+        life: 5000,
+      });
+    }, TEMPO_MAXIMO_CHECKOUT);
+  }
+
+  private desarmarWatchdog(): void {
+    if (this.timerCheckout) {
+      clearTimeout(this.timerCheckout);
+      this.timerCheckout = null;
+    }
+  }
+
+  private fecharTelaTravada(): void {
+    this.desarmarWatchdog();
+    this.abrindoCheckout.set(false);
+    this.travandoTela(false);
+  }
+
+  /** Trava a rolagem do fundo enquanto a tela travada está no ar. */
+  private travandoTela(ativo: boolean): void {
+    document.body.classList.toggle('tela-travada', ativo);
+  }
+
+  private async abrirCheckout(tentativa: number): Promise<void> {
     this.erroPedido.set(null);
     this.observacao.set('');
-    this.formaPagamento.set('pix');
+    this.formaPagamento.set(this.aceitaPix() ? 'pix' : 'dinheiro');
     this.tipoPedido.set('entrega');
     this.precisaTroco.set(false);
     this.trocoPara.set('');
@@ -412,6 +497,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
           '/me',
         ),
       );
+      if (tentativa !== this.checkoutTentativa) return;
       this.enderecos.set(me.enderecos);
       const padrao = me.enderecos.find((e) => e.padrao) ?? me.enderecos[0] ?? null;
       this.enderecoSelecionadoId.set(padrao?.id ?? null);
@@ -419,10 +505,12 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.semTelefone.set(!this.telefoneSalvo());
       this.telefone.set('');
     } catch {
+      if (tentativa !== this.checkoutTentativa) return;
       this.enderecos.set([]);
       this.enderecoSelecionadoId.set(null);
       this.usarNovo.set(true);
     }
+    if (tentativa !== this.checkoutTentativa) return;
     this.checkoutAberto.set(true);
   }
 
@@ -440,6 +528,7 @@ export class CardapioComponent implements OnInit, OnDestroy {
   }
 
   definirFormaPagamento(forma: 'pix' | 'cartao' | 'dinheiro', marcado: boolean): void {
+    if (forma === 'pix' && !this.aceitaPix()) return;
     if (marcado) {
       this.formaPagamento.set(forma);
       if (forma !== 'dinheiro') {

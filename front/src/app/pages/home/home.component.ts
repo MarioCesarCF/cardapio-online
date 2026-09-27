@@ -12,7 +12,7 @@ import {
   type Favorita,
   type LanchoneteFavoritaResumo,
 } from '../../services/favoritas.service';
-import { TIPOS_LANCHONETE, logoPadrao } from '../../services/lanchonete-visual';
+import { TIPOS_LANCHONETE, resolveLogo } from '../../services/lanchonete-visual';
 
 interface DiretorioLanchonete {
   id: string;
@@ -76,6 +76,8 @@ export class HomeComponent implements OnInit {
   readonly erro = signal<string | null>(null);
   readonly filtro = signal('');
   readonly ocupada = signal<Record<string, boolean>>({});
+  /** Ids cujo logo proprio falhou ao carregar (cai no logo do tipo). */
+  private readonly logosQuebrados = signal<Set<string>>(new Set());
   readonly emailLojista = signal<string | null>(null);
 
   readonly meNome = signal('');
@@ -170,7 +172,14 @@ export class HomeComponent implements OnInit {
   }
 
   logoDa(linha: LinhaLanchonete | LanchoneteFavoritaResumo): string | null {
-    return linha.logoUrl ?? (linha.tipo ? logoPadrao(linha.tipo) : null);
+    // Logo que falhou ao carregar (URL Morta/R2 removida) cai no logo do tipo.
+    const quebrado = this.logosQuebrados().has(linha.id);
+    return resolveLogo(quebrado ? null : linha.logoUrl, linha.tipo);
+  }
+
+  /** Marca o logo como quebrado uma unica vez, pra nao entrar em loop. */
+  logoQuebrou(linha: LinhaLanchonete | LanchoneteFavoritaResumo): void {
+    this.logosQuebrados.update((m) => new Set(m).add(linha.id));
   }
 
   async alternarFavorita(linha: LinhaLanchonete): Promise<void> {
@@ -336,5 +345,10 @@ export class HomeComponent implements OnInit {
   async sair(): Promise<void> {
     await this.auth.signOut();
     await this.router.navigate(['/']);
+  }
+
+  /** Encerramento de conta: a confirmação e o questionário ficam em /encerrar. */
+  async encerrarConta(): Promise<void> {
+    await this.router.navigate(['/encerrar'], { queryParams: { perfil: 'cliente' } });
   }
 }

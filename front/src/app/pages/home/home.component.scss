@@ -200,7 +200,10 @@
     width: 3rem;
     height: 3rem;
     border-radius: var(--app-raio-sm);
-    object-fit: cover;
+    /* `contain` (e nao `cover`): logo de verdade costuma ser horizontal e
+       `cover` cortava as pontas. O fundo evita buraco em PNG/SVG transparente. */
+    object-fit: contain;
+    background: var(--app-superficie-2);
     flex-shrink: 0;
   }
   .lanchonete__info {
@@ -340,6 +343,13 @@
   &:hover {
     text-decoration: underline;
   }
+}
+.saudacao__encerrar {
+  margin: 0.6rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--app-borda);
+  font-size: 0.82rem;
+  color: var(--app-texto-suave);
 }
 .perfil-form {
   display: grid;
