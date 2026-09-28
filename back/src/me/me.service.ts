@@ -64,9 +64,13 @@ export class MeService {
           WHERE id = ${user.id}::uuid
           LIMIT 1
         `,
-        this.prisma.termoAceite.findFirst({
-          where: { usuarioId: user.id },
-          orderBy: { aceitoEm: 'desc' },
+        // Só interessa o aceite da versão em vigor. Ler "o mais recente" quebrava
+        // quem já tinha aceito uma versão antiga (ex.: 1.1): o front comparava com a
+        // versão atual, achava que faltava aceite e pedia de novo a cada login.
+        this.prisma.termoAceite.findUnique({
+          where: {
+            usuarioId_versao: { usuarioId: user.id, versao: TERMO_VERSAO_ATUAL },
+          },
         }),
       ]);
     const dadosConta = conta[0];

@@ -26,7 +26,7 @@ function prismaParaGetMe(termoAceite: unknown) {
       findUnique: vi.fn().mockResolvedValue(null),
     },
     termoAceite: {
-      findFirst: vi.fn().mockResolvedValue(termoAceite),
+      findUnique: vi.fn().mockResolvedValue(termoAceite),
     },
     $queryRaw: vi.fn().mockResolvedValue([{ nome: null, email: null }]),
   };
@@ -102,7 +102,7 @@ describe('MeService.registrarConsentimento', () => {
 });
 
 describe('MeService.getMe termoAceite', () => {
-  it('retorna o aceite mais recente quando existe', async () => {
+  it('retorna o aceite da versão em vigor quando existe', async () => {
     const aceitoEm = new Date('2026-09-22T12:00:00Z');
     const servico = criarServico(
       prismaParaGetMe({
@@ -115,6 +115,20 @@ describe('MeService.getMe termoAceite', () => {
     const me = await servico.getMe(USUARIO);
 
     expect(me.termoAceite).toEqual({ versao: TERMO_VERSAO_ATUAL, aceitoEm });
+  });
+
+  it('consulta o aceite só da versão atual (aceite de versão antiga não conta)', async () => {
+    const prisma = prismaParaGetMe(null);
+    const servico = criarServico(prisma);
+
+    const me = await servico.getMe(USUARIO);
+
+    expect(prisma.termoAceite.findUnique).toHaveBeenCalledWith({
+      where: {
+        usuarioId_versao: { usuarioId: USUARIO.id, versao: TERMO_VERSAO_ATUAL },
+      },
+    });
+    expect(me.termoAceite).toBeNull();
   });
 
   it('retorna termoAceite null quando o usuário nunca aceitou', async () => {
