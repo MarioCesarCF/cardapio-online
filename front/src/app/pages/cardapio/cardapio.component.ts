@@ -262,8 +262,23 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.load(slug);
     });
     this.timerRef = setInterval(() => this.refreshPedidoStatus(), 20000);
-    if (this.auth.isAuthenticated()) {
-      void this.perfil.carregar(true);
+    void this.carregarPerfil();
+  }
+
+  /**
+   * Carrega o perfil (usado pelo botão "Página principal"/"Painel do dono" no topo
+   * do cardápio). `auth.init()` vem **primeiro**: no reload o signal de sessão
+   * ainda está vazio, então checar `isAuthenticated()` direto pulava o perfil (o
+   * botão não aparecia) e, se o `GET /me` saísse antes da troca do token, o back
+   * devolvia 401 "Sessão ausente" sem `Authorization`.
+   */
+  private async carregarPerfil(): Promise<void> {
+    try {
+      await this.auth.init();
+      if (!this.auth.isAuthenticated()) return;
+      await this.perfil.carregar(true);
+    } catch {
+      // sem perfil (visitante ou sessão expirada): o botão do topo simplesmente não entra
     }
   }
 

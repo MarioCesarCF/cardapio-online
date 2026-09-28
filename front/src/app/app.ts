@@ -50,7 +50,16 @@ export class App implements OnInit {
       return;
     }
     try {
-      await this.perfil.carregar();
+      // A sessão (e a troca do token opaco pelo JWT) precisa estar pronta ANTES do
+      // `GET /me`: o construtor roda antes do `ngOnInit`, então sem esta espera a
+      // chamada saía sem `Authorization` e o back respondia 401 "Sessão ausente"
+      // no console a cada reload. `init()` é cacheado, não custa nada depois.
+      await this.auth.init();
+      // Sem sessão nem vale a pena pedir o perfil: só geraria 401 no console de
+      // quem ainda não entrou (o destino abaixo já cai em '/').
+      if (this.auth.isAuthenticated()) {
+        await this.perfil.carregar();
+      }
     } catch {
       // sem sessão ou rede — cai no login
     }
