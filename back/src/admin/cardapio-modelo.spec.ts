@@ -103,8 +103,8 @@ describe('cardápios modelo — dados', () => {
       modeloDoTipo(tipo).categorias.map((c) => c.nome);
 
     expect(nomes('lanches')).toEqual([
-      'X-Saladas',
       'Hambúrgueres',
+      'X-Saladas',
       'Cachorros-quentes',
       'Porções',
       'Combos',
@@ -114,8 +114,8 @@ describe('cardápios modelo — dados', () => {
     expect(nomes('pizzaria')).toEqual([
       'Pizzas Salgadas',
       'Pizzas Doces',
-      'Combos',
       'Bebidas',
+      'Combos',
     ]);
     expect(nomes('acai')).toEqual([
       'Açaí',

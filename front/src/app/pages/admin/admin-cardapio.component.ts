@@ -85,9 +85,8 @@ interface ModalOpcao {
       <section class="bloco modelo" *ngIf="podeUsarModelo()">
         <h2>Comece mais rápido</h2>
         <p class="dica">
-          Seu cardápio está vazio. Crie uma estrutura pronta de categorias,
-          produtos, adicionais e removíveis e depois ajuste nomes, preços e
-          imagens. Nada é publicado antes de você salvar.
+          Seu cardápio está vazio. Crie uma estrutura pronta de categorias, produtos, adicionais e
+          removíveis e depois ajuste nomes, preços e imagens do seu jeito.
         </p>
         <button type="button" class="btn-modelo" (click)="abrirModelo()">
           <i class="pi pi-bolt"></i> Cadastrar cardápio automaticamente
@@ -595,8 +594,8 @@ interface ModalOpcao {
     >
       <div class="modal-form">
         <p class="dica">
-          Escolha o tipo da sua lanchonete. Vamos criar categorias, produtos e
-          grupos de adicionais e removíveis para você editar em seguida.
+          Escolha o tipo da sua lanchonete. Vamos criar categorias, produtos e grupos de adicionais
+          e removíveis para você editar em seguida.
         </p>
 
         <div class="modelo-opcoes">
@@ -1226,7 +1225,7 @@ export class AdminCardapioComponent {
     if (tipo === 'acai') {
       return 'Açaí por tamanho, complementos, frutas, cremes e removíveis.';
     }
-    return 'X-saladas, hambúrgueres, porções, combos, bebidas e molhos.';
+    return 'Hambúrgueres, x-saladas, porções, combos, bebidas e molhos.';
   }
 
   abrirModelo() {

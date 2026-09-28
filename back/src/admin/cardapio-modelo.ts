@@ -111,6 +111,17 @@ const MODELO_LANCHES: CardapioModelo = {
   ],
   categorias: [
     {
+      nome: 'Hambúrgueres',
+      produtos: [
+        {
+          nome: 'Hambúrguer Artesanal',
+          preco: 32.9,
+          descricao: 'Pão brioche, carne 180g, queijo e cebola caramelizada.',
+          grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+        },
+      ],
+    },
+    {
       nome: 'X-Saladas',
       produtos: [
         {
@@ -136,17 +147,6 @@ const MODELO_LANCHES: CardapioModelo = {
           nome: 'X-Frango',
           preco: 26.9,
           descricao: 'Hambúrguer, queijo e frango grelhado.',
-          grupos: ['Adicionais', 'Molhos', 'Removíveis'],
-        },
-      ],
-    },
-    {
-      nome: 'Hambúrgueres',
-      produtos: [
-        {
-          nome: 'Hambúrguer Artesanal',
-          preco: 32.9,
-          descricao: 'Pão brioche, carne 180g, queijo e cebola caramelizada.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
         },
       ],
@@ -396,6 +396,17 @@ const MODELO_PIZZARIA: CardapioModelo = {
       ],
     },
     {
+      nome: 'Bebidas',
+      produtos: [
+        { nome: 'Coca-Cola 1,5 L', preco: 10 },
+        { nome: 'Guaraná 1,5 L', preco: 9 },
+        { nome: 'Coca-Cola 2 L', preco: 13 },
+        { nome: 'Guaraná 2 L', preco: 12 },
+        { nome: 'Água', preco: 3 },
+        { nome: 'Suco', preco: 9 },
+      ],
+    },
+    {
       nome: 'Combos',
       produtos: [
         {
@@ -410,17 +421,6 @@ const MODELO_PIZZARIA: CardapioModelo = {
           descricao: 'Uma pizza sabor do dia com refrigerante de 2 L.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
         },
-      ],
-    },
-    {
-      nome: 'Bebidas',
-      produtos: [
-        { nome: 'Coca-Cola 1,5 L', preco: 10 },
-        { nome: 'Guaraná 1,5 L', preco: 9 },
-        { nome: 'Coca-Cola 2 L', preco: 13 },
-        { nome: 'Guaraná 2 L', preco: 12 },
-        { nome: 'Água', preco: 3 },
-        { nome: 'Suco', preco: 9 },
       ],
     },
   ],
