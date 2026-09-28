@@ -398,10 +398,18 @@ pediu para **remover** e o front foi ajustado:
   (manter em sincronia).
 - **Decisão de 2026-09-27 (dono)**: o Peditto **ainda não está em produção**, então o texto é
   revisado **dentro da 1.0** — não há mais bump de versão por ajuste de redação. Ficou um registro
-  `1.1` no banco de uma conta que aceitou na janela do bump (2026-09-27 13:05); é lixo inofensivo,
-  o `termos_aceite` é `@@id([usuarioId, versao])` e o `upsert` com `update: {}` preserva a data do
-  1º aceite. **Na virada para produção** a versão deve subir para 1.1 de verdade (ou o que o
+  `1.1` no banco de uma conta que aceitou na janela do bump (2026-09-27 13:05); o `termos_aceite` é
+  `@@id([usuarioId, versao])` e o `upsert` com `update: {}` preserva a data do 1º aceite.
+  **Na virada para produção** a versão deve subir para 1.1 de verdade (ou o que o
   advogado definir), com data nova e aviso ao dono.
+- **Bug corrigido em 2026-09-28 (importante para a virada)**: o `getMe` lia o aceite **mais recente**
+  (`findFirst` por `aceitoEm desc`). Com o registro `1.1` na tabela, essa conta recebia `versao: '1.1'`
+  no `GET /me`, o front comparava com `1.0` e caía na tela de aceite **a cada login** — e aceitar de novo
+  não resolvia (o `upsert` com `update: {}` mantém a data antiga da 1.0, então a 1.1 continuava sendo a
+  mais recente). Agora é `findUnique` por `usuarioId_versao` com `TERMO_VERSAO_ATUAL` (**só** o aceite da
+  versão vigente interessa). **Regra: nunca voltar a "ler o mais recente"** — no bump de versão, quem
+  já aceitou a antiga **precisa** ver a tela de aceite de novo, e quem já aceitou a nova **não** pode
+  ver por causa de um registro antigo.
 - Smoke validado: 13/11 seções, matriz 6 col × 9 linhas, aceite gravado no banco
   (`termos_aceite`) e tela de aceite aparecendo para quem não tem a versão vigente.
 
@@ -565,3 +573,31 @@ Pontos que fecham o caso:
 - `npm ls @triplit/client ua-parser-js` no `front` — esperado: 2 cópias, ambas sob
   `node_modules/@neondatabase/auth-ui/`.
 - Bundle sem nenhuma das strings.
+
+## Cadastro automático do cardápio: revisar o conteúdo dos modelos (2026-09-28)
+
+### Contexto
+
+Entregue o "cadastro automático do cardápio" (`back/src/admin/cardapio-modelo.ts` + `POST /admin/lanchonetes/:slug/cardapio-modelo` + botão no `admin-cardapio`). O modelo de cada tipo saiu da lista do dono, mas teve duas decisões de conteúdo que **precisam do olho do dono**:
+
+1. **Preços** — todos foram estimados por mim (ex.: X-Salada R$ 22,90, X-Tudo R$ 28,90, pizza Mussarela R$ 45,00, açaí tradicional R$ 16,00). O dono nunca passou os valores, e o modelo é só um ponto de partida (ele edita tudo depois).
+2. **Itens que não estavam na lista** — inventados para exemplificar: **Sobremesas** (pudim/mousse/sorvete) na lanchonete, grupo **Tamanho** (obrigatório) e **Combos** na pizzaria, e as categorias avulsas de **bebidas/frutas/complementos** do açaí (sem elas o grupo de opções ficaria órfão na tela).
+3. **`Cheddar`** — o dono listou em *duas* listas ("Adicionais" e "Molhos como adicionais"). Como o schema de opções é por grupo e não por produto, ficou **só em "Molhos"** (grupo de escolha única) para o cliente não ser cobrado duas vezes pelo mesmo item.
+
+### Passo a passo (se/quando revisar)
+
+- Editar `back/src/admin/cardapio-modelo.ts` direto (é um arquivo de dados puro, sem I/O).
+- Rodar `npm test` no `back` (o `cardapio-modelo.spec.ts` tem 15 casos que travam a integridade: grupo citado por produto existe, `descricao` só onde há produto, `remove: true` só com preço 0 e sem acréscimo no mesmo grupo, ordem das categorias).
+- `npm run build` + reiniciar o `dist/main` (o servidor local não é watch).
+- **Mudança de conteúdo não afeta loja já cadastrada** — o botão só aparece em cardápio vazio, então o modelo novo só vale para lojas novas. Para testar de novo é preciso criar outra lanchonete.
+
+### Pendências
+
+- [ ] Dono revisar/ajustar os preços dos 3 modelos.
+- [ ] Dono decidir se mantém os itens inventados (Sobremesas, Tamanho/Combos de pizza, categorias avulsas de açaí).
+- [ ] Dono confirmar o destino do `Cheddar` (hoje só em "Molhos").
+
+### Verificação
+
+- `cd back && npm test` → 147 testes (o `cardapio-modelo.spec.ts` cobre os 3 modelos).
+- Smoke de ponta a ponta: `C:\Users\Europa\AppData\Local\Temp\opencode\smoke-modelo2.mjs` (lanches + pedido real) e `smoke-modelo3.mjs` (açaí + grupo obrigatório). Ambos usam Prisma, então precisam rodar de dentro de `back/` (`node --env-file=.env`).
