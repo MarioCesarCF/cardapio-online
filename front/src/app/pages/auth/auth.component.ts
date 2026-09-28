@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -9,6 +9,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { AuthError, AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { TERMO_VERSAO_ATUAL } from '../../services/termos';
+import { TemaService } from '../../services/tema.service';
 
 interface MeResponse {
   user: { id: string; name?: string | null; email?: string | null };
@@ -40,6 +41,14 @@ export class AuthComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly tema = inject(TemaService);
+
+  /**
+   * Logo da tela de login conforme o tema: `logo-black.png` (marca escura, para o
+   * fundo claro) e `logo.png` (marca clara, para o fundo escuro). Só aqui a logo
+   * troca — o app bar é sempre escuro e usa `logo.png` nos dois temas.
+   */
+  readonly logoLogin = computed(() => (this.tema.escuro() ? 'logo.png' : 'logo-black.png'));
 
   readonly modos = [
     { label: 'Entrar', value: 'login' },
