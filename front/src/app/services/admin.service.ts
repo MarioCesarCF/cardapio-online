@@ -63,6 +63,8 @@ export interface ProdutoAdmin {
   nome: string;
   descricao: string | null;
   preco: number;
+  /** Preço promocional; `null` quando o produto não está em promoção. */
+  precoPromo: number | null;
   imagemUrl: string | null;
   destaque: boolean;
   ativo: boolean;

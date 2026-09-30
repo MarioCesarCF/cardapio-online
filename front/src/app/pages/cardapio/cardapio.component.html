@@ -1,14 +1,9 @@
 <div class="cardapio" [style]="theme()">
   <header class="cabecalho-topo">
-    <h1>Cardápio</h1>
-    @if (rotaPerfil(); as destino) {
-      <a class="topo-home" [routerLink]="destino.rota">
-        <i class="pi pi-home"></i> {{ destino.rotulo }}
-      </a>
-    }
+    <h1>Card├ípio</h1>
   </header>
   @if (loading()) {
-    <p class="status">Carregando cardápio…</p>
+    <p class="status">Carregando card├ípioÔÇª</p>
   } @else if (error()) {
     <p class="status">{{ error() }}</p>
   } @else if (cardapio(); as dados) {
@@ -39,8 +34,44 @@
     }
 
     <main class="conteudo">
+      <div class="busca">
+        <span class="busca__campo">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="search"
+            [ngModel]="busca()"
+            (ngModelChange)="busca.set($event)"
+            name="busca"
+            placeholder="Buscar produto pelo nome"
+            aria-label="Buscar produto pelo nome"
+            enterkeyhint="search"
+            autocomplete="off"
+          />
+        </span>
+        @if (buscando()) {
+          <p-button
+            icon="pi pi-times"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            ariaLabel="Limpar busca"
+            title="Limpar busca"
+            (onClick)="limparBusca()"
+          />
+        }
+      </div>
+      @if (buscando()) {
+        <p class="busca__resumo">
+          {{ totalProdutosBusca() }}
+          {{ totalProdutosBusca() === 1 ? 'produto encontrado' : 'produtos encontrados' }} para "{{
+            busca()
+          }}"
+        </p>
+      }
+
       <section class="categorias">
-        @for (categoria of dados.categorias; track categoria.id) {
+        @for (categoria of categoriasBusca(); track categoria.id) {
           <div class="categoria">
             <h2>{{ categoria.nome }}</h2>
 
@@ -65,7 +96,7 @@
                             (escolha 1)
                           }
                           @if (grupo.obrigatorio) {
-                            <span class="obrigatorio">obrigatório</span>
+                            <span class="obrigatorio">obrigat├│rio</span>
                           }
                         </summary>
                         <ul>
@@ -88,7 +119,20 @@
                     @if (produto.imagemUrl; as imagem) {
                       <img [src]="imagem" alt="{{ produto.nome }}" />
                     }
-                    <strong>{{ produto.preco | currency: 'BRL' }}</strong>
+                    @if (emPromocao(produto)) {
+                      <span class="promo">
+                        <span class="promo__marca">
+                          <i class="pi pi-star-fill"></i>
+                          Promo├º├úo
+                        </span>
+                        <s class="promo__antigo">{{ produto.preco | currency: 'BRL' }}</s>
+                        <strong class="promo__novo">{{
+                          precoDe(produto) | currency: 'BRL'
+                        }}</strong>
+                      </span>
+                    } @else {
+                      <strong>{{ produto.preco | currency: 'BRL' }}</strong>
+                    }
                     <p-button
                       label="Adicionar"
                       size="small"
@@ -100,6 +144,19 @@
                 </article>
               }
             </div>
+          </div>
+        }
+        @if (buscando() && categoriasBusca().length === 0) {
+          <div class="busca__vazia">
+            <i class="pi pi-search"></i>
+            <p>Nenhum produto com esse nome.</p>
+            <p-button
+              label="Limpar busca"
+              icon="pi pi-times"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="limparBusca()"
+            />
           </div>
         }
       </section>
@@ -128,7 +185,7 @@
           <span class="barra-pedido-texto">
             <strong>Pedido #{{ p.numero }}</strong>
             <small
-              >{{ rotuloStatus(p.status) }} · {{ tipoCurto(p.tipoEntrega) }} ·
+              >{{ rotuloStatus(p.status) }} ┬À {{ tipoCurto(p.tipoEntrega) }} ┬À
               {{ p.total | currency: 'BRL' }}</small
             >
           </span>
@@ -148,7 +205,7 @@
     [modal]="true"
     [dismissableMask]="true"
     [draggable]="false"
-    appendTo="self"
+    [appendTo]="null"
     [style]="{ width: 'min(94vw, 30rem)', zIndex: zOverlay }"
     styleClass="dialog-produto"
   >
@@ -161,7 +218,7 @@
           <legend>
             {{ grupo.nome }}
             @if (grupo.obrigatorio) {
-              <span class="tag">obrigatório</span>
+              <span class="tag">obrigat├│rio</span>
             }
             @if (grupo.tipo === 'unica') {
               <span class="tag">escolha 1</span>
@@ -203,7 +260,7 @@
     (visibleChange)="cartAberto.set($event)"
     position="right"
     [showCloseIcon]="false"
-    appendTo="self"
+    [appendTo]="null"
     [style]="{ width: 'min(92vw, 23rem)', zIndex: zOverlay }"
   >
     <ng-template #header>
@@ -220,9 +277,9 @@
       </div>
     </ng-template>
     @if (cart.linhas().length === 0) {
-      <p class="status">Sua sacola está vazia.</p>
+      <p class="status">Sua sacola est├í vazia.</p>
     } @else {
-      <p class="dica sacola-dica">Ajuste as quantidades ou continue escolhendo no cardápio.</p>
+      <p class="dica sacola-dica">Ajuste as quantidades ou continue escolhendo no card├ípio.</p>
     }
     @for (item of cart.linhas(); track item.chave) {
       <div class="sacola-item">
@@ -313,7 +370,7 @@
     [modal]="true"
     [dismissableMask]="true"
     [draggable]="false"
-    appendTo="self"
+    [appendTo]="null"
     [style]="{ width: 'min(94vw, 32rem)', zIndex: zOverlay }"
     styleClass="dialog-checkout"
   >
@@ -359,17 +416,17 @@
       <p class="dica">A lanchonete usa seu WhatsApp para confirmar a entrega.</p>
     }
 
-    <h3>Endereço de entrega</h3>
+    <h3>Endere├ºo de entrega</h3>
     @if (mostrarEndereco()) {
       @if (enderecos().length > 0) {
         <label class="opcao">
           <input type="radio" [checked]="!usarNovo()" (change)="usarNovo.set(false)" />
-          <span>Usar endereço salvo</span>
+          <span>Usar endere├ºo salvo</span>
         </label>
       }
       <label class="opcao">
         <input type="radio" [checked]="usarNovo()" (change)="usarNovo.set(true)" />
-        <span>Cadastrar novo endereço</span>
+        <span>Cadastrar novo endere├ºo</span>
       </label>
 
       @if (!usarNovo() && enderecos().length > 0) {
@@ -384,13 +441,13 @@
               (change)="selecionarEndereco(e.id)"
             />
             <span>
-              {{ e.apelido ? e.apelido + ' — ' : '' }}{{ e.rua }}, {{ e.numero }}
+              {{ e.apelido ? e.apelido + ' ÔÇö ' : '' }}{{ e.rua }}, {{ e.numero }}
               @if (e.complemento) {
                 - {{ e.complemento }}
               }
-              · {{ e.bairro }}, {{ e.cidade }}/{{ e.uf }}
+              ┬À {{ e.bairro }}, {{ e.cidade }}/{{ e.uf }}
               @if (e.padrao) {
-                <em>(padrão)</em>
+                <em>(padr├úo)</em>
               }
             </span>
           </label>
@@ -416,7 +473,7 @@
             />
           </label>
           <label class="campo">
-            <span>Número *</span>
+            <span>N├║mero *</span>
             <input
               pInputText
               [value]="novoEndereco()['numero'] ?? ''"
@@ -473,20 +530,20 @@
             [checked]="salvarNovo()"
             (change)="salvarNovo.set(!salvarNovo())"
           />
-          <span>Salvar endereço para as próximas compras</span>
+          <span>Salvar endere├ºo para as pr├│ximas compras</span>
         </label>
       }
     } @else {
-      <p class="dica">Pedido sem entrega — retire ou consuma no local da lanchonete.</p>
+      <p class="dica">Pedido sem entrega ÔÇö retire ou consuma no local da lanchonete.</p>
     }
 
-    <h3>Observações</h3>
+    <h3>Observa├º├Áes</h3>
     <textarea
       pTextarea
       rows="2"
       [value]="observacao()"
       (input)="observacao.set($any($event.target).value)"
-      placeholder="Ex.: sem cebola, entregar no portão"
+      placeholder="Ex.: sem cebola, entregar no port├úo"
       style="width: 100%"
     ></textarea>
 
@@ -501,7 +558,7 @@
       <span class="opcao-texto">
         Pix
         @if (!aceitaPix()) {
-          <small class="pago-delay">Esta lanchonete ainda não configurou uma chave PIX.</small>
+          <small class="pago-delay">Esta lanchonete ainda n├úo configurou uma chave PIX.</small>
         }
       </span>
     </label>
@@ -512,7 +569,7 @@
         (change)="definirFormaPagamento('cartao', $any($event.target).checked)"
       />
       <span class="opcao-texto">
-        Cartão de crédito/débito
+        Cart├úo de cr├®dito/d├®bito
         @if (formaPagamento() === 'cartao') {
           <small class="pago-delay">{{ avisoPagamento() }}</small>
         }
@@ -592,7 +649,7 @@
     [modal]="true"
     [dismissableMask]="true"
     [draggable]="false"
-    appendTo="self"
+    [appendTo]="null"
     [style]="{ width: 'min(94vw, 30rem)', maxWidth: '94vw', zIndex: zOverlay }"
     styleClass="dialog-pix"
   >
@@ -602,7 +659,7 @@
         <span class="pix-pill pix-pill--tipo">{{ tipoCurto(p.tipoEntrega) }}</span>
         @if (precisaPagar(p.status)) {
           <p class="pix-status">
-            Para confirmar, faça o PIX de <strong>{{ p.total | currency: 'BRL' }}</strong> abaixo.
+            Para confirmar, fa├ºa o PIX de <strong>{{ p.total | currency: 'BRL' }}</strong> abaixo.
           </p>
           @if (p.taxaEntrega > 0) {
             <p class="pix-taxa">
@@ -613,28 +670,28 @@
           @if (qrUrl(); as url) {
             <img class="pix-qr" [src]="url" alt="QR Code PIX" />
           } @else {
-            <p class="pix-status">QR indisponível — use o código copia e cola.</p>
+            <p class="pix-status">QR indispon├¡vel ÔÇö use o c├│digo copia e cola.</p>
           }
           <div class="pix-codigo">{{ p.brCodePix }}</div>
           <p-button
-            label="Copiar código PIX"
+            label="Copiar c├│digo PIX"
             icon="pi pi-copy"
             class="bloco"
             (onClick)="copiarPix()"
           />
           <p class="pix-espera">
-            Após realizar o pagamento a lanchonete vai confirmar o mesmo. O QR Code some assim que a
-            confirmação for feita.
+            Ap├│s realizar o pagamento a lanchonete vai confirmar o mesmo. O QR Code some assim que
+            a confirma├º├úo for feita.
           </p>
         } @else if (p.pixConfirmado) {
           <p class="pix-status">
-            <strong>Pagamento confirmado pela lanchonete.</strong> Este pedido está
+            <strong>Pagamento confirmado pela lanchonete.</strong> Este pedido est├í
             {{ rotuloStatus(p.status).toLowerCase() }}.
           </p>
         } @else {
           <p class="pix-status">
-            Este pedido está <strong>{{ rotuloStatus(p.status).toLowerCase() }}</strong> — acompanhe
-            a entrega nos meus pedidos.
+            Este pedido est├í <strong>{{ rotuloStatus(p.status).toLowerCase() }}</strong> ÔÇö
+            acompanhe a entrega nos meus pedidos.
           </p>
         }
         <a class="pix-link" routerLink="/meus-pedidos">Acompanhar nos meus pedidos</a>
@@ -646,8 +703,8 @@
     <div class="travando" role="status" aria-live="polite">
       <div class="travando__caixa">
         <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
-        <p>Abrindo o pedido…</p>
-        <small>Só um instante.</small>
+        <p>Abrindo o pedidoÔÇª</p>
+        <small>S├│ um instante.</small>
       </div>
     </div>
   }

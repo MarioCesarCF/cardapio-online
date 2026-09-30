@@ -1,19 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
-import {
-  ActivatedRoute,
-  Router,
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet,
-} from '@angular/router';
-import { Button } from 'primeng/button';
+import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
-import { AuthService } from '../../services/auth.service';
 import { resolveLogo } from '../../services/lanchonete-visual';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Button],
+  imports: [RouterOutlet],
   template: `
     <main class="shell">
       <header class="shell__topo">
@@ -21,19 +13,6 @@ import { resolveLogo } from '../../services/lanchonete-visual';
           <img class="shell__logo" [src]="logo" alt="" />
         }
         <h1>{{ nome() }}</h1>
-        <div class="shell__acoes">
-          <a class="shell__ver" [href]="'/' + slug()" target="_blank">
-            Ver cardápio público <i class="pi pi-external-link"></i>
-          </a>
-          <p-button
-            label="Sair"
-            icon="pi pi-sign-out"
-            severity="secondary"
-            [text]="true"
-            [rounded]="true"
-            (onClick)="sair()"
-          />
-        </div>
       </header>
 
       @if (situacao() === 'pendente') {
@@ -54,18 +33,6 @@ import { resolveLogo } from '../../services/lanchonete-visual';
         </div>
       }
 
-      <nav class="shell__abas">
-        <a routerLink="config" routerLinkActive="shell__aba--ativa">
-          <i class="pi pi-id-card"></i> Dados cadastrados
-        </a>
-        <a routerLink="cardapio" routerLinkActive="shell__aba--ativa">
-          <i class="pi pi-list"></i> Cardápio
-        </a>
-        <a routerLink="pedidos" routerLinkActive="shell__aba--ativa">
-          <i class="pi pi-receipt"></i> Pedidos
-        </a>
-      </nav>
-
       <router-outlet />
     </main>
   `,
@@ -78,73 +45,21 @@ import { resolveLogo } from '../../services/lanchonete-visual';
     .shell__topo {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
     }
     .shell__topo h1 {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
       margin: 0;
       flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .shell__logo {
-      max-height: 3.5rem;
-      max-width: 9rem;
+      max-height: 2.75rem;
+      max-width: 7rem;
       object-fit: contain;
       border-radius: var(--app-raio-sm);
-    }
-    .shell__acoes {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    a {
-      text-decoration: none;
-    }
-    .shell__ver {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      color: var(--p-primary-color);
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    .shell__abas {
-      display: flex;
-      gap: 6px;
-      margin: 18px auto 22px;
-      padding: 5px;
-      border: 1px solid var(--app-borda);
-      border-radius: 999px;
-      background: var(--app-superficie);
-      width: fit-content;
-      max-width: 100%;
-      overflow-x: auto;
-    }
-    .shell__abas a {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 8px 16px;
-      border-radius: 999px;
-      color: var(--app-texto-suave);
-      font-weight: 600;
-      white-space: nowrap;
-      transition:
-        background-color 0.15s ease,
-        color 0.15s ease;
-    }
-    .shell__abas a:hover {
-      color: var(--p-primary-color);
-      text-decoration: none;
-    }
-    .shell__aba--ativa {
-      color: var(--p-primary-contrast-color, #fff) !important;
-      background: var(--p-primary-color);
-    }
-    .shell__ver:hover {
-      text-decoration: none;
     }
     .shell__aviso {
       display: flex;
@@ -170,9 +85,7 @@ import { resolveLogo } from '../../services/lanchonete-visual';
 })
 export class AdminShellComponent {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly admin = inject(AdminService);
-  private readonly auth = inject(AuthService);
 
   readonly slug = signal('');
   readonly nome = signal('');
@@ -189,10 +102,5 @@ export class AdminShellComponent {
         this.situacao.set(config.situacao ?? '');
       });
     });
-  }
-
-  async sair(): Promise<void> {
-    await this.auth.signOut();
-    await this.router.navigate(['/']);
   }
 }

@@ -172,7 +172,7 @@ export class AdminService {
       } else if (field === 'nome') {
         data.nome = this.requiredNome(body, 'nome');
       } else if (field === 'tipo') {
-        data.tipo = this.optionalTipo(value);
+        data.tipo = this.requiredTipo(value);
       } else if (field === 'horarios') {
         data.horarios = this.validaHorarios(
           value,
@@ -188,6 +188,18 @@ export class AdminService {
           value === '' ? null : value;
       }
     }
+
+    // Invariante: a lanchonete nunca fica sem nome, tipo ou slug (sem tipo ela
+    // não tem logo padrão e sem slug não existe página pública). Campos que não
+    // vieram no corpo mantêm o valor atual — se esse valor estiver vazio, o save
+    // é recusado mesmo assim. É o que fecha a loja criada pelo onboarding sem
+    // tipo: ela só passa a ser editável depois de o dono escolher um.
+    this.requiredNome(
+      { nome: 'nome' in data ? data.nome : lanchonete.nome },
+      'nome',
+    );
+    this.requiredTipo('tipo' in data ? data.tipo : lanchonete.tipo);
+    this.requiredSlug('slug' in data ? data.slug : lanchonete.slug);
 
     try {
       return await this.prisma.lanchonete.update({
@@ -261,6 +273,7 @@ export class AdminService {
           nome: produto.nome,
           descricao: produto.descricao,
           preco: produto.preco.toNumber(),
+          precoPromo: produto.precoPromo?.toNumber() ?? null,
           imagemUrl: produto.imagemUrl,
           destaque: produto.destaque,
           ativo: produto.ativo,
@@ -452,6 +465,7 @@ export class AdminService {
     const categoria = await this.assureCategoria(userId, idCat);
     const nome = this.requiredString(body, 'nome', 1);
     const preco = this.requiredDecimal(body.preco, 'preco');
+    const precoPromo = this.optionalPrecoPromo(body.precoPromo, preco);
     const descricao = this.optionalString(body.descricao);
     const imagemUrl = this.optionalString(body.imagemUrl);
     const destaque =
@@ -463,6 +477,7 @@ export class AdminService {
         categoriaId: categoria.id,
         nome,
         preco,
+        precoPromo,
         descricao,
         imagemUrl,
         destaque,
@@ -472,6 +487,7 @@ export class AdminService {
         id: true,
         nome: true,
         preco: true,
+        precoPromo: true,
         descricao: true,
         imagemUrl: true,
         destaque: true,
@@ -489,6 +505,15 @@ export class AdminService {
     const data: Prisma.ProdutoUpdateInput = {};
     if ('nome' in body) data.nome = this.requiredString(body, 'nome', 1);
     if ('preco' in body) data.preco = this.requiredDecimal(body.preco, 'preco');
+    if ('precoPromo' in body || 'preco' in body) {
+      // A promoção é validada contra o preço resultante: se o dono baixar o
+      // preço base e esquecer de ajustar a promoção, ela deixa de valer.
+      const precoBase = 'preco' in body
+        ? this.requiredDecimal(body.preco, 'preco')
+        : Number(produto.preco);
+      const bruto = 'precoPromo' in body ? body.precoPromo : produto.precoPromo;
+      data.precoPromo = this.optionalPrecoPromo(bruto, precoBase);
+    }
     if ('descricao' in body)
       data.descricao = this.nullableString(body.descricao);
     if ('imagemUrl' in body)
@@ -503,6 +528,7 @@ export class AdminService {
         id: true,
         nome: true,
         preco: true,
+        precoPromo: true,
         descricao: true,
         imagemUrl: true,
         destaque: true,
@@ -1034,6 +1060,20 @@ export class AdminService {
     if (value === undefined || value === null) {
       return null;
     }
+    return this.requiredTipo(value);
+  }
+
+  /**
+   * Nome, tipo e slug são obrigatórios para a lanchonete ter página pública
+   * (o tipo define a logo padrão e o slug é a rota `/<slug>`). Por isso os três
+   * não podem ser salvos vazios/ausentes.
+   */
+  private requiredTipo(value: unknown): string {
+    if (value === undefined || value === null || value === '') {
+      throw new BadRequestException(
+        'tipo é obrigatório (use lanches, pizzaria, sorvetes ou acai)',
+      );
+    }
     if (
       typeof value !== 'string' ||
       !(TIPOS_LANCHONETE as readonly string[]).includes(value)
@@ -1056,6 +1096,27 @@ export class AdminService {
       );
     }
     return value;
+  }
+
+  /**
+   * Preço promocional: vazio/ausente remove a promoção. Tem de ser menor que o
+   * preço base — um valor igual ou maior não é promoção, é erro de digitação.
+   */
+  private optionalPrecoPromo(value: unknown, precoBase: number): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) {
+      throw new BadRequestException('precoPromo deve ser um número maior ou igual a zero');
+    }
+    const promo = Math.round(number * 100) / 100;
+    if (promo >= precoBase) {
+      throw new BadRequestException(
+        'O preço da promoção precisa ser menor que o preço normal.',
+      );
+    }
+    return promo;
   }
 
   private requiredDecimal(value: unknown, key: string): number {

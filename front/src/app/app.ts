@@ -3,12 +3,12 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { AuthService } from './services/auth.service';
 import { MarcaService } from './services/marca.service';
 import { PerfilService } from './services/perfil.service';
-import { TemaSwitchComponent } from './components/tema-switch.component';
+import { MenuNavComponent } from './components/menu-nav.component';
 import { Toast } from 'primeng/toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, TemaSwitchComponent, Toast],
+  imports: [RouterOutlet, RouterLink, MenuNavComponent, Toast],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
 })
@@ -24,6 +24,9 @@ export class App implements OnInit {
    * sem sessão, para a tela de login.
    */
   readonly rotaHome = signal('/');
+
+  /** Ano corrente no copyright do rodapé (nunca fixo no HTML). */
+  readonly anoAtual = new Date().getFullYear();
 
   constructor() {
     inject(MarcaService);

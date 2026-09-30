@@ -3,8 +3,16 @@
     <a class="app-bar__logo" [routerLink]="rotaHome()" title="Ir para o início">
       <img src="logo.png" alt="Peditto" />
     </a>
-    <app-tema-switch />
+    <app-menu-nav />
   </header>
 }
 <router-outlet />
+<footer class="app-footer">
+  <nav class="app-footer__links" aria-label="Termos e privacidade">
+    <a routerLink="/termos">Termo de Uso</a>
+    <span aria-hidden="true">·</span>
+    <a routerLink="/privacidade">Política de Privacidade</a>
+  </nav>
+  <p class="app-footer__copy">&copy; {{ anoAtual }} Peditto - Todos os direitos reservados</p>
+</footer>
 <p-toast position="top-center" [breakpoints]="{ '480px': { width: '92vw', maxWidth: '26rem' } }" />

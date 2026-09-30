@@ -67,6 +67,9 @@ model Produto {
   nome       String
   descricao  String?
   preco      Decimal   @db.Decimal(10, 2)
+  /// Preço promocional. Quando preenchido (e menor que `preco`) é o valor
+  /// cobrado no pedido e o produto aparece antes dos demais na categoria.
+  precoPromo Decimal?  @db.Decimal(10, 2)
   imagemUrl  String?
   destaque   Boolean   @default(false)
   ativo      Boolean   @default(true)

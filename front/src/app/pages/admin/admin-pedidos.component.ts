@@ -51,10 +51,12 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
             {{ realtime.conectado() ? 'ao vivo' : 'reconectando…' }}
           </span>
           <p-button
-            label="Atualizar"
             icon="pi pi-refresh"
             severity="secondary"
             [outlined]="true"
+            [rounded]="true"
+            ariaLabel="Atualizar"
+            title="Atualizar"
             (onClick)="recarregar()"
           />
           <button
@@ -643,6 +645,56 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
     footer span {
       color: var(--app-texto-suave);
       font-size: 0.82rem;
+    }
+
+    @media (max-width: 900px) {
+      /* Alvos de toque: tablet também é tocado com o dedo. */
+      .chip {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .whats__link {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .topo {
+        flex-wrap: wrap;
+        row-gap: 10px;
+      }
+      .topo h2 {
+        flex: 1 1 auto;
+      }
+      /* O "Atualizar" só com ícone não empurra mais nada: fica no fim da 1ª
+         linha e o chip de Histórico desce inteiro para a 2ª. */
+      .topo p-button {
+        order: 1;
+      }
+      .chip--historico {
+        order: 2;
+        flex: 1 1 auto;
+        text-align: center;
+      }
+      .pedido {
+        padding: 12px;
+      }
+      .banner {
+        flex-wrap: wrap;
+      }
+      .data {
+        margin-left: 0;
+        flex: 1 1 100%;
+      }
+      .acoes {
+        flex-wrap: wrap;
+      }
+      footer {
+        flex-wrap: wrap;
+      }
     }
   `,
 })

@@ -7,6 +7,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { gerarBrCode } from './pix.js';
+import { montaPrecoUnit } from './preco.js';
 import { formataPedido } from './pedidos.types.js';
 import { estaDentroDoHorario, type HorarioDia } from './horarios.js';
 import { calculaTaxaEntrega, calculaTotalPedido } from './taxa-entrega.js';
@@ -357,12 +358,13 @@ export class PedidosService {
         }
       }
 
-      const precoProduto = Number(produto.preco);
+      // Promoção: o `precoDoProduto` devolve o `precoPromo` quando ele existe e
+      // é menor que o preço normal (ver `preco.ts`). Os acréscimos das opções
+      // somam por cima. O snapshot em `pedido_itens.precoUnit` grava o valor
+      // realmente cobrado, então o pedido não muda se a lanchonete mexer na
+      // promoção depois.
       const todasOpcoes = gruposFlat(produto, item.opcoes);
-      const extra = todasOpcoes
-        .filter((o) => !o.remove)
-        .reduce((acc, o) => acc + Number(o.precoAdicional), 0);
-      const precoUnit = Math.round((precoProduto + extra) * 100) / 100;
+      const precoUnit = montaPrecoUnit(produto, todasOpcoes);
       return {
         produtoId: produto.id,
         nome: produto.nome,

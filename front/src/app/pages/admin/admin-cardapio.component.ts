@@ -57,6 +57,9 @@ interface ModalProduto {
   id: string | null;
   nome: string;
   preco: number;
+  /** Preço promocional. `null` = sem promoção. Vem como string porque o input
+   *  numérico escreve `null` quando o dono apaga o campo. */
+  precoPromo: number | null;
   descricao: string;
   imagemUrl: string;
   destaque: boolean;
@@ -79,6 +82,7 @@ interface ModalOpcao {
   imports: [CommonModule, FormsModule, Button, Dialog, InputText],
   template: `
     <div class="cardapio">
+      <h2 class="cardapio__titulo">Configuração de Cardápio</h2>
       <p class="aviso" *ngIf="mensagem">{{ mensagem }}</p>
 
       <!-- CADASTRO AUTOMÁTICO (só em cardápio vazio) -->
@@ -128,7 +132,15 @@ interface ModalOpcao {
                 >
               </span>
               <div class="acoes">
-                <span class="prod-preco">{{ formatarMoeda(produto.preco) }}</span>
+                <span class="prod-preco" [class.prod-preco--promo]="produto.precoPromo != null">
+                  @if (produto.precoPromo != null) {
+                    <i class="pi pi-star-fill" title="Em promoção"></i>
+                    <s>{{ formatarMoeda(produto.preco) }}</s>
+                    <strong>{{ formatarMoeda(produto.precoPromo) }}</strong>
+                  } @else {
+                    {{ formatarMoeda(produto.preco) }}
+                  }
+                </span>
                 <button class="btn-neutro" (click)="abrirProdEditar(cat.id, produto)">
                   Editar
                 </button>
@@ -414,6 +426,26 @@ interface ModalOpcao {
         </label>
 
         <label class="f">
+          <span>Preço da promoção (R$)</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="prodModal.precoPromo"
+            name="pmPrecoPromo"
+            [class.erro]="!!prodErros['precoPromo']"
+            placeholder="Deixe vazio se não houver"
+          />
+          <small class="erro-txt" *ngIf="prodErros['precoPromo']">
+            {{ prodErros['precoPromo'] }}
+          </small>
+          <small class="dica" *ngIf="!prodErros['precoPromo']">
+            Menor que o preço normal. Em promoção o produto aparece no topo da
+            categoria, marcado com estrela.
+          </small>
+        </label>
+
+        <label class="f">
           <span>Descrição</span>
           <input
             type="text"
@@ -646,6 +678,10 @@ interface ModalOpcao {
       display: grid;
       gap: 24px;
     }
+    .cardapio__titulo {
+      font-size: 1.35rem;
+      margin: 0;
+    }
     .aviso {
       color: var(--p-red-500, #ef4444);
       margin: 0;
@@ -868,6 +904,26 @@ interface ModalOpcao {
     }
     .prod-preco {
       font-weight: 600;
+
+      &--promo {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        white-space: nowrap;
+
+        i {
+          color: var(--cardapio-cor, var(--p-primary-500));
+          font-size: 0.75rem;
+        }
+        s {
+          opacity: 0.55;
+          font-weight: 400;
+          font-size: 0.8rem;
+        }
+        strong {
+          color: var(--p-primary-600);
+        }
+      }
     }
     .thumb {
       width: 44px;
@@ -1054,11 +1110,72 @@ interface ModalOpcao {
       align-items: center;
     }
     @media (max-width: 600px) {
+      .cardapio {
+        gap: 18px;
+      }
+      .cardapio__titulo {
+        font-size: 1.2rem;
+      }
+      .card {
+        padding: 10px;
+      }
       .f-cols {
         grid-template-columns: 1fr;
       }
+      /* Linha de produto: 1ª linha = thumb + nome (o nome fica com a largura
+         toda, sem quebrar), 2ª linha = etiquetas + preço + ações. */
+      .produtos li,
+      .opcoes li {
+        flex-wrap: wrap;
+        row-gap: 8px;
+      }
+      .produtos .prod-nome {
+        flex: 1 1 60%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .opcoes li > span:first-child {
+        flex: 1 1 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .prod-badges {
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+      }
+      /* Etiqueta menor para caberem na mesma linha das ações. */
+      .badge {
+        font-size: 0.68rem;
+        padding: 2px 6px;
+      }
       .acoes {
-        margin-left: 0;
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+      /* Alvo de toque mínimo confortável no celular. */
+      button {
+        min-height: 40px;
+      }
+      .chk {
+        min-height: 40px;
+      }
+      .chk input[type='checkbox'] {
+        width: 20px;
+        height: 20px;
+      }
+      .taxa-valor {
+        width: 100%;
+      }
+      .taxa-itens {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+      }
+      .modal-acoes {
+        justify-content: stretch;
+      }
+      .modal-acoes button {
+        flex: 1 1 0;
       }
     }
   `,
@@ -1114,6 +1231,7 @@ export class AdminCardapioComponent {
     id: null,
     nome: '',
     preco: 0,
+    precoPromo: null,
     descricao: '',
     imagemUrl: '',
     destaque: false,
@@ -1444,6 +1562,7 @@ export class AdminCardapioComponent {
       id: null,
       nome: '',
       preco: 0,
+      precoPromo: null,
       descricao: '',
       imagemUrl: '',
       destaque: false,
@@ -1461,6 +1580,7 @@ export class AdminCardapioComponent {
       descricao: string | null;
       imagemUrl: string | null;
       preco: number;
+      precoPromo: number | null;
       destaque: boolean;
       ativo: boolean;
       grupoIds: string[];
@@ -1472,6 +1592,7 @@ export class AdminCardapioComponent {
       id: p.id,
       nome: p.nome,
       preco: p.preco,
+      precoPromo: p.precoPromo ?? null,
       descricao: p.descricao ?? '',
       imagemUrl: p.imagemUrl ?? '',
       destaque: p.destaque,
@@ -1501,12 +1622,30 @@ export class AdminCardapioComponent {
       this.prodErros['preco'] = 'O preço deve ser maior ou igual a zero.';
       return;
     }
+    // Promoção: campo vazio = sem promoção. Preenchido precisa ser menor que
+    // o preço normal (mesma regra do back, que é quem decide). O valor vai
+    // como `unknown` porque o input numérico pode escrever `''` ao ser apagado.
+    const brutoPromo: unknown = this.prodModal.precoPromo;
+    let precoPromo: number | null = null;
+    if (brutoPromo !== null && brutoPromo !== undefined && brutoPromo !== '') {
+      const numero = Number(brutoPromo);
+      if (!Number.isFinite(numero) || numero < 0) {
+        this.prodErros['precoPromo'] = 'O preço da promoção deve ser maior ou igual a zero.';
+        return;
+      }
+      if (numero >= preco) {
+        this.prodErros['precoPromo'] = 'A promoção precisa ser mais barata que o preço normal.';
+        return;
+      }
+      precoPromo = Math.round(numero * 100) / 100;
+    }
     if (!this.prodModal.categoriaId) return;
     this.salvando = true;
     try {
       const payload = {
         nome,
         preco,
+        precoPromo,
         descricao: this.prodModal.descricao.trim() || null,
         imagemUrl: this.prodModal.imagemUrl || null,
         destaque: this.prodModal.destaque,

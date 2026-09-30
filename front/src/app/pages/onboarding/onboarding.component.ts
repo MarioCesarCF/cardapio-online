@@ -1,6 +1,6 @@
 import { Component, computed, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
@@ -26,11 +26,9 @@ const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
 
 @Component({
   selector: 'app-onboarding',
-  imports: [FormsModule, RouterLink, HeaderLanchoneteComponent, Button, InputText, Select],
+  imports: [FormsModule, HeaderLanchoneteComponent, Button, InputText, Select],
   template: `
     <main class="ob">
-      <a class="ob__voltar" routerLink="/"><i class="pi pi-arrow-left"></i> Início</a>
-
       <div class="ob__card superficie">
         <h1>Configure sua lanchonete</h1>
         <p class="ob__subtitulo">{{ tituloEtapa }}</p>
@@ -237,21 +235,8 @@ const NOME_REGEX = /^[\p{L}\p{N} ]+$/u;
       margin: 0 auto;
       padding: 24px 16px 64px;
     }
-    .ob__voltar {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      color: var(--app-texto-suave);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .ob__voltar:hover {
-      color: var(--p-primary-color);
-    }
     .ob__card {
       padding: 24px;
-      margin-top: 12px;
     }
     .ob__card h1 {
       margin: 0 0 2px;

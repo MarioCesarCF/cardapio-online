@@ -76,7 +76,14 @@ export class LojasService {
           include: {
             produtos: {
               where: { ativo: true },
-              orderBy: [{ destaque: 'desc' }, { nome: 'asc' }],
+              // Promoção primeiro (`nulls: last` = só os que têm preço
+              // promocional entram no grupo da frente); dentro de cada grupo
+              // vale a ordem antiga: destaque e depois nome.
+              orderBy: [
+                { precoPromo: { sort: 'asc', nulls: 'last' } },
+                { destaque: 'desc' },
+                { nome: 'asc' },
+              ],
               include: {
                 grupos: {
                   orderBy: { ordem: 'asc' },
@@ -125,6 +132,8 @@ export class LojasService {
           nome: produto.nome,
           descricao: produto.descricao,
           preco: produto.preco.toNumber(),
+          // `Decimal` do Prisma vira número simples; sem promoção é `null`.
+          precoPromo: produto.precoPromo?.toNumber() ?? null,
           imagemUrl: produto.imagemUrl,
           destaque: produto.destaque,
           grupos: produto.grupos.map((pg) => ({

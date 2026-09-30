@@ -13,43 +13,40 @@ import { AdminService, LanchoneteResumo } from '../../services/admin.service';
     <main class="admin-home">
       <header class="admin-home__topo">
         <h1>Minhas lanchonetes</h1>
-        <a routerLink="/" class="admin-home__link"
-          ><i class="pi pi-arrow-left"></i> Voltar ao site</a
-        >
       </header>
 
-@if (!carregando && lanchonetes().length === 0) {
-      <form class="card criar superficie" (ngSubmit)="criar()" autocomplete="off">
-        <h2>Criar lanchonete</h2>
-        <label class="campo">
-          <span>Nome</span>
-          <input
-            pInputText
-            type="text"
-            [(ngModel)]="novoNome"
-            name="nome"
-            required
-            minlength="2"
-            maxlength="50"
-            placeholder="Ex.: Sabor da Vila"
+      @if (!carregando && lanchonetes().length === 0) {
+        <form class="card criar superficie" (ngSubmit)="criar()" autocomplete="off">
+          <h2>Criar lanchonete</h2>
+          <label class="campo">
+            <span>Nome</span>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="novoNome"
+              name="nome"
+              required
+              minlength="2"
+              maxlength="50"
+              placeholder="Ex.: Sabor da Vila"
+            />
+          </label>
+          <p class="dica">
+            O endereço da página é gerado automaticamente a partir do nome (sem acentos). Ele
+            precisa ser único: se já existir uma lanchonete com esse nome, você verá a mensagem e
+            poderá escolher outro.
+          </p>
+          <p-button
+            type="submit"
+            [label]="salvando ? 'Criando…' : 'Criar'"
+            icon="pi pi-plus"
+            [loading]="salvando"
           />
-        </label>
-        <p class="dica">
-          O endereço da página é gerado automaticamente a partir do nome (sem acentos). Ele precisa
-          ser único: se já existir uma lanchonete com esse nome, você verá a mensagem e poderá
-          escolher outro.
-        </p>
-        <p-button
-          type="submit"
-          [label]="salvando ? 'Criando…' : 'Criar'"
-          icon="pi pi-plus"
-          [loading]="salvando"
-        />
-        @if (mensagem) {
-          <p class="aviso"><i class="pi pi-exclamation-circle"></i> {{ mensagem }}</p>
-        }
-      </form>
-    }
+          @if (mensagem) {
+            <p class="aviso"><i class="pi pi-exclamation-circle"></i> {{ mensagem }}</p>
+          }
+        </form>
+      }
 
       <section class="lista">
         @if (carregando) {
@@ -89,21 +86,11 @@ import { AdminService, LanchoneteResumo } from '../../services/admin.service';
       align-items: baseline;
       gap: 1rem;
       flex-wrap: wrap;
-      padding-right: 7.5rem;
+      margin-bottom: 16px;
     }
     .admin-home__topo h1 {
       margin: 0;
       font-size: 1.5rem;
-    }
-    .admin-home__link {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--app-texto-suave);
-
-      &:hover {
-        color: var(--p-primary-color);
-        text-decoration: none;
-      }
     }
     .card {
       padding: 16px;

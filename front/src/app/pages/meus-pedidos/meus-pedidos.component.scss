@@ -24,20 +24,6 @@ header {
   align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-
-  .voltar {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--app-texto-suave);
-
-    &:hover {
-      color: var(--p-primary-color);
-      text-decoration: none;
-    }
-  }
 }
 
 .status {

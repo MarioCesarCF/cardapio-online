@@ -24,18 +24,6 @@
     font-size: 0.85rem;
   }
 
-  &__nav {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin: 0.75rem 0 1.25rem;
-    font-size: 0.85rem;
-
-    a {
-      color: var(--p-primary-color);
-    }
-  }
-
   &__aviso {
     display: flex;
     gap: 0.5rem;
@@ -94,6 +82,12 @@
   a {
     color: var(--p-primary-color);
     word-break: break-word;
+  }
+
+  .matriz__dica {
+    margin: 0.5rem 0 0;
+    font-size: 0.78rem;
+    color: var(--app-texto-suave);
   }
 
   .matriz {

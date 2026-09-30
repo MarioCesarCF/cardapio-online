@@ -1,12 +1,6 @@
 <div class="home">
   <header class="home__topo">
     <h1>Página principal</h1>
-    <div class="home__links">
-      <a routerLink="/meus-pedidos"><i class="pi pi-receipt"></i> Meus pedidos</a>
-      <button type="button" class="home__sair" (click)="sair()">
-        <i class="pi pi-sign-out"></i> Sair
-      </button>
-    </div>
   </header>
 
   @if (loading()) {

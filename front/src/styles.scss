@@ -149,6 +149,29 @@ body.tela-travada {
   font-size: 0.82rem;
 }
 
+/* Menu hambúrguer do app bar: o `p-menu` é criado no body (appendTo), então o
+   estilo precisa ser global. */
+.menu-nav {
+  min-width: 14.5rem;
+
+  .p-menu-item-content {
+    gap: 0.65rem;
+    padding: 0.7rem 0.95rem;
+  }
+
+  .p-menu-item-label {
+    font-weight: 600;
+  }
+
+  .p-menu-item-icon {
+    font-size: 0.95rem;
+  }
+}
+
+.menu-nav .p-menu-item.menu-nav__sair .p-menu-item-content {
+  color: var(--p-red-500, #ef4444);
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -161,4 +184,99 @@ body.tela-travada {
 
 .app-dark ::-webkit-scrollbar-thumb {
   background: var(--p-surface-700);
+}
+
+// ---------- Cardápio: promoções e busca ----------
+// Estas regras vivem no global (e não em `cardapio.component.scss`) porque o
+// componente estourou o budget `anyComponentStyle` (erro em 10 kB, aviso em
+// 12 kB) depois das telas de T10/T11. Escopadas em `.cardapio` para não vazar
+// para os painéis.
+
+.cardapio .promo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  white-space: nowrap;
+
+  &__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cardapio-cor);
+    background: color-mix(in srgb, var(--cardapio-cor) 14%, transparent);
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  &__antigo {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    text-decoration: line-through;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__novo {
+    font-size: 1.05rem;
+    color: var(--cardapio-cor);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cardapio .busca {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+
+  &__campo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+
+    i {
+      position: absolute;
+      left: 0.85rem;
+      color: var(--app-texto-suave);
+      pointer-events: none;
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      min-height: 44px;
+      padding-left: 2.4rem;
+    }
+  }
+
+  &__resumo {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-texto-suave);
+  }
+
+  &__vazia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--app-texto-suave);
+
+    i {
+      font-size: 1.8rem;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
 }

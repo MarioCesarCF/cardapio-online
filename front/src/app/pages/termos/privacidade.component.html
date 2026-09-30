@@ -4,12 +4,6 @@
     <p class="termos__meta">Versão {{ VERSAO }} · atualizada em {{ ATUALIZADO_EM }}</p>
   </header>
 
-  <nav class="termos__nav">
-    <a routerLink="/termos">Termos de Uso</a>
-    <span>·</span>
-    <a routerLink="/auth">Voltar para o login</a>
-  </nav>
-
   <p class="termos__aviso">
     <i class="pi pi-info-circle"></i>
     <span>
@@ -126,7 +120,10 @@
 
   <section>
     <h2>4. Matriz de tratamento de dados</h2>
-    <div class="matriz">
+    @if (matrizEstoura()) {
+      <p class="matriz__dica">Arraste a tabela para o lado para ver todas as colunas.</p>
+    }
+    <div class="matriz" #matriz>
       <table>
         <thead>
           <tr>

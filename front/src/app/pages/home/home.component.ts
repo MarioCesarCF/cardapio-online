@@ -342,11 +342,6 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  async sair(): Promise<void> {
-    await this.auth.signOut();
-    await this.router.navigate(['/']);
-  }
-
   /** Encerramento de conta: a confirmação e o questionário ficam em /encerrar. */
   async encerrarConta(): Promise<void> {
     await this.router.navigate(['/encerrar'], { queryParams: { perfil: 'cliente' } });

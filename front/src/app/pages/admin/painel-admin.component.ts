@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Button } from 'primeng/button';
@@ -10,7 +9,6 @@ import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Dialog } from 'primeng/dialog';
 import { ApiService } from '../../services/api.service';
-import { AuthService } from '../../services/auth.service';
 import {
   AdminPainel,
   CardapioConsulta,
@@ -56,13 +54,10 @@ const PERIODOS_ENCERRAMENTO = [
 
 @Component({
   selector: 'app-painel-admin',
-  imports: [FormsModule, RouterLink, Button, InputText, Select, Tag, JsonPipe, Dialog],
+  imports: [FormsModule, Button, InputText, Select, Tag, JsonPipe, Dialog],
   template: `
     <main class="pa">
       @if (semAcesso()) {
-        <header class="pa__topo">
-          <a class="pa__voltar" routerLink="/"><i class="pi pi-arrow-left"></i> Voltar ao site</a>
-        </header>
         <p class="pa__erro">Você não tem acesso ao painel administrativo desta plataforma.</p>
       } @else {
         <header class="pa__topo">
@@ -70,15 +65,6 @@ const PERIODOS_ENCERRAMENTO = [
           <p-tag
             [value]="eSuper() ? 'Raiz' : 'Admin'"
             [severity]="eSuper() ? 'warn' : 'secondary'"
-          />
-          <p-button
-            class="pa__sair"
-            label="Sair"
-            icon="pi pi-sign-out"
-            severity="secondary"
-            [text]="true"
-            [rounded]="true"
-            (onClick)="sair()"
           />
         </header>
 
@@ -916,20 +902,8 @@ const PERIODOS_ENCERRAMENTO = [
       font-size: 1.5rem;
       margin: 0;
     }
-    .pa__sair {
+    .pa__topo p-tag {
       margin-left: auto;
-    }
-    .pa__voltar {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      color: var(--app-texto-suave);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .pa__voltar:hover {
-      color: var(--p-primary-color);
     }
     .pa__abas {
       display: flex;
@@ -1430,8 +1404,6 @@ const PERIODOS_ENCERRAMENTO = [
 export class PainelAdminComponent {
   private readonly api = inject(ApiService);
   private readonly painel = inject(PainelAdminService);
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly encerramento = inject(EncerramentoService);
 
   readonly periodosEncerramento = PERIODOS_ENCERRAMENTO;
@@ -1612,11 +1584,6 @@ export class PainelAdminComponent {
   rotuloEncerramento(motivo: string): string {
     const todos = [...MOTIVOS_CLIENTE, ...MOTIVOS_LANCHONETE];
     return todos.find((m) => m.valor === motivo)?.rotulo ?? this.capitalizar(motivo);
-  }
-
-  async sair(): Promise<void> {
-    await this.auth.signOut();
-    await this.router.navigate(['/']);
   }
 
   async carregarLogs(): Promise<void> {

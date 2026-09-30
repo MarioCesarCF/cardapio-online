@@ -13,6 +13,8 @@
   &__logo {
     display: flex;
     align-items: center;
+    // Alvo de toque: a logo ocupa toda a altura da barra.
+    min-height: 40px;
     border-radius: 0.4rem;
     transition: opacity 0.15s ease;
 
@@ -26,4 +28,51 @@
       width: auto;
     }
   }
+}
+
+/* Rodapé global. Fica no fim do fluxo (o app já é `display: block`, então o
+   `min-height: 100%` das telas não empurra o rodapé para fora da viewport). */
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--app-borda);
+  background: var(--app-superficie);
+  text-align: center;
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+
+    a {
+      color: var(--app-texto);
+      font-weight: 600;
+      text-decoration: none;
+
+      &:hover,
+      &:focus-visible {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__copy {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-texto-suave);
+  }
+}
+
+/* Flex column no app para o rodapé ficar colado embaixo mesmo em página curta
+   (o `margin-top: auto` acima absorve o espaço sobrando). */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
 }

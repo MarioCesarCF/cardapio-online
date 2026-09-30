@@ -14,6 +14,9 @@ import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.co
 import { FONTES_PADRAO, TIPOS_LANCHONETE, type FonteOpcao } from '../../services/lanchonete-visual';
 import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horarios';
 
+/** Mesma regra do back (`SLUG_REGEX` em `admin.service.ts`). */
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 @Component({
   selector: 'app-admin-config',
   imports: [
@@ -29,13 +32,17 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
   template: `
     @if (conf(); as c) {
       <form class="config superficie" (ngSubmit)="salvar()" autocomplete="off">
-        <app-header-lanchonete
-          [nome]="c.nome"
-          [logoUrl]="c.logoUrl"
-          [tipo]="c.tipo"
-          [cor]="c.corPrincipal"
-          [fonte]="c.fonte"
-        />
+        <h2 class="config__titulo">Dados cadastrados</h2>
+
+        <p class="preview">
+          <app-header-lanchonete
+            [nome]="c.nome"
+            [logoUrl]="c.logoUrl"
+            [tipo]="c.tipo"
+            [cor]="c.corPrincipal"
+            [fonte]="c.fonte"
+          />
+        </p>
 
         @if (c.situacao === 'pendente') {
           <div class="banner">
@@ -165,6 +172,9 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
         </p-dialog>
 
         <h2>Identidade</h2>
+        <p class="secao-dica">
+          Nome, tipo e rota de acesso são obrigatórios para a lanchonete ter página pública.
+        </p>
         <div class="grid2">
           <label class="campo">
             <span>Nome</span>
@@ -176,7 +186,12 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
               required
               minlength="2"
               maxlength="50"
+              [class.erro]="erros()['nome']"
+              (ngModelChange)="limparErro('nome')"
             />
+            @if (erros()['nome']) {
+              <span class="erro-campo">{{ erros()['nome'] }}</span>
+            }
           </label>
           <label class="campo">
             <span>Tipo</span>
@@ -186,9 +201,13 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
               optionValue="valor"
               [(ngModel)]="c.tipo"
               name="tipo"
-              placeholder="—"
-              [showClear]="true"
+              placeholder="Escolha o tipo"
+              [class.erro]="erros()['tipo']"
+              (ngModelChange)="limparErro('tipo')"
             />
+            @if (erros()['tipo']) {
+              <span class="erro-campo">{{ erros()['tipo'] }}</span>
+            }
           </label>
         </div>
 
@@ -206,6 +225,8 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
                 required
                 pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                 placeholder="ex.: minha-lanchonete"
+                [class.erro]="erros()['slug']"
+                (ngModelChange)="limparErro('slug')"
               />
               <p-button
                 label="Copiar link"
@@ -215,6 +236,9 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
                 (onClick)="copiarLink()"
               />
             </span>
+            @if (erros()['slug']) {
+              <span class="erro-campo">{{ erros()['slug'] }}</span>
+            }
           </label>
           <label class="campo">
             <span>Logo</span>
@@ -326,12 +350,13 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
           @for (dia of horarios(); track dia.dia) {
             <div class="linha-horario" [class.linha-horario--fechada]="!dia.aberto">
               <span class="linha-dia">{{ diasSemana[dia.dia] }}</span>
+              <p-toggleswitch
+                [ngModel]="dia.aberto"
+                name="horario-{{ dia.dia }}"
+                [ariaLabel]="'Abrir ' + diasSemana[dia.dia]"
+                (ngModelChange)="setHorario(dia.dia, 'aberto', $event)"
+              />
               <div class="linha-controles">
-                <p-toggleswitch
-                  [ngModel]="dia.aberto"
-                  name="horario-{{ dia.dia }}"
-                  (ngModelChange)="setHorario(dia.dia, 'aberto', $event)"
-                />
                 <label class="mini-campo">
                   <span>Início</span>
                   <input
@@ -388,6 +413,19 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
       display: grid;
       gap: 14px;
       padding: 20px;
+    }
+    .config__titulo {
+      /* Título da tela: sem a linha divisória das seções. */
+      border-bottom: none !important;
+      margin: 0 !important;
+      font-size: 1.35rem;
+    }
+    .preview {
+      display: block;
+      margin: 0;
+      padding: 12px;
+      border: 1px dashed var(--app-borda);
+      border-radius: var(--app-raio-sm);
     }
     .banner {
       display: flex;
@@ -527,6 +565,7 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
     }
     .linha-dia {
       flex: 1;
+      min-width: 0;
       font-weight: 600;
       font-size: 0.9rem;
     }
@@ -536,7 +575,7 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
     }
     .linha-controles {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 12px;
     }
     .mini-campo {
@@ -565,22 +604,6 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
         }
       }
     }
-    @media (max-width: 600px) {
-      .linha-horario {
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .linha-dia {
-        flex: 1 1 100%;
-      }
-      .linha-controles {
-        width: 100%;
-        justify-content: space-between;
-      }
-      .mini-campo input {
-        width: 8.5rem;
-      }
-    }
     .acoes {
       display: flex;
       gap: 10px;
@@ -596,17 +619,92 @@ import { DIAS_SEMANA, horaValida, type HorarioDia } from '../../services/horario
     .aviso--ok {
       color: var(--p-green-500, #22c55e);
     }
+
     @media (max-width: 600px) {
+      .config {
+        padding: 14px;
+        gap: 12px;
+      }
+      .config__titulo {
+        font-size: 1.2rem;
+      }
       .grid2 {
         grid-template-columns: 1fr;
       }
       .notifs {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
+        grid-template-columns: 1fr;
+        gap: 10px;
       }
       .check {
-        font-size: 0.78rem;
-        gap: 4px;
+        font-size: 0.85rem;
+        gap: 8px;
+      }
+      .secao-dica {
+        margin: -0.25rem 0 1rem;
+        font-size: 0.85rem;
+        color: var(--app-texto-suave);
+      }
+      /* Campo inválido: borda vermelha + mensagem logo abaixo. */
+      .erro:not(.p-select) {
+        border-color: var(--p-red-500, #ef4444);
+        box-shadow: inset 0 0 0 1px var(--p-red-500, #ef4444);
+      }
+      .erro .p-select {
+        border-color: var(--p-red-500, #ef4444);
+        box-shadow: inset 0 0 0 1px var(--p-red-500, #ef4444);
+      }
+      .erro-campo {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--p-red-500, #ef4444);
+      }
+      .banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      /* Linha do horário vira 2 linhas: dia + interruptor, e os dois campos
+         de hora dividindo a largura restante (evita estouro horizontal). */
+      .linha-horario {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px;
+      }
+      .linha-controles {
+        width: 100%;
+        gap: 10px;
+      }
+      .mini-campo {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .mini-campo input {
+        width: 100%;
+        min-height: 40px;
+      }
+      .slug-linha,
+      .logo-linha {
+        flex-wrap: wrap;
+      }
+      .slug-linha input,
+      .logo-linha input {
+        flex: 1 1 100%;
+      }
+      .slug-linha p-button,
+      .logo-linha p-button {
+        width: 100%;
+      }
+      .slug-linha p-button button,
+      .logo-linha p-button button {
+        width: 100%;
+      }
+      .acoes {
+        justify-content: stretch;
+      }
+      .acoes p-button {
+        flex: 1 1 100%;
       }
     }
   `,
@@ -629,6 +727,8 @@ export class AdminConfigComponent {
   readonly propErro = signal<string | null>(null);
   readonly propSucesso = signal(false);
   readonly editandoProprietario = signal(false);
+  /** Erros por campo da seção Dados cadastrados (nome/tipo/slug). */
+  readonly erros = signal<Record<string, string>>({});
   salvando = false;
   mensagem = '';
   private slug = '';
@@ -802,6 +902,13 @@ export class AdminConfigComponent {
     if (!this.conf()) return;
     this.salvando = true;
     this.mensagem = '';
+    const erros = this.validaObrigatorios();
+    this.erros.set(erros);
+    if (Object.keys(erros).length) {
+      this.mensagem = 'Preencha os campos obrigatórios para salvar.';
+      this.salvando = false;
+      return;
+    }
     const erroHorarios = this.validaHorarios(this.horarios());
     if (erroHorarios) {
       this.mensagem = erroHorarios;
@@ -824,6 +931,37 @@ export class AdminConfigComponent {
     } finally {
       this.salvando = false;
     }
+  }
+
+  /** Limpa o erro do campo assim que o dono começa a corrigir. */
+  limparErro(campo: string): void {
+    if (!this.erros()[campo]) return;
+    const { [campo]: _, ...resto } = this.erros();
+    this.erros.set(resto);
+  }
+
+  /**
+   * Nome, tipo e slug não podem ficar vazios: sem tipo a loja não tem logo
+   * padrão e sem slug não existe página pública. A mesma regra é validada no
+   * back (`requiredNome`/`requiredTipo`/`requiredSlug`).
+   */
+  private validaObrigatorios(): Record<string, string> {
+    const c = this.conf() as unknown as Record<string, unknown> | null;
+    const erros: Record<string, string> = {};
+    const nome = typeof c?.['nome'] === 'string' ? (c['nome'] as string).trim() : '';
+    if (nome.length < 2) {
+      erros['nome'] = 'Informe o nome da lanchonete.';
+    }
+    if (!c?.['tipo']) {
+      erros['tipo'] = 'Escolha o tipo da lanchonete.';
+    }
+    const slug = typeof c?.['slug'] === 'string' ? (c['slug'] as string).trim() : '';
+    if (!slug) {
+      erros['slug'] = 'Informe a rota de acesso.';
+    } else if (!SLUG_REGEX.test(slug)) {
+      erros['slug'] = 'Use apenas letras minúsculas, números e hifens (ex.: minha-lanchonete).';
+    }
+    return erros;
   }
 
   async excluir() {

@@ -1,4 +1,5 @@
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import QRCode from 'qrcode';
@@ -12,7 +13,6 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { MarcaService } from '../../services/marca.service';
-import { PerfilService } from '../../services/perfil.service';
 import { CartService, type CartItem } from '../../services/cart.service';
 import { formatarMoeda } from '../../services/moeda';
 import { HeaderLanchoneteComponent } from '../../components/header-lanchonete.component';
@@ -26,11 +26,20 @@ import {
 } from '../../services/pedido-painel';
 
 /**
- * Os overlays do cardápio usam `appendTo="self"` (sem `p-overlay` no body) para
- * herdar a cor da lanchonete, que fica restrita à subárvore da página. Nesse modo
- * o PrimeNG não gerencia z-index, então o app bar fixo (`position: sticky`,
- * z-index 900) cobria o topo dos painéis — no drawer isso escondia o botão de
- * fechar. Por isso todos recebem um z-index próprio acima do app bar.
+ * Os overlays do cardápio ficam **inline** (sem `p-overlay` no body) para herdar
+ * a cor da lanchonete, que fica restrita à subárvore da página. Isso se faz com
+ * `[appendTo]="null"` (falsy = não move o painel para fora do componente).
+ *
+ * NÃO usar `appendTo="self"`: essa string é um sentinela interno do PrimeNG e só
+ * é tratada por alguns componentes. O `p-dialog` a ignora, mas o `p-drawer` não:
+ * ele chamava `appendChild('self', painel)`, o `getTargetElement` devolvia `null`
+ * e o console lotava de `ERROR Error: Cannot append [object HTMLDivElement] to
+ * self` toda vez que a sacola abria (primeng-drawer.mjs, `appendContainer`).
+ *
+ * Nesse modo o PrimeNG não gerencia z-index, então o app bar fixo
+ * (`position: sticky`, z-index 900) cobria o topo dos painéis — no drawer isso
+ * escondia o botão de fechar. Por isso todos recebem um z-index próprio acima do
+ * app bar.
  */
 const Z_OVERLAY = 1000;
 
@@ -41,6 +50,18 @@ const Z_OVERLAY = 1000;
  * vez de deixar o cliente preso num loading eterno.
  */
 const TEMPO_MAXIMO_CHECKOUT = 15000;
+
+/**
+ * Busca por nome: minúsculas e sem acento, para "acai" achar "Açaí" e
+ * "x-burguer" achar "X-Burguer".
+ */
+function normaliza(texto: string): string {
+  return texto
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
 
 interface Lanchonete {
   id: string;
@@ -80,6 +101,8 @@ interface Produto {
   nome: string;
   descricao: string | null;
   preco: number;
+  /** Preço promocional; quando preenchido é o valor cobrado e vem antes dos outros. */
+  precoPromo: number | null;
   destaque: boolean;
   imagemUrl: string | null;
   grupos: GrupoOpcoes[];
@@ -126,6 +149,7 @@ interface PedidoConfirmado {
   selector: 'app-cardapio',
   imports: [
     CurrencyPipe,
+    FormsModule,
     RouterLink,
     HeaderLanchoneteComponent,
     Button,
@@ -142,7 +166,6 @@ export class CardapioComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
-  private readonly perfil = inject(PerfilService);
   private readonly marca = inject(MarcaService);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly msg = inject(MessageService);
@@ -162,19 +185,6 @@ export class CardapioComponent implements OnInit, OnDestroy {
   readonly cardapio = signal<CardapioResponse | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
-  readonly rotaPerfil = computed(() => {
-    const principal = this.perfil.perfilPrincipal();
-    if (principal === 'admin-sistema') {
-      return { rotulo: 'Painel da plataforma', rota: '/painel-admin' };
-    }
-    if (principal === 'dono') {
-      return { rotulo: 'Painel do dono', rota: '/admin' };
-    }
-    if (principal === 'cliente') {
-      return { rotulo: 'Página principal', rota: '/home' };
-    }
-    return null;
-  });
 
   readonly theme = computed(() => {
     const c = this.config();
@@ -188,6 +198,48 @@ export class CardapioComponent implements OnInit, OnDestroy {
 
   estaAberta(): boolean {
     return dentroDoHorario(this.config()?.horarios ?? null, new Date());
+  }
+
+  // ---------- Pesquisa por nome (T11) ----------
+
+  /** Texto digitado na busca. Fica em signal para o filtro ser reativo. */
+  readonly busca = signal('');
+
+  /**
+   * Categorias filtradas pela busca. Uma categoria só aparece se sobrar
+   * ao menos um produto; sem busca devolve a lista original (mesma ordem do
+   * back, que já traz as promoções na frente).
+   */
+  readonly categoriasBusca = computed<Categoria[]>(() => {
+    const categorias = this.cardapio()?.categorias ?? [];
+    const termo = normaliza(this.busca());
+    if (!termo) return categorias;
+    return categorias
+      .map((categoria) => ({
+        ...categoria,
+        produtos: categoria.produtos.filter((p) => normaliza(p.nome).includes(termo)),
+      }))
+      .filter((categoria) => categoria.produtos.length > 0);
+  });
+
+  readonly buscando = computed(() => this.busca().trim().length > 0);
+  readonly totalProdutosBusca = computed(() =>
+    this.categoriasBusca().reduce((acc, c) => acc + c.produtos.length, 0),
+  );
+
+  limparBusca(): void {
+    this.busca.set('');
+  }
+
+  // ---------- Promoções (T10) ----------
+
+  /** Preço cobrado: o promocional quando existe, senão o normal. */
+  precoDe(produto: Produto): number {
+    return produto.precoPromo != null ? Number(produto.precoPromo) : produto.preco;
+  }
+
+  emPromocao(produto: Produto): boolean {
+    return produto.precoPromo != null;
   }
 
   resumoInfo(lanchonete: Lanchonete): string {
@@ -262,24 +314,6 @@ export class CardapioComponent implements OnInit, OnDestroy {
       this.load(slug);
     });
     this.timerRef = setInterval(() => this.refreshPedidoStatus(), 20000);
-    void this.carregarPerfil();
-  }
-
-  /**
-   * Carrega o perfil (usado pelo botão "Página principal"/"Painel do dono" no topo
-   * do cardápio). `auth.init()` vem **primeiro**: no reload o signal de sessão
-   * ainda está vazio, então checar `isAuthenticated()` direto pulava o perfil (o
-   * botão não aparecia) e, se o `GET /me` saísse antes da troca do token, o back
-   * devolvia 401 "Sessão ausente" sem `Authorization`.
-   */
-  private async carregarPerfil(): Promise<void> {
-    try {
-      await this.auth.init();
-      if (!this.auth.isAuthenticated()) return;
-      await this.perfil.carregar(true);
-    } catch {
-      // sem perfil (visitante ou sessão expirada): o botão do topo simplesmente não entra
-    }
   }
 
   ngOnDestroy(): void {
@@ -407,7 +441,9 @@ export class CardapioComponent implements OnInit, OnDestroy {
     this.cart.adicionar({
       produtoId: produto.id,
       nome: produto.nome,
-      preco: produto.preco,
+      // A sacola já entra com o preço cobrado (promocional quando houver), para
+      // o total da barra e do checkout baterem com o que o back vai cobrar.
+      preco: this.precoDe(produto),
       opcoes,
     });
     this.fecharProduto();

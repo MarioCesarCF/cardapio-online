@@ -2,13 +2,13 @@
   <header>
     <h1>Meus pedidos</h1>
     <div class="topo-acoes">
-      <a class="voltar" routerLink="/home"><i class="pi pi-home"></i> Página principal</a>
       <p-button
-        label="Atualizar"
         icon="pi pi-refresh"
-        size="small"
+        [rounded]="true"
         severity="secondary"
         [outlined]="true"
+        ariaLabel="Atualizar"
+        title="Atualizar"
         (onClick)="atualizar()"
       />
     </div>
