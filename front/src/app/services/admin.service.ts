@@ -103,6 +103,10 @@ export interface ResultadoCardapioModelo {
   produtos: number;
   grupos: number;
   opcoes: number;
+  /** Produtos do modelo que pedem imagem (nem sempre todos têm foto na galeria). */
+  comImagem: number;
+  /** Produtos que saíram **com** imagem da galeria. */
+  imagens: number;
   vinculos: number;
 }
 
@@ -145,10 +149,7 @@ export class AdminService {
   }
 
   /** Cria um cardápio de exemplo (só funciona se o cardápio estiver vazio). */
-  criarCardapioModelo(
-    slug: string,
-    tipo: TipoCardapioModelo,
-  ): Promise<ResultadoCardapioModelo> {
+  criarCardapioModelo(slug: string, tipo: TipoCardapioModelo): Promise<ResultadoCardapioModelo> {
     return firstValueFrom(
       this.api.post<ResultadoCardapioModelo>(`/admin/lanchonetes/${slug}/cardapio-modelo`, {
         tipo,

@@ -14,6 +14,8 @@ import {
   ehTipoModelo,
   modeloDoTipo,
   resumoDoModelo,
+  chavesDeImagem,
+  type CardapioModelo,
 } from './cardapio-modelo.js';
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -290,6 +292,10 @@ export class AdminService {
    * (lanches | pizzaria | acai). Só funciona em cardápio vazio: se a
    * lanchonete já tem categorias ou grupos, o dono precisa usar o CRUD normal
    * (evita duplicar/misturar o cardápio com o que ele já montou).
+   *
+   * Os produtos também saem com imagem: cada um tem uma palavra-chave
+   * (`ProdutoModelo.imagem`) que é trocada por uma foto da galeria. Galeria
+   * vazia não quebra nada — o produto é criado sem imagem.
    */
   async gerarCardapioModelo(
     userId: string,
@@ -315,78 +321,178 @@ export class AdminService {
       );
     }
 
-    const idGrupos = new Map<string, string>();
-    let qtdeOpcoes = 0;
-    const vinculos: { produtoId: string; grupoId: string; ordem: number }[] = [];
+    // Fora da transação de propósito: as fotos já existentes não mudam.
+    const proximaImagem = await this.imagensDaGaleria(modelo);
+    let produtosComImagem = 0;
+    let vinculos = 0;
 
-    await this.prisma.$transaction(async (tx) => {
-      for (const grupo of modelo.grupos) {
-        const criado = await tx.grupoOpcoes.create({
-          data: {
+    // Tudo em lote (`createMany` + uma leitura por entidade) em vez de um
+    // `create` por item: a transação interativa do Prisma tem timeout de 5s e
+    // o deploy (Render → Neon, outra região) leva ~40 queries a mais que o
+    // local. Com uma query por produto a transação morria no meio e o Prisma
+    // devolvia "Transaction not found" (500) sem gravar nada. Os ids saem das
+    // leituras: o cardápio está vazio, então tudo que existe na lanchonete
+    // acabou de ser criado aqui. O vínculo produto↔grupo é montado por
+    // `categoriaId|nome` e `nome`, então os nomes precisam ser únicos dentro
+    // da lanchonete (garantido pelo modelo e conferido em `cardapio-modelo.spec.ts`).
+    const nomesProdutosUnicos = new Set<string>();
+    for (const categoria of modelo.categorias) {
+      for (const produto of categoria.produtos) {
+        const chave = `${categoria.nome}|${produto.nome}`;
+        if (nomesProdutosUnicos.has(chave)) {
+          throw new Error(
+            `Cardápio modelo inconsistente: produto "${produto.nome}" repetido em "${categoria.nome}".`,
+          );
+        }
+        nomesProdutosUnicos.add(chave);
+      }
+    }
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        // 1) Grupos (1 query) + ids (1 query)
+        await tx.grupoOpcoes.createMany({
+          data: modelo.grupos.map((grupo) => ({
             lanchoneteId: lanchonete.id,
             nome: grupo.nome,
             tipo: grupo.tipo,
             obrigatorio: grupo.obrigatorio,
             minSelecoes: grupo.minSelecoes,
             maxSelecoes: grupo.maxSelecoes,
-          },
-          select: { id: true },
+          })),
         });
-        idGrupos.set(grupo.nome, criado.id);
-        if (grupo.opcoes.length > 0) {
-          await tx.opcao.createMany({
-            data: grupo.opcoes.map((opcao) => ({
-              grupoId: criado.id,
-              nome: opcao.nome,
-              precoAdicional: opcao.precoAdicional,
-              remove: opcao.remove === true,
-            })),
-          });
-          qtdeOpcoes += grupo.opcoes.length;
-        }
-      }
+        const gruposCriados = await tx.grupoOpcoes.findMany({
+          where: { lanchoneteId: lanchonete.id },
+          select: { id: true, nome: true },
+        });
+        const idGrupos = new Map(gruposCriados.map((g) => [g.nome, g.id]));
 
-      let posicao = 0;
-      for (const categoria of modelo.categorias) {
-        const catCriada = await tx.categoria.create({
-          data: {
+        // 2) Todas as opções de todos os grupos em 1 query
+        const opcoes = modelo.grupos.flatMap((grupo) => {
+          const grupoId = idGrupos.get(grupo.nome);
+          if (!grupoId) return [];
+          return grupo.opcoes.map((opcao) => ({
+            grupoId,
+            nome: opcao.nome,
+            precoAdicional: opcao.precoAdicional,
+            remove: opcao.remove === true,
+          }));
+        });
+        if (opcoes.length > 0) await tx.opcao.createMany({ data: opcoes });
+
+        // 3) Categorias (1 query) + ids (1 query)
+        await tx.categoria.createMany({
+          data: modelo.categorias.map((categoria, posicao) => ({
             lanchoneteId: lanchonete.id,
             nome: categoria.nome,
-            posicao: posicao++,
-          },
-          select: { id: true },
+            posicao,
+          })),
         });
-        for (const produto of categoria.produtos) {
-          const prodCriado = await tx.produto.create({
-            data: {
-              categoriaId: catCriada.id,
+        const categoriasCriadas = await tx.categoria.findMany({
+          where: { lanchoneteId: lanchonete.id },
+          select: { id: true, nome: true },
+        });
+        const idCategorias = new Map(
+          categoriasCriadas.map((c) => [c.nome, c.id]),
+        );
+
+        // 4) Todos os produtos em 1 query (imagem da galeria já decidida)
+        const produtos = modelo.categorias.flatMap((categoria) => {
+          const categoriaId = idCategorias.get(categoria.nome);
+          if (!categoriaId) return [];
+          return categoria.produtos.map((produto) => {
+            const imagemUrl = produto.imagem
+              ? proximaImagem(produto.imagem)
+              : undefined;
+            if (imagemUrl) produtosComImagem += 1;
+            return {
+              categoriaId,
               nome: produto.nome,
               preco: produto.preco,
               descricao: produto.descricao ?? null,
               destaque: produto.destaque === true,
-            },
-            select: { id: true },
+              imagemUrl: imagemUrl ?? null,
+            };
           });
-          (produto.grupos ?? []).forEach((nomeGrupo, ordem) => {
-            const grupoId = idGrupos.get(nomeGrupo);
-            if (grupoId) {
-              vinculos.push({ produtoId: prodCriado.id, grupoId, ordem });
-            }
-          });
-        }
-      }
+        });
+        if (produtos.length > 0)
+          await tx.produto.createMany({ data: produtos });
 
-      if (vinculos.length > 0) {
-        await tx.produtoGrupo.createMany({ data: vinculos });
-      }
-    });
+        // 5) Vínculos produto ↔ grupo (1 query)
+        const produtosCriados = await tx.produto.findMany({
+          where: { categoriaId: { in: categoriasCriadas.map((c) => c.id) } },
+          select: { id: true, categoriaId: true, nome: true },
+        });
+        const idProdutos = new Map(
+          produtosCriados.map((p) => [`${p.categoriaId}|${p.nome}`, p.id]),
+        );
+        const vinculosProduto = modelo.categorias.flatMap((categoria) => {
+          const categoriaId = idCategorias.get(categoria.nome);
+          return categoria.produtos.flatMap((produto) => {
+            const produtoId = idProdutos.get(`${categoriaId}|${produto.nome}`);
+            if (!produtoId) return [];
+            // `ordem` = posição do grupo na lista do produto (o painel usa para
+            // ordenar os grupos na tela do cardápio).
+            return (produto.grupos ?? []).flatMap((nomeGrupo, ordem) => {
+              const grupoId = idGrupos.get(nomeGrupo);
+              return grupoId ? [{ produtoId, grupoId, ordem }] : [];
+            });
+          });
+        });
+        if (vinculosProduto.length > 0) {
+          await tx.produtoGrupo.createMany({ data: vinculosProduto });
+        }
+        vinculos = vinculosProduto.length;
+      },
+      // Margem folgada: o lote acima faz ~10 queries, então qualquer rede
+      // decente fica muito abaixo disso. Sem o timeout explícito valeria o
+      // padrão de 5s, que é o que quebrava em produção.
+      { maxWait: 20000, timeout: 120000 },
+    );
 
     return {
       ok: true,
       tipo,
       rotulo: modelo.rotulo,
       ...resumoDoModelo(modelo),
-      vinculos: vinculos.length,
+      imagens: produtosComImagem,
+      vinculos,
+    };
+  }
+
+  /**
+   * Monta o "sorteador" de imagens da galeria: uma foto por palavra-chave e,
+   * dentro da mesma chave, as fotos vão se alternando (dois X-Salada não saem
+   * com a mesma foto enquanto houver outras na galeria).
+   */
+  private async imagensDaGaleria(
+    modelo: CardapioModelo,
+  ): Promise<(chave: string) => string | undefined> {
+    const chaves = chavesDeImagem(modelo);
+    if (chaves.length === 0) return () => undefined;
+
+    const imagens = await this.prisma.galeriaImagem.findMany({
+      where: { keywords: { hasSome: chaves } },
+      select: { url: true, keywords: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const porChave = new Map<string, string[]>();
+    for (const chave of chaves) porChave.set(chave, []);
+    for (const imagem of imagens) {
+      for (const chave of chaves) {
+        if (imagem.keywords.includes(chave))
+          porChave.get(chave)!.push(imagem.url);
+      }
+    }
+
+    const posicao = new Map<string, number>();
+    return (chave: string) => {
+      const urls = porChave.get(chave);
+      if (!urls || urls.length === 0) return undefined;
+      const atual = posicao.get(chave) ?? 0;
+      posicao.set(chave, atual + 1);
+      return urls[atual % urls.length];
     };
   }
 
@@ -508,9 +614,10 @@ export class AdminService {
     if ('precoPromo' in body || 'preco' in body) {
       // A promoção é validada contra o preço resultante: se o dono baixar o
       // preço base e esquecer de ajustar a promoção, ela deixa de valer.
-      const precoBase = 'preco' in body
-        ? this.requiredDecimal(body.preco, 'preco')
-        : Number(produto.preco);
+      const precoBase =
+        'preco' in body
+          ? this.requiredDecimal(body.preco, 'preco')
+          : Number(produto.preco);
       const bruto = 'precoPromo' in body ? body.precoPromo : produto.precoPromo;
       data.precoPromo = this.optionalPrecoPromo(bruto, precoBase);
     }
@@ -1108,7 +1215,9 @@ export class AdminService {
     }
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0) {
-      throw new BadRequestException('precoPromo deve ser um número maior ou igual a zero');
+      throw new BadRequestException(
+        'precoPromo deve ser um número maior ou igual a zero',
+      );
     }
     const promo = Math.round(number * 100) / 100;
     if (promo >= precoBase) {
@@ -1277,10 +1386,9 @@ export class AdminService {
       ativa: lanchonete.situacao === 'ativa',
       plano: lanchonete.plano,
       planoExpira: lanchonete.planoExpira,
+      // Venceu = tem data e a data já passou (vale para trial e pago).
       planoExpirado:
-        lanchonete.plano === 'trial' &&
-        lanchonete.planoExpira !== null &&
-        lanchonete.planoExpira < new Date(),
+        lanchonete.planoExpira !== null && lanchonete.planoExpira < new Date(),
     };
   }
 

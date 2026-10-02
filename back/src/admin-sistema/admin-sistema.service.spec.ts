@@ -118,8 +118,11 @@ describe('AdminSistemaService', () => {
   });
 
   describe('alterarPlano', () => {
-    it('troca trial → pago (planoExpira null) e registra log', async () => {
+    it('troca trial → pago com 30 dias de validade e registra log', async () => {
       const logCriado: unknown[] = [];
+      const agora = Date.now();
+      vi.useFakeTimers();
+      vi.setSystemTime(agora);
       const prisma = {
         lanchonete: {
           findUnique: vi.fn().mockResolvedValue({
@@ -127,13 +130,59 @@ describe('AdminSistemaService', () => {
             nome: 'Loja',
             plano: 'trial',
           }),
-          update: vi.fn().mockResolvedValue({
+          update: vi.fn().mockImplementation(({ data }) =>
+            Promise.resolve({ id: 'l1', nome: 'Loja', slug: 'loja', ...data }),
+          ),
+        },
+        logSistema: {
+          create: vi.fn().mockImplementation((d) => {
+            logCriado.push(d.data);
+            return d.data;
+          }),
+        },
+      };
+      const servico = criarServico(prisma);
+
+      const resultado = await servico.alterarPlano(
+        'l1',
+        { plano: 'pago' },
+        USER_ADMIN,
+      );
+
+      const em30Dias = agora + 30 * 24 * 60 * 60 * 1000;
+      expect(resultado.plano).toBe('pago');
+      expect(resultado.planoExpira).toBeInstanceOf(Date);
+      expect(resultado.planoExpira!.getTime()).toBe(em30Dias);
+      expect(prisma.lanchonete.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { plano: 'pago', planoExpira: new Date(em30Dias) },
+        }),
+      );
+      expect(logCriado).toHaveLength(1);
+      expect(logCriado[0]).toMatchObject({ mensagem: 'Plano de assinatura alterado' });
+      expect((logCriado[0] as { detalhes: unknown }).detalhes).toMatchObject({
+        planoAnterior: 'trial',
+        planoNovo: 'pago',
+        renovando: false,
+      });
+      vi.useRealTimers();
+    });
+
+    it('pago → pago renova mais 30 dias e loga como renovação', async () => {
+      const logCriado: unknown[] = [];
+      const agora = Date.now();
+      vi.useFakeTimers();
+      vi.setSystemTime(agora);
+      const prisma = {
+        lanchonete: {
+          findUnique: vi.fn().mockResolvedValue({
             id: 'l1',
             nome: 'Loja',
-            slug: 'loja',
             plano: 'pago',
-            planoExpira: null,
           }),
+          update: vi.fn().mockImplementation(({ data }) =>
+            Promise.resolve({ id: 'l1', nome: 'Loja', slug: 'loja', ...data }),
+          ),
         },
         logSistema: {
           create: vi.fn().mockImplementation((d) => {
@@ -151,17 +200,14 @@ describe('AdminSistemaService', () => {
       );
 
       expect(resultado.plano).toBe('pago');
-      expect(resultado.planoExpira).toBeNull();
-      expect(prisma.lanchonete.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: { plano: 'pago', planoExpira: null },
-        }),
+      expect(resultado.planoExpira!.getTime()).toBe(
+        agora + 30 * 24 * 60 * 60 * 1000,
       );
-      expect(logCriado).toHaveLength(1);
+      expect(logCriado[0]).toMatchObject({ mensagem: 'Plano de assinatura renovado' });
       expect((logCriado[0] as { detalhes: unknown }).detalhes).toMatchObject({
-        planoAnterior: 'trial',
-        planoNovo: 'pago',
+        renovando: true,
       });
+      vi.useRealTimers();
     });
 
     it('troca pago → trial e reinicia planoExpira com +30 dias', async () => {
@@ -221,13 +267,13 @@ describe('AdminSistemaService', () => {
     it('rejeita plano igual ao atual', async () => {
       const prisma = {
         lanchonete: {
-          findUnique: vi.fn().mockResolvedValue({ id: 'l1', plano: 'pago' }),
+          findUnique: vi.fn().mockResolvedValue({ id: 'l1', plano: 'trial' }),
         },
       };
       const servico = criarServico(prisma);
       await expect(
-        servico.alterarPlano('l1', { plano: 'pago' }, USER_ADMIN),
-      ).rejects.toThrow(/já está no plano pago/);
+        servico.alterarPlano('l1', { plano: 'trial' }, USER_ADMIN),
+      ).rejects.toThrow(/já está no plano de teste/);
     });
 
     it('404 quando a lanchonete não existe', async () => {
@@ -675,6 +721,28 @@ describe('AdminSistemaService', () => {
       const servico = criarServico(prismaCom('admin'));
       const dados = await servico.consultarLanchonete('l1', USER_ADMIN);
       expect(dados.chavePix).toBeNull();
+    });
+
+    it('plano pago com data vencida também entra como expirado', async () => {
+      const prisma = prismaCom('super');
+      prisma.lanchonete.findUnique.mockResolvedValue({
+        ...lanchoneteBase,
+        plano: 'pago',
+        planoExpira: new Date(Date.now() - 86_400_000),
+      });
+      const dados = await criarServico(prisma).consultarLanchonete('l1', USER_SUPER);
+      expect(dados.planoExpirado).toBe(true);
+    });
+
+    it('plano pago sem data de vencimento não entra como expirado', async () => {
+      const prisma = prismaCom('super');
+      prisma.lanchonete.findUnique.mockResolvedValue({
+        ...lanchoneteBase,
+        plano: 'pago',
+        planoExpira: null,
+      });
+      const dados = await criarServico(prisma).consultarLanchonete('l1', USER_SUPER);
+      expect(dados.planoExpirado).toBe(false);
     });
   });
 

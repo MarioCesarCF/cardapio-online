@@ -5,12 +5,16 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export const GALERIA_CATEGORIAS = [
   { slug: 'hamburguer', label: 'Hambúrgueres' },
   { slug: 'batata', label: 'Porções / batata frita' },
+  { slug: 'pizza', label: 'Pizzas' },
+  { slug: 'hot-dog', label: 'Hot dogs' },
+  { slug: 'calabresa', label: 'Calabresa e embutidos' },
+  { slug: 'acai', label: 'Açaí' },
   { slug: 'sucos', label: 'Sucos' },
   { slug: 'sorvetes', label: 'Sorvetes e sobremesas' },
-  { slug: 'acai', label: 'Açaí' },
-  { slug: 'pizza', label: 'Pizzas' },
-  { slug: 'refrigerantes', label: 'Refrigerantes' },
+  { slug: 'frutas', label: 'Frutas' },
+  { slug: 'refrigerantes', label: 'Refrigerantes e bebidas' },
   { slug: 'cerveja', label: 'Cervejas' },
+  { slug: 'combo', label: 'Combos' },
 ] as const;
 
 const CATEGORIA_SLUGS = GALERIA_CATEGORIAS.map((c) => c.slug);
@@ -40,7 +44,7 @@ export class GaleriaService {
     return this.prisma.galeriaImagem.findMany({
       where,
       orderBy: [{ categoria: 'asc' }, { createdAt: 'desc' }],
-      take: 60,
+      take: 120,
     });
   }
 }

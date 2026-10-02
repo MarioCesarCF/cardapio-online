@@ -440,8 +440,8 @@ interface ModalOpcao {
             {{ prodErros['precoPromo'] }}
           </small>
           <small class="dica" *ngIf="!prodErros['precoPromo']">
-            Menor que o preço normal. Em promoção o produto aparece no topo da
-            categoria, marcado com estrela.
+            Menor que o preço normal. Em promoção o produto aparece no topo da categoria, marcado
+            com estrela.
           </small>
         </label>
 
@@ -627,7 +627,8 @@ interface ModalOpcao {
       <div class="modal-form">
         <p class="dica">
           Escolha o tipo da sua lanchonete. Vamos criar categorias, produtos e grupos de adicionais
-          e removíveis para você editar em seguida.
+          e removíveis para você editar em seguida — os produtos que têm foto na galeria já saem com
+          imagem.
         </p>
 
         <div class="modelo-opcoes">
@@ -1359,10 +1360,11 @@ export class AdminCardapioComponent {
     try {
       const r = await this.admin.criarCardapioModelo(this.slug(), this.modeloModal.tipo);
       this.modeloModal.aberto = false;
+      const fotos = r.imagens > 0 ? `, ${r.imagens} já com imagem` : '';
       this.msg.add({
         severity: 'success',
         summary: `Cardápio de ${r.rotulo} criado`,
-        detail: `${r.categorias} categorias, ${r.produtos} produtos, ${r.grupos} grupos e ${r.opcoes} opções. Ajuste os preços e as imagens.`,
+        detail: `${r.categorias} categorias, ${r.produtos} produtos, ${r.grupos} grupos e ${r.opcoes} opções${fotos}. Ajuste os preços e as imagens.`,
         life: 6000,
       });
       await this.carregar(this.slug());

@@ -83,8 +83,6 @@ export class MenuNavComponent {
       }
     }
 
-    add('Termos de Uso', 'pi pi-file', '/termos');
-    add('Política de Privacidade', 'pi pi-lock', '/privacidade');
     if (!logado) {
       add('Voltar para o login', 'pi pi-sign-in', '/auth');
     }

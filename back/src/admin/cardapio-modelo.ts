@@ -10,6 +10,11 @@
 //   "unica" com maxSelecoes 1; onde pode escolher vários, "multipla".
 // - "Remover" nunca divide grupo com acréscimo: as regras do back rejeitam
 //   "remover" combinado com adições no mesmo grupo.
+// - `imagem` do produto é a **palavra-chave** da galeria de imagens (coluna
+//   `keywords` de `galeria_imagens`) — o `gerarCardapioModelo` troca pela URL
+//   de uma foto da galeria. Produto sem `imagem` fica sem foto (o lojista
+//   escolhe na galeria depois). As chaves aceitas estão em
+//   `CHAVES_IMAGEM_GALERIA` e são garantidas pelo `npm run seed:galeria`.
 export const TIPOS_MODELO = ['lanches', 'pizzaria', 'acai'] as const;
 export type TipoModelo = (typeof TIPOS_MODELO)[number];
 
@@ -34,7 +39,46 @@ export interface ProdutoModelo {
   descricao?: string;
   destaque?: boolean;
   grupos?: string[];
+  /** Palavra-chave da galeria (ver `CHAVES_IMAGEM_GALERIA`). */
+  imagem?: string;
 }
+
+/**
+ * Palavras-chave que o `seed:galeria` garante ter. Os itens mais específicos
+ * (`lata-refrigerante`, `garrafa-cerveja`, …) existem para separar o que é
+ * latinha de refrigerante e long neck de cerveja; os genéricos (`lata`,
+ * `garrafa`, `agua`, …) servem à busca do painel do lojista.
+ */
+export const CHAVES_IMAGEM_GALERIA = [
+  'hamburguer',
+  'batata',
+  'batata-doce',
+  'hot dog',
+  'calabresa',
+  'pizza',
+  'pizza-doce',
+  'suco',
+  'laranja',
+  'maracuja',
+  'sorvete',
+  'pudim',
+  'mousse',
+  'acai',
+  'creme',
+  'banana',
+  'morango',
+  'manga',
+  'kiwi',
+  'uva',
+  'lata',
+  'lata-refrigerante',
+  'garrafa',
+  'garrafa-refrigerante',
+  'agua',
+  'lata-cerveja',
+  'garrafa-cerveja',
+  'combo',
+] as const;
 
 export interface CategoriaModelo {
   nome: string;
@@ -118,6 +162,7 @@ const MODELO_LANCHES: CardapioModelo = {
           preco: 32.9,
           descricao: 'Pão brioche, carne 180g, queijo e cebola caramelizada.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hamburguer',
         },
       ],
     },
@@ -129,12 +174,14 @@ const MODELO_LANCHES: CardapioModelo = {
           preco: 22.9,
           descricao: 'Hambúrguer, queijo, presunto e salada.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hamburguer',
         },
         {
           nome: 'X-Bacon',
           preco: 25.9,
           descricao: 'Hambúrguer, queijo e bacon.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hamburguer',
         },
         {
           nome: 'X-Tudo',
@@ -142,12 +189,14 @@ const MODELO_LANCHES: CardapioModelo = {
           descricao: 'Hambúrguer com queijo, presunto, bacon e salada.',
           destaque: true,
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hamburguer',
         },
         {
           nome: 'X-Frango',
           preco: 26.9,
           descricao: 'Hambúrguer, queijo e frango grelhado.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hamburguer',
         },
       ],
     },
@@ -159,12 +208,14 @@ const MODELO_LANCHES: CardapioModelo = {
           preco: 15.9,
           descricao: 'Salsicha, molho, milho, ervilha e batata palha.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hot dog',
         },
         {
           nome: 'Cachorro-Quente Especial',
           preco: 19.9,
           descricao: 'Duas salsichas, queijo, calabresa e batata palha.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'hot dog',
         },
       ],
     },
@@ -176,18 +227,21 @@ const MODELO_LANCHES: CardapioModelo = {
           preco: 12,
           descricao: 'Porção pequena de batata frita crocante.',
           grupos: ['Adicionais', 'Removíveis'],
+          imagem: 'batata',
         },
         {
           nome: 'Batata Frita G',
           preco: 18,
           descricao: 'Porção grande de batata frita crocante.',
           grupos: ['Adicionais', 'Removíveis'],
+          imagem: 'batata',
         },
         {
           nome: 'Calabresa Acebolada',
           preco: 26,
           descricao: 'Calabresa fatiada na chapa com cebola.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'calabresa',
         },
       ],
     },
@@ -199,33 +253,35 @@ const MODELO_LANCHES: CardapioModelo = {
           preco: 34.9,
           descricao: 'X-Salada, batata frita pequena e refrigerante lata.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'combo',
         },
         {
           nome: 'Combo X-Bacon',
           preco: 37.9,
           descricao: 'X-Bacon, batata frita pequena e refrigerante lata.',
           grupos: ['Adicionais', 'Molhos', 'Removíveis'],
+          imagem: 'combo',
         },
       ],
     },
     {
       nome: 'Bebidas',
       produtos: [
-        { nome: 'Coca-Cola lata', preco: 6.5 },
-        { nome: 'Guaraná lata', preco: 5.5 },
-        { nome: 'Coca-Cola 600 ml', preco: 8 },
-        { nome: 'Guaraná 1,5 L', preco: 10 },
-        { nome: 'Água mineral', preco: 3 },
-        { nome: 'Suco de laranja', preco: 9 },
-        { nome: 'Suco de maracujá', preco: 9 },
+        { nome: 'Coca-Cola lata', preco: 6.5, imagem: 'lata-refrigerante' },
+        { nome: 'Guaraná lata', preco: 5.5, imagem: 'lata-refrigerante' },
+        { nome: 'Coca-Cola 600 ml', preco: 8, imagem: 'garrafa-refrigerante' },
+        { nome: 'Guaraná 1,5 L', preco: 10, imagem: 'garrafa-refrigerante' },
+        { nome: 'Água mineral', preco: 3, imagem: 'agua' },
+        { nome: 'Suco de laranja', preco: 9, imagem: 'laranja' },
+        { nome: 'Suco de maracujá', preco: 9, imagem: 'maracuja' },
       ],
     },
     {
       nome: 'Sobremesas',
       produtos: [
-        { nome: 'Pudim', preco: 9 },
-        { nome: 'Mousse de maracujá', preco: 9.5 },
-        { nome: 'Sorvete (2 bolas)', preco: 8 },
+        { nome: 'Pudim', preco: 9, imagem: 'pudim' },
+        { nome: 'Mousse de maracujá', preco: 9.5, imagem: 'mousse' },
+        { nome: 'Sorvete (2 bolas)', preco: 8, imagem: 'sorvete' },
       ],
     },
   ],
@@ -302,48 +358,56 @@ const MODELO_PIZZARIA: CardapioModelo = {
           preco: 45,
           descricao: 'Molho, mussarela e orégano.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Calabresa',
           preco: 48,
           descricao: 'Molho, calabresa e cebola.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Presunto e Queijo',
           preco: 50,
           descricao: 'Molho, presunto e mussarela.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Frango com Catupiry',
           preco: 52,
           descricao: 'Frango desfiado, catupiry e milho.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Portuguesa',
           preco: 55,
           descricao: 'Presunto, ovo, cebola, pimentão e ervilha.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Bacon',
           preco: 54,
           descricao: 'Mussarela, bacon e cebola.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Frango com Milho',
           preco: 53,
           descricao: 'Frango desfiado, milho e catupiry.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Quatro Queijos',
           preco: 56,
           descricao: 'Mussarela, catupiry, gorgonzola e parmesão.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Moda da Casa',
@@ -351,12 +415,14 @@ const MODELO_PIZZARIA: CardapioModelo = {
           descricao: 'Presunto, frango, calabresa, bacon e catupiry.',
           destaque: true,
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
         {
           nome: 'Carne Seca com Catupiry',
           preco: 62,
           descricao: 'Carne seca desfiada, catupiry e cebola.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas', 'Removíveis'],
+          imagem: 'pizza',
         },
       ],
     },
@@ -368,42 +434,47 @@ const MODELO_PIZZARIA: CardapioModelo = {
           preco: 46,
           descricao: 'Chocolate meio amargo e chocolate branco.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'pizza-doce',
         },
         {
           nome: 'Chocolate com Morango',
           preco: 50,
           descricao: 'Chocolate, morango e leite condensado.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'pizza-doce',
         },
         {
           nome: 'Banana com Canela',
           preco: 45,
           descricao: 'Banana, açúcar e canela.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'pizza-doce',
         },
         {
           nome: 'Prestígio',
           preco: 50,
           descricao: 'Chocolate, coco ralado e prestígio.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'pizza-doce',
         },
         {
           nome: 'Romeu e Julieta',
           preco: 52,
           descricao: 'Mussarela, goiabada e doce de leite.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'pizza-doce',
         },
       ],
     },
     {
       nome: 'Bebidas',
       produtos: [
-        { nome: 'Coca-Cola 1,5 L', preco: 10 },
-        { nome: 'Guaraná 1,5 L', preco: 9 },
-        { nome: 'Coca-Cola 2 L', preco: 13 },
-        { nome: 'Guaraná 2 L', preco: 12 },
-        { nome: 'Água', preco: 3 },
-        { nome: 'Suco', preco: 9 },
+        { nome: 'Coca-Cola 1,5 L', preco: 10, imagem: 'garrafa-refrigerante' },
+        { nome: 'Guaraná 1,5 L', preco: 9, imagem: 'garrafa-refrigerante' },
+        { nome: 'Coca-Cola 2 L', preco: 13, imagem: 'garrafa-refrigerante' },
+        { nome: 'Guaraná 2 L', preco: 12, imagem: 'garrafa-refrigerante' },
+        { nome: 'Água', preco: 3, imagem: 'agua' },
+        { nome: 'Suco', preco: 9, imagem: 'suco' },
       ],
     },
     {
@@ -414,12 +485,14 @@ const MODELO_PIZZARIA: CardapioModelo = {
           preco: 54.9,
           descricao: 'Uma pizza sabor do dia com refrigerante de 1,5 L.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'combo',
         },
         {
           nome: 'Combo Pizza + Refrigerante 2 L',
           preco: 57.9,
           descricao: 'Uma pizza sabor do dia com refrigerante de 2 L.',
           grupos: ['Tamanho', 'Adicionais', 'Bordas'],
+          imagem: 'combo',
         },
       ],
     },
@@ -531,51 +604,108 @@ const MODELO_ACAI: CardapioModelo = {
           preco: 16,
           descricao: 'Açaí puro, servido com banana.',
           grupos: ['Tamanho', 'Complementos', 'Frutas', 'Cremes', 'Removíveis'],
+          imagem: 'acai',
         },
         {
           nome: 'Açaí com Leite Ninho',
           preco: 19,
           descricao: 'Açaí com leite ninho.',
           grupos: ['Tamanho', 'Complementos', 'Frutas', 'Cremes', 'Removíveis'],
+          imagem: 'acai',
         },
         {
           nome: 'Açaí com Morango',
           preco: 18,
           descricao: 'Açaí com morango e leite condensado.',
           grupos: ['Tamanho', 'Complementos', 'Frutas', 'Cremes', 'Removíveis'],
+          imagem: 'acai',
         },
         {
           nome: 'Açaí com Banana',
           preco: 17,
           descricao: 'Açaí com banana e granola.',
           grupos: ['Tamanho', 'Complementos', 'Frutas', 'Cremes', 'Removíveis'],
+          imagem: 'acai',
         },
         {
           nome: 'Açaí Especial',
           preco: 29,
-          descricao: 'Açaí com frutas, dois complementos e calda (a partir de 500 ml).',
+          descricao:
+            'Açaí com frutas, dois complementos e calda (a partir de 500 ml).',
           destaque: true,
-          grupos: ['Tamanho Especial', 'Complementos', 'Frutas', 'Cremes', 'Removíveis'],
+          grupos: [
+            'Tamanho Especial',
+            'Complementos',
+            'Frutas',
+            'Cremes',
+            'Removíveis',
+          ],
+          imagem: 'acai',
         },
       ],
     },
     {
       nome: 'Cremes',
       produtos: [
-        { nome: 'Creme de Ninho', preco: 12, descricao: 'Potinho de creme de ninho (300 ml).' },
-        { nome: 'Creme de Morango', preco: 12, descricao: 'Potinho de creme de morango (300 ml).' },
-        { nome: 'Creme de Cupuaçu', preco: 12, descricao: 'Potinho de creme de cupuaçu (300 ml).' },
-        { nome: 'Creme de Chocolate', preco: 12, descricao: 'Potinho de creme de chocolate (300 ml).' },
+        {
+          nome: 'Creme de Ninho',
+          preco: 12,
+          descricao: 'Potinho de creme de ninho (300 ml).',
+          imagem: 'creme',
+        },
+        {
+          nome: 'Creme de Morango',
+          preco: 12,
+          descricao: 'Potinho de creme de morango (300 ml).',
+          imagem: 'creme',
+        },
+        {
+          nome: 'Creme de Cupuaçu',
+          preco: 12,
+          descricao: 'Potinho de creme de cupuaçu (300 ml).',
+          imagem: 'creme',
+        },
+        {
+          nome: 'Creme de Chocolate',
+          preco: 12,
+          descricao: 'Potinho de creme de chocolate (300 ml).',
+          imagem: 'creme',
+        },
       ],
     },
     {
       nome: 'Frutas',
       produtos: [
-        { nome: 'Banana', preco: 6, descricao: 'Porção extra de banana.' },
-        { nome: 'Morango', preco: 8, descricao: 'Porção extra de morango.' },
-        { nome: 'Manga', preco: 8, descricao: 'Porção extra de manga.' },
-        { nome: 'Kiwi', preco: 8, descricao: 'Porção extra de kiwi.' },
-        { nome: 'Uva', preco: 6, descricao: 'Porção extra de uva.' },
+        {
+          nome: 'Banana',
+          preco: 6,
+          descricao: 'Porção extra de banana.',
+          imagem: 'banana',
+        },
+        {
+          nome: 'Morango',
+          preco: 8,
+          descricao: 'Porção extra de morango.',
+          imagem: 'morango',
+        },
+        {
+          nome: 'Manga',
+          preco: 8,
+          descricao: 'Porção extra de manga.',
+          imagem: 'manga',
+        },
+        {
+          nome: 'Kiwi',
+          preco: 8,
+          descricao: 'Porção extra de kiwi.',
+          imagem: 'kiwi',
+        },
+        {
+          nome: 'Uva',
+          preco: 6,
+          descricao: 'Porção extra de uva.',
+          imagem: 'uva',
+        },
       ],
     },
     {
@@ -600,10 +730,10 @@ const MODELO_ACAI: CardapioModelo = {
     {
       nome: 'Bebidas',
       produtos: [
-        { nome: 'Coca-Cola lata', preco: 6.5 },
-        { nome: 'Guaraná lata', preco: 5.5 },
-        { nome: 'Água mineral', preco: 3 },
-        { nome: 'Suco de laranja', preco: 9 },
+        { nome: 'Coca-Cola lata', preco: 6.5, imagem: 'lata-refrigerante' },
+        { nome: 'Guaraná lata', preco: 5.5, imagem: 'lata-refrigerante' },
+        { nome: 'Água mineral', preco: 3, imagem: 'agua' },
+        { nome: 'Suco de laranja', preco: 9, imagem: 'laranja' },
       ],
     },
   ],
@@ -621,7 +751,8 @@ export const ROTULOS_MODELO: { tipo: TipoModelo; rotulo: string }[] =
 
 export function ehTipoModelo(valor: unknown): valor is TipoModelo {
   return (
-    typeof valor === 'string' && (TIPOS_MODELO as readonly string[]).includes(valor)
+    typeof valor === 'string' &&
+    (TIPOS_MODELO as readonly string[]).includes(valor)
   );
 }
 
@@ -633,8 +764,14 @@ export function modeloDoTipo(tipo: TipoModelo): CardapioModelo {
  * Tipo da lanchonete → modelo sugerido. `sorvetes` cai no de açaíteria (mesma
  * estrutura de base + complementos) e loja sem tipo cai no de lanchonete.
  */
-export function modeloSugerido(tipoDaLoja: string | null | undefined): TipoModelo {
-  if (tipoDaLoja === 'pizzaria' || tipoDaLoja === 'acai' || tipoDaLoja === 'sorvetes') {
+export function modeloSugerido(
+  tipoDaLoja: string | null | undefined,
+): TipoModelo {
+  if (
+    tipoDaLoja === 'pizzaria' ||
+    tipoDaLoja === 'acai' ||
+    tipoDaLoja === 'sorvetes'
+  ) {
     return tipoDaLoja === 'pizzaria' ? 'pizzaria' : 'acai';
   }
   return 'lanches';
@@ -647,5 +784,21 @@ export function resumoDoModelo(modelo: CardapioModelo) {
     produtos: modelo.categorias.reduce((acc, c) => acc + c.produtos.length, 0),
     grupos: modelo.grupos.length,
     opcoes: modelo.grupos.reduce((acc, g) => acc + g.opcoes.length, 0),
+    /** Produtos que pedem imagem (o front avisa quando a galeria está vazia). */
+    comImagem: modelo.categorias.reduce(
+      (acc, c) => acc + c.produtos.filter((p) => Boolean(p.imagem)).length,
+      0,
+    ),
   };
+}
+
+/** Palavras-chave de imagem usadas por um modelo (sem repetir). */
+export function chavesDeImagem(modelo: CardapioModelo): string[] {
+  const chaves = new Set<string>();
+  for (const categoria of modelo.categorias) {
+    for (const produto of categoria.produtos) {
+      if (produto.imagem) chaves.add(produto.imagem);
+    }
+  }
+  return [...chaves];
 }

@@ -159,6 +159,14 @@ const PERIODOS_ENCERRAMENTO = [
                 }
                 @if (l.plano === 'pago') {
                   <p-button
+                    label="Renovar +30 dias"
+                    icon="pi pi-calendar-plus"
+                    size="small"
+                    severity="success"
+                    [outlined]="true"
+                    (onClick)="trocarPlanoParaPago(l)"
+                  />
+                  <p-button
                     label="Marcar como teste"
                     icon="pi pi-refresh"
                     size="small"
@@ -1643,7 +1651,10 @@ export class PainelAdminComponent {
     planoExpira: string | null;
     planoExpirado: boolean;
   }): string {
-    if (l.plano === 'pago') return 'Pago';
+    if (l.plano === 'pago') {
+      if (l.planoExpirado) return 'Pago · vencido';
+      return l.planoExpira ? `Pago · até ${this.dataDe(l.planoExpira)}` : 'Pago';
+    }
     if (l.plano === 'trial') {
       if (l.planoExpirado) return 'Trial expirado';
       return l.planoExpira ? `Trial · até ${this.dataDe(l.planoExpira)}` : 'Trial';
@@ -1655,7 +1666,7 @@ export class PainelAdminComponent {
     plano: string | null;
     planoExpirado: boolean;
   }): 'success' | 'info' | 'danger' | 'secondary' {
-    if (l.plano === 'pago') return 'success';
+    if (l.plano === 'pago') return l.planoExpirado ? 'danger' : 'success';
     if (l.planoExpirado) return 'danger';
     if (l.plano === 'trial') return 'info';
     return 'secondary';
@@ -1736,17 +1747,21 @@ export class PainelAdminComponent {
     try {
       const atualizado = await this.painel.alterarPlano(l.id, plano);
       await this.carregarLanchonetes();
+      const planoNovo = {
+        plano: atualizado.plano,
+        planoExpira: atualizado.planoExpira,
+        planoExpirado:
+          atualizado.planoExpira !== null && new Date(atualizado.planoExpira) < new Date(),
+      };
       const consultando = this.consultando();
       if (consultando && consultando.id === l.id) {
-        this.consultando.set({
-          ...consultando,
-          plano: atualizado.plano,
-          planoExpira: atualizado.planoExpira,
-          planoExpirado:
-            atualizado.plano === 'trial' &&
-            atualizado.planoExpira !== null &&
-            new Date(atualizado.planoExpira) < new Date(),
-        });
+        this.consultando.set({ ...consultando, ...planoNovo });
+      }
+      // A consulta de dados usa outro sinal: sem isto a linha "Plano:" ficava
+      // mostrando a situação antiga depois de renovar/marcar como teste.
+      const dados = this.consultaDados();
+      if (dados && dados.id === l.id) {
+        this.consultaDados.set({ ...dados, ...planoNovo });
       }
     } catch (error) {
       this.mensagem.set(this.mensagemDe(error));

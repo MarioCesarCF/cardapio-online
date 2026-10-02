@@ -126,10 +126,8 @@ export class AdminSistemaService implements OnModuleInit {
         totalPedidos: l._count.pedidos,
         plano: l.plano,
         planoExpira: l.planoExpira,
-        planoExpirado:
-          l.plano === 'trial' &&
-          l.planoExpira !== null &&
-          l.planoExpira < new Date(),
+        // Venceu = tem data e a data já passou (vale para trial e pago).
+        planoExpirado: l.planoExpira !== null && l.planoExpira < new Date(),
       };
     });
   }
@@ -180,16 +178,24 @@ export class AdminSistemaService implements OnModuleInit {
     if (!atual) throw new NotFoundException('Lanchonete não encontrada.');
 
     const plano = this.planoValido(body.plano);
-    if (plano === atual.plano) {
+
+    // O plano é mensal: as duas opções valem 30 dias a partir de agora. Enviar
+    // "pago" para uma loja que já está "pago" é a **renovação** do mês (o
+    // front só mostra o botão quando o mês venceu ou está perto). Para
+    // "trial" repetir o mesmo plano continua sendo erro — lá a renovação é
+    // automática ao virar "pago".
+    const renovando = plano === 'pago' && atual.plano === 'pago';
+    if (plano === atual.plano && !renovando) {
       throw new BadRequestException(
         `A lanchonete já está no plano ${this.rotuloPlano(plano)}.`,
       );
     }
 
-    // Sem gateway ainda: "pago" não expira (planoExpira = null); voltar a
-    // "trial" reinicia os 30 dias a partir de agora (renovação manual).
-    const planoExpira =
-      plano === 'pago' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Sem gateway de cobrança ainda: quem marca é um admin da plataforma, e
+    // por isso a data vale só como aviso (a loja continua atendendo depois
+    // do vencimento — o bloqueio de pedidos é só do trial, ver
+    // `criaPedido` em `pedidos.service.ts`).
+    const planoExpira = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const atualizada = await this.prisma.lanchonete.update({
       where: { id },
@@ -207,12 +213,16 @@ export class AdminSistemaService implements OnModuleInit {
       user,
       'info',
       'acao',
-      'Plano de assinatura alterado',
+      renovando
+        ? 'Plano de assinatura renovado'
+        : 'Plano de assinatura alterado',
       {
         lanchoneteId: atual.id,
         lanchoneteNome: atual.nome,
         planoAnterior: atual.plano,
         planoNovo: plano,
+        renovando,
+        planoExpira,
       },
     );
 
@@ -281,10 +291,9 @@ export class AdminSistemaService implements OnModuleInit {
       situacao: lanchonete.situacao,
       plano: lanchonete.plano,
       planoExpira: lanchonete.planoExpira,
+      // Venceu = tem data e a data já passou (vale para trial e pago).
       planoExpirado:
-        lanchonete.plano === 'trial' &&
-        lanchonete.planoExpira !== null &&
-        lanchonete.planoExpira < new Date(),
+        lanchonete.planoExpira !== null && lanchonete.planoExpira < new Date(),
       createdAt: lanchonete.createdAt,
       updatedAt: lanchonete.updatedAt,
       donoNome: dono?.nome ?? null,

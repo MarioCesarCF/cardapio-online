@@ -46,7 +46,7 @@ const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
         @if (c.situacao === 'pendente') {
           <div class="banner">
-            <p-tag value="pendente" severity="warn" />
+            <p-tag value="Pendente" severity="warn" />
             <span>
               Sua lanchonete está em análise pela plataforma. Continue editando o que quiser — ela
               só entra no ar depois da aprovação.
@@ -54,26 +54,40 @@ const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
           </div>
         } @else if (c.situacao === 'pausada') {
           <div class="banner">
-            <p-tag value="pausada" severity="danger" />
+            <p-tag value="Pausada" severity="danger" />
             <span>Lanchonete pausada pela plataforma — a página está fora do ar.</span>
           </div>
         }
 
         @if (c.plano === 'pago') {
           <div class="banner">
-            <p-tag value="pago" severity="success" />
-            <span>Plano ativo — sem data de vencimento.</span>
+            @if (c.planoExpirado) {
+              <p-tag value="Vencido" severity="danger" />
+              <span>
+                O pagamento do seu plano venceu em {{ dataPlano(c.planoExpira) }}. Sua lanchonete
+                continua funcionando, mas fale com a plataforma para renovar o mês.
+              </span>
+            } @else if (c.planoExpira) {
+              <p-tag value="Pago" severity="success" />
+              <span>
+                Plano ativo — pago até {{ dataPlano(c.planoExpira) }}. A renovação do mês é feita
+                pela plataforma.
+              </span>
+            } @else {
+              <p-tag value="Pago" severity="success" />
+              <span>Plano ativo — sem data de vencimento.</span>
+            }
           </div>
         } @else {
           <div class="banner">
             @if (c.planoExpirado) {
-              <p-tag value="expirado" severity="danger" />
+              <p-tag value="Expirado" severity="danger" />
               <span>
                 O período de teste da sua lanchonete expirou — você não pode mais receber pedidos.
                 Entre em contato com a plataforma para assinar um plano.
               </span>
             } @else {
-              <p-tag value="trial" severity="warn" />
+              <p-tag value="Trial" severity="warn" />
               <span>
                 Período de teste válido até {{ dataPlano(c.planoExpira) }}. Depois dessa data, para
                 continuar recebendo pedidos será preciso assinar um plano.
