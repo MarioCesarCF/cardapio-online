@@ -19,6 +19,7 @@ import { FavoritasModule } from './favoritas/favoritas.module.js';
 import { PlataformaModule } from './plataforma/plataforma.module.js';
 import { EncerramentoModule } from './encerramento/encerramento.module.js';
 import { AssetsController } from './assets/assets.controller.js';
+import { criarTracker } from './common/limite-taxa.js';
 
 @Module({
   imports: [
@@ -34,6 +35,10 @@ import { AssetsController } from './assets/assets.controller.js';
             skipIf: () => config.get('THROTTLE_DISABLED') === 'true',
           },
         ],
+        // Balde por usuário autenticado, por IP só no público (ver `limite-taxa.ts`
+        // para o caso do CGNAT). Sem isto, um CGNAT de operadora estoura o limite
+        // global e derruba todo mundo junto.
+        getTracker: criarTracker(config.get<string>('APP_JWT_SECRET', '')),
       }),
     }),
     PrismaModule,
