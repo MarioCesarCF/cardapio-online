@@ -601,3 +601,44 @@ Entregue o "cadastro automático do cardápio" (`back/src/admin/cardapio-modelo.
 
 - `cd back && npm test` → 147 testes (o `cardapio-modelo.spec.ts` cobre os 3 modelos).
 - Smoke de ponta a ponta: `C:\Users\Europa\AppData\Local\Temp\opencode\smoke-modelo2.mjs` (lanches + pedido real) e `smoke-modelo3.mjs` (açaí + grupo obrigatório). Ambos usam Prisma, então precisam rodar de dentro de `back/` (`node --env-file=.env`).
+
+## Escala: o que manter no radar quando o pico crescer (medido em 2026-10-03)
+
+Estado atual medido com `back/scripts/carga.mjs`, **na meta real de 4–5 lanchonetes / 80 no pico** (80 conexões, 60 s, `connection_limit=20`):
+
+| Métrica | Valor |
+|---|---|
+| Vazão | 93,9 req/s |
+| p50 / p99 / máx | 727 ms / 1999 ms / 2491 ms |
+| Erros / 429 / 5xx / timeouts | 0 / 0 / 0 / 0 |
+| Pool do Postgres (teto 20) | máx 18 |
+
+Caveat honesto: medido **local**, com servidor e gerador de carga dividindo a mesma CPU. Serve como linha de base comparável, não como número de produção.
+
+**Decisões fechadas com base nessa medição**
+- **Cache do cardápio: não implementado.** Com 80 simultâneos o p99 fica abaixo de 2 s sem nenhum cache. Não vale a complexidade agora (TTL, invalidação, orçamento de memória) nem o risco de servir cardápio velho. Só criar se p99 passar de ~800 ms nas telas de cliente.
+- **Rate limit passou a ser por usuário** (`back/src/common/limite-taxa.ts`), não por IP. Motivo: no Brasil o 4G sai por CGNAT e ~34 pessoas atrás do mesmo IPv4 estouravam o global de 100/min, derrubando **todas** juntas durante o pico. O JWT da aplicação é verificado (HS256, sem consulta ao banco) antes de virar chave de balde, então token forjado cai no balde de IP em vez de abrir um balde novo.
+- **`connection_limit=20`** no `DATABASE_URL` (local já aplicado; **falta aplicar no painel do Render e reiniciar**). Com 13 conexões o pool era o gargalo: 800 conexões simultâneas davam 335 5xx. O limite 20 é folgado para 80 usuários (nunca passou de 18).
+
+**Gatilhos — quando cada item vira trabalho de verdade**
+- **Mais instâncias do Render (cache em memória perde validade entre processos)** — só quando aparecer 429 do próprio Render por CPU. Aí: cache compartilhado (Redis ou o store do throttler).
+- **Redis / store compartilhado do throttler** — junto com o item anterior. Hoje o balde do rate limit vive na memória do processo; com 2+ réplicas o limite efetivo dobra.
+- **CDN (Cloudflare)** — travado por falta de domínio. Ganho real é estático (o front na Vercel já é CDN); o que falta é borda mais próxima do Brasil para a API no Render (hoje USA).
+- **VPS / OCI** — quando o custo do Render pagar a máquina dedicada, não antes.
+- **Plano pago do Neon** — o free tier do Neon dá folga para 4–5 lojas; o gatilho é `connection_limit` atingindo o teto ou latência de query piorando. Em 3–4 cidades o custo do banco deixa de ser item de segunda ordem.
+## Bundle inicial do front 83 kB acima do budget de aviso (medido em 2026-10-03)
+
+`npm run verificar` no `front/` acusou: `Budget 1.60 MB was not met by 83.08 kB with a
+total of 1.68 MB`. **Ja estava assim antes** desta medicao — nao foi nenhuma mudanca
+desta sessao.
+
+- `angular.json` -> `budgets`: `initial` = **maximumWarning 1.6MB / maximumError 2.4MB**.
+  Ou seja, hoje e **aviso**, o build passa. O `maximumError` de 2.4 MB e o que vai
+  derrubar o build.
+- Como o aviso e cumulativo, ele sobe a cada lib/dependencia nova. Faltam **~720 kB**
+  para o build quebrar de verdade.
+- `anyComponentStyle` (warn 12 kB / error 10 kB) esta folgado hoje.
+- A reducao de bundle inicial e trabalho de conteudo (lazy loading de rota, troca de
+  lib pesada), nao de config. Nao mexer nisso por conta propria.
+- Enquanto for so aviso, `npm run verificar` do front **nao falha** (o script distingue
+  WARNING de ERROR, igual o Angular).

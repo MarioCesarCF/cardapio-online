@@ -3,8 +3,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { gerarBrCode } from './pix.js';
 import { montaPrecoUnit } from './preco.js';
@@ -42,7 +43,44 @@ interface EnderecoInput {
   apelido?: string;
 }
 
-export interface CriaPedidoInput {
+// A corrida do número do pedido: `MAX(numero)+1` é lido FORA da transação, então
+// dois checkouts no mesmo instante na mesma loja podem calcular o mesmo número —
+// o `@@unique([lanchoneteId, numero])` recusa o segundo (P2002). Em vez de deixar
+// virar 500, tenta de novo com o número recalculado. Espera um número aleatório
+// curto entre as tentativas para as duas requisições não ficarem em lockstep.
+const TENTATIVAS_NUMERO = 5;
+const ESPERA_BASE_MS = 20;
+
+interface ItemMontado {
+  produtoId: string;
+  nome: string;
+  qtd: number;
+  precoUnit: number;
+  opcoes: {
+    opcaoId: string;
+    nome: string;
+    precoAdicional: number;
+    remove: boolean;
+  }[];
+}
+
+interface DadosNovoPedido {
+  lanchoneteId: string;
+  clienteId: string;
+  tipoEntrega: 'entrega' | 'retirar' | 'consumir';
+  subtotal: number;
+  taxaEntrega: number;
+  total: number;
+  formaPagamento: 'pix' | 'cartao' | 'dinheiro';
+  brCodePix: string | null;
+  clienteTelefone: string | null;
+  enderecoEntrega: unknown;
+  observacao: string | null;
+  pagamentoInfo: string | null;
+  itensMontados: ItemMontado[];
+}
+
+  export interface CriaPedidoInput {
   itens: ItemPedidoInput[];
   enderecoId?: string;
   endereco?: EnderecoInput;
@@ -120,44 +158,21 @@ export class PedidosService {
 
     const brCodePix =
       formaPagamento === 'pix' ? this.geraPix(lanchonete, total) : null;
-    const numero = await this.proximoNumero(lanchonete.id);
 
-    const pedido = await this.prisma.$transaction(async (tx) => {
-      return tx.pedido.create({
-        data: {
-          numero,
-          lanchoneteId: lanchonete.id,
-          clienteId: user.id,
-          status: 'recebido',
-          tipoEntrega,
-          subtotal,
-          taxaEntrega,
-          total,
-          formaPagamento,
-          brCodePix,
-          clienteTelefone: telefone,
-          enderecoEntrega: enderecoEntrega as Prisma.InputJsonValue,
-          observacao,
-          pagamentoInfo,
-          itens: {
-            create: itensMontados.map((item) => ({
-              produtoId: item.produtoId,
-              nomeSnapshot: item.nome,
-              precoUnit: item.precoUnit,
-              qtd: item.qtd,
-              opcoes: {
-                create: item.opcoes.map((op) => ({
-                  opcaoId: op.opcaoId,
-                  nomeSnapshot: op.nome,
-                  precoAdicional: op.precoAdicional,
-                  remove: op.remove,
-                })),
-              },
-            })),
-          },
-        },
-        include: { itens: { include: { opcoes: true } } },
-      });
+    const pedido = await this.criaPedidoComRetry({
+      lanchoneteId: lanchonete.id,
+      clienteId: user.id,
+      tipoEntrega,
+      subtotal,
+      taxaEntrega,
+      total,
+      formaPagamento,
+      brCodePix,
+      clienteTelefone: telefone,
+      enderecoEntrega: enderecoEntrega as Prisma.InputJsonValue,
+      observacao,
+      pagamentoInfo,
+      itensMontados,
     });
 
     this.gateway.emitirNovoPedido(
@@ -305,7 +320,7 @@ export class PedidosService {
   private montaItens(
     itens: ItemPedidoValidado[],
     produtos: Awaited<ReturnType<PedidosService['carregaProdutos']>>,
-  ) {
+  ): { itensMontados: ItemMontado[]; subtotal: number } {
     const porId = new Map(produtos.map((p) => [p.id, p]));
     const itensMontados = itens.map((item) => {
       const produto = porId.get(item.produtoId);
@@ -406,8 +421,107 @@ export class PedidosService {
     });
   }
 
-  private async proximoNumero(lanchoneteId: string): Promise<number> {
-    const [next] = await this.prisma.$queryRawUnsafe<{ next: bigint }[]>(
+  /**
+   * Grava o pedido com o número reservado sem corrida.
+   *
+   * O número é `MAX(numero)+1` por lanchonete, e esse `MAX` precisa ser lido
+   * dentro da mesma transação que grava — senão dois checkouts simultâneos leem o
+   * mesmo valor e o segundo leva P2002 do `@@unique([lanchoneteId, numero])`.
+   *
+   * Um lock aloneatório de transação por loja serializa a reserva: cada checkout
+   * entra, lê o `MAX` já com o número do anterior gravado, grava e libera. O lock
+   * é de escopo de transação (`_xact_`), então some sozinho no COMMIT/ROLLBACK e
+   * é compatível com o pooler da Neon (PgBouncer em modo transação). Ele serializa
+   * **por loja**, então duas lanchonetes diferentes não se atrapalham.
+   *
+   * O retry no P2002 continua como rede de segurança (outro processo escrevendo no
+   * mesmo banco sem passar por aqui), com espera aleatória para as tentativas não
+   * caírem em lockstep.
+   */
+  private async criaPedidoComRetry(dados: DadosNovoPedido) {
+    for (let tentativa = 1; tentativa <= TENTATIVAS_NUMERO; tentativa++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            // `::text` é obrigatório: `pg_advisory_xact_lock` devolve `void` e o
+            // Prisma falha ao desserializar (`P2010`) — o cast faz o SELECT
+            // devolver um tipo que ele entende, sem mudar o efeito do lock.
+            await tx.$queryRawUnsafe(
+              'SELECT pg_advisory_xact_lock(hashtext($1)::bigint)::text AS travado',
+              dados.lanchoneteId,
+            );
+            const numero = await this.proximoNumero(dados.lanchoneteId, tx);
+            return tx.pedido.create({
+              data: {
+                numero,
+                lanchoneteId: dados.lanchoneteId,
+                clienteId: dados.clienteId,
+                status: 'recebido',
+                tipoEntrega: dados.tipoEntrega,
+                subtotal: dados.subtotal,
+                taxaEntrega: dados.taxaEntrega,
+                total: dados.total,
+                formaPagamento: dados.formaPagamento,
+                brCodePix: dados.brCodePix,
+                clienteTelefone: dados.clienteTelefone,
+                enderecoEntrega: dados.enderecoEntrega as Prisma.InputJsonValue,
+                observacao: dados.observacao,
+                pagamentoInfo: dados.pagamentoInfo,
+                itens: {
+                  create: dados.itensMontados.map((item) => ({
+                    produtoId: item.produtoId,
+                    nomeSnapshot: item.nome,
+                    precoUnit: item.precoUnit,
+                    qtd: item.qtd,
+                    opcoes: {
+                      create: item.opcoes.map((op) => ({
+                        opcaoId: op.opcaoId,
+                        nomeSnapshot: op.nome,
+                        precoAdicional: op.precoAdicional,
+                        remove: op.remove,
+                      })),
+                    },
+                  })),
+                },
+              },
+              include: { itens: { include: { opcoes: true } } },
+            });
+          },
+          // A serialização segura a transação na fila dos checkouts concorrentes:
+          // o default do Prisma (5s) mataria o pedido no deploy lento.
+          { maxWait: 20000, timeout: 30000 },
+        );
+      } catch (error) {
+        if (!this.ehConflitoNumero(error)) throw error;
+        this.logger.warn(
+          `Número de pedido em conflito (loja ${dados.lanchoneteId}), tentativa ${tentativa}/${TENTATIVAS_NUMERO}.`,
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, ESPERA_BASE_MS * tentativa + Math.random() * 20),
+        );
+      }
+    }
+
+    this.logger.error(
+      `Não foi possível reservar o número do pedido na loja ${dados.lanchoneteId} após ${TENTATIVAS_NUMERO} tentativas.`,
+    );
+    throw new ServiceUnavailableException(
+      'Muitos pedidos ao mesmo tempo. Tente novamente em instantes.',
+    );
+  }
+
+  private ehConflitoNumero(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
+  }
+
+  private async proximoNumero(
+    lanchoneteId: string,
+    client: Pick<PrismaService, '$queryRawUnsafe'> = this.prisma,
+  ): Promise<number> {
+    const [next] = await client.$queryRawUnsafe<{ next: bigint }[]>(
       'SELECT COALESCE(MAX(numero), 0) + 1 AS next FROM pedidos WHERE "lanchoneteId" = $1',
       lanchoneteId,
     );

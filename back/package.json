@@ -18,6 +18,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "oxlint src/ test/",
+    "verificar": "node scripts/verificar.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
@@ -28,7 +29,9 @@
     "criar:admin": "node --env-file=.env scripts/criar-admin.mjs",
     "corrigir:chaves-pix": "node --env-file=.env scripts/corrigir-chaves-pix.mjs",
     "corrigir:logos": "node --env-file=.env scripts/corrigir-logos.mjs",
-    "testar:whatsapp": "node --env-file=.env scripts/testar-whatsapp.mjs"
+    "testar:whatsapp": "node --env-file=.env scripts/testar-whatsapp.mjs",
+    "carga": "node --env-file=.env scripts/carga.mjs",
+    "smoke:auth": "node --env-file=.env scripts/smoke/autorizacao.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1130.0",
@@ -55,6 +58,7 @@
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
     "@vitest/coverage-v8": "^4.1.2",
+    "autocannon": "^8.0.0",
     "oxlint": "^1.58.0",
     "prettier": "^3.4.2",
     "prisma": "^6.19.3",
