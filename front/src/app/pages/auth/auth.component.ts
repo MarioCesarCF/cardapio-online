@@ -22,6 +22,8 @@ interface MeResponse {
 }
 
 const LEMBRAR_KEY = 'auth.lembrar';
+// Legadas: mantidas só para apagar o que versões antigas gravaram. O e-mail saiu
+// do `localStorage` (ver `ngOnInit`); a senha nunca mais foi gravada.
 const EMAIL_SALVO_KEY = 'auth.email-salvo';
 const SENHA_SALVA_KEY = 'auth.senha-salva'; // legado: mantido só para APAGAR dados antigos — nunca mais reescrevemos
 const MODO_CADASTRO_KEY = 'auth.modo-cadastro';
@@ -79,8 +81,10 @@ export class AuthComponent implements OnInit {
   readonly cadastroSenha = signal('');
   readonly tipoConta = signal<TipoConta>('cliente');
   readonly formularioAceite = signal(false);
+  readonly maioridade = signal(false);
 
   readonly aceiteTela = signal(false);
+  readonly maioridadeTela = signal(false);
   readonly termosErro = signal<string | null>(null);
 
   readonly emailRecuperar = signal('');
@@ -96,15 +100,12 @@ export class AuthComponent implements OnInit {
 
   ngOnInit(): void {
     this.lembrar.set(localStorage.getItem(LEMBRAR_KEY) === '1');
-    if (this.lembrar()) {
-      const salvo = localStorage.getItem(EMAIL_SALVO_KEY);
-      if (salvo) {
-        this.email.set(salvo);
-      }
-      // Segurança (decisão do dono): a senha NÃO é mais guardada no dispositivo.
-      // Aqui apagamos a chave legada (quem tinha "lembrar" ativo antes desta mudança).
-      localStorage.removeItem(SENHA_SALVA_KEY);
-    }
+    // O e-mail não é mais guardado no aparelho. "Lembrar de mim" agora controla
+    // só a duração da sessão (o cookie fica gravado em vez de morrer ao fechar o
+    // navegador); o preenchimento do campo fica por conta do autocomplete do
+    // próprio navegador. Aqui limpamos o que versões antigas deixaram.
+    localStorage.removeItem(EMAIL_SALVO_KEY);
+    localStorage.removeItem(SENHA_SALVA_KEY);
     this.route.queryParamMap.subscribe((params) => {
       const destino = params.get('redirect');
       this.redirect.set(destino && destino.startsWith('/') ? destino : null);
@@ -184,6 +185,7 @@ export class AuthComponent implements OnInit {
     }
     this.termosErro.set(null);
     this.aceiteTela.set(false);
+    this.maioridadeTela.set(false);
     this.tela.set('termos');
   }
 
@@ -201,6 +203,12 @@ export class AuthComponent implements OnInit {
 
   async aceitarTermos(): Promise<void> {
     if (this.submitting() || !this.aceiteTela()) return;
+    // Mesma regra do cadastro: quem chegou aqui pelo Google nunca viu a caixa de
+    // maioridade do formulário, então ela é exigida nesta tela também.
+    if (!this.maioridadeTela()) {
+      this.termosErro.set('É preciso ter 18 anos ou mais para usar o Peditto.');
+      return;
+    }
     this.submitting.set(true);
     this.termosErro.set(null);
     try {
@@ -218,7 +226,9 @@ export class AuthComponent implements OnInit {
     await this.auth.signOut();
     this.mode.set('login');
     this.formularioAceite.set(false);
+    this.maioridade.set(false);
     this.aceiteTela.set(false);
+    this.maioridadeTela.set(false);
     this.termosErro.set(null);
     this.error.set(null);
     this.tela.set('login');
@@ -250,6 +260,7 @@ export class AuthComponent implements OnInit {
       this.cadastroSenha.set('');
       this.tipoConta.set('cliente');
       this.formularioAceite.set(false);
+      this.maioridade.set(false);
     }
     this.error.set(null);
     this.sucesso.set(null);
@@ -282,16 +293,18 @@ export class AuthComponent implements OnInit {
   alternarLembrar(): void {
     const valor = !this.lembrar();
     this.lembrar.set(valor);
+    // Só a preferência da sessão: nem e-mail, nem senha ficam no aparelho.
     localStorage.setItem(LEMBRAR_KEY, valor ? '1' : '0');
-    if (valor && this.email()) {
-      localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
-    }
-    // Segurança (decisão do dono): a senha nunca é salva — só limpamos a chave legada.
+    localStorage.removeItem(EMAIL_SALVO_KEY);
     localStorage.removeItem(SENHA_SALVA_KEY);
-    if (!valor) {
-      localStorage.removeItem(EMAIL_SALVO_KEY);
-      localStorage.removeItem(SENHA_SALVA_KEY);
-    }
+  }
+
+  alternarMaioridade(): void {
+    this.maioridade.set(!this.maioridade());
+  }
+
+  alternarMaioridadeTela(): void {
+    this.maioridadeTela.set(!this.maioridadeTela());
   }
 
   alternarAceiteFormulario(): void {
@@ -303,11 +316,18 @@ export class AuthComponent implements OnInit {
   }
 
   async submit(): Promise<void> {
-    if (this.mode() === 'cadastro' && !this.formularioAceite()) {
-      this.error.set(
-        'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar uma conta.',
-      );
-      return;
+    if (this.mode() === 'cadastro') {
+      if (!this.formularioAceite()) {
+        this.error.set(
+          'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar uma conta.',
+        );
+        return;
+      }
+      // Termos de Uso 1.1: o Peditto é para quem já tem 18 anos.
+      if (!this.maioridade()) {
+        this.error.set('É preciso ter 18 anos ou mais para criar uma conta no Peditto.');
+        return;
+      }
     }
     this.submitting.set(true);
     this.error.set(null);
@@ -315,10 +335,6 @@ export class AuthComponent implements OnInit {
     try {
       if (this.mode() === 'login') {
         await this.auth.signIn(this.email(), this.password(), this.lembrar());
-        if (this.lembrar()) {
-          localStorage.setItem(EMAIL_SALVO_KEY, this.email().trim());
-          localStorage.removeItem(SENHA_SALVA_KEY);
-        }
       } else {
         await this.auth.signUp(this.cadastroNome(), this.cadastroEmail(), this.cadastroSenha());
         if (this.tipoConta() === 'lojista') {

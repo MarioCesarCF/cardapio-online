@@ -119,6 +119,37 @@ function catalogo<T extends readonly string[]>(
   return new Set<string>(valores);
 }
 
+// Remove dado pessoal que a pessoa digita no campo aberto ("meu telefone é...").
+// Não é para ser esperto: é para o texto livre não virar uma segunda lista de
+// contatos que ninguém pediu para guardar. E-mail, telefone, documento e
+// qualquer sequência longa de dígitos saem; o resto do texto fica.
+//
+// A ordem importa: `RE_DIGITOS` roda ANTES do telefone/documento porque eles
+// casam por prefixes e deixavam a cauda de um número/protocolo sobreviver
+// ("protocolo 99887[dado removido]"). Quem tem 8+ dígitos seguido vira a marca
+// inteira; telefone e documento só pegam o que estiver mascarado (`(11) 9xxxx-xxxx`,
+// `123.456.789-00`), e com os guards `(?<!\d)`/`(?!\d)` não arrancam o meio de
+// uma sequência maior.
+const MARCA = '[dado removido]';
+const RE_EMAIL = /[^\s@<>()[\],;:]+@[^\s@<>()[\],;:]+\.[^\s@<>()[\],;:]{2,}/g;
+const RE_DIGITOS = /\d{8,}/g;
+const RE_DOCUMENTO =
+  /(?<!\d)\d{3}[.\s-]?\d{3}[.\s-]?\d{3}[.\s-]?\d{2}(?!\d)/g;
+const RE_TELEFONE =
+  /(?<!\d)(?:\+?55\s*)?(?:\(\d{2}\)|\d{2})[\s.-]?9?\d{4}[\s.-]?\d{4}(?!\d)/g;
+
+function redigeDadoPessoal(texto: string): string {
+  return (
+    texto
+      // E-mail primeiro: tem letra e ponto, e os números de dentro dele (um
+      // número de telefone no domínio) já saem com ele.
+      .replace(RE_EMAIL, MARCA)
+      .replace(RE_DIGITOS, MARCA)
+      .replace(RE_DOCUMENTO, MARCA)
+      .replace(RE_TELEFONE, MARCA)
+  );
+}
+
 const CATALOGOS = {
   cliente: catalogo(MOTIVOS_CLIENTE),
   lanchonete: catalogo(MOTIVOS_LANCHONETE),
@@ -178,7 +209,7 @@ function enumOpcional(
 function textoOpcional(valor: unknown, rotuloCampo: string): string | null {
   if (valor === undefined || valor === null) return null;
   if (typeof valor !== 'string') throw new Error(`${rotuloCampo} inválido.`);
-  const texto = valor.trim();
+  const texto = redigeDadoPessoal(valor.trim());
   if (texto.length === 0) return null;
   if (texto.length > MAX_TEXTO) {
     throw new Error(

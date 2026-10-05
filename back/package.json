@@ -31,7 +31,8 @@
     "corrigir:logos": "node --env-file=.env scripts/corrigir-logos.mjs",
     "testar:whatsapp": "node --env-file=.env scripts/testar-whatsapp.mjs",
     "carga": "node --env-file=.env scripts/carga.mjs",
-    "smoke:auth": "node --env-file=.env scripts/smoke/autorizacao.mjs"
+    "smoke:auth": "node --env-file=.env scripts/smoke/autorizacao.mjs",
+    "smoke:lgpd": "node --env-file=.env scripts/smoke/lgpd-e2e.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1130.0",

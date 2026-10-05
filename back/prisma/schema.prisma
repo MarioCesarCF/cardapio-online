@@ -280,6 +280,28 @@ model LogSistema {
   @@map("logs_sistema")
 }
 
+// Registro de acesso à API (art. 15 da Lei 12.965/2014 — Marco Civil da
+// Internet): data/hora, IP, método, rota em *template* e status HTTP, sob sigilo
+// e pelo prazo mínimo de 6 meses (aqui 180 dias).
+//
+// Guarda o MÍNIMO. NUNCA entra corpo de requisição, query string, senha, chave
+// PIX, nome, e-mail ou telefone: se um dia for preciso ligar um registro a um
+// pedido, o id do pedido já está no `Authorization` do log de aplicação. Não há
+// endpoint de leitura — a tabela existe para prova em incidente e para
+// investigação interna restrita.
+model LogAcesso {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  ip        String   @db.VarChar(45) // cabe IPv4 e IPv6 completo
+  metodo    String   @db.VarChar(8)
+  rota      String   @db.VarChar(120) // template do caminho: /pedidos/:id (nunca o id)
+  status    Int
+  usuarioId String?  @db.Uuid // id no schema neon_auth, quando houver auth
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("logs_acesso")
+}
+
 // Configurações gerais da plataforma (linha única, id fixo "global").
 // emailLojista: e-mail de contato para quem quer anunciar como lojista.
 model ConfigPlataforma {
@@ -299,7 +321,10 @@ model ConfigPlataforma {
 model RespostaEncerramento {
   id           String  @id @default(cuid()) @db.VarChar(30)
   perfil       String // cliente | lanchonete
-  usuarioId    String  @db.Uuid // quem respondeu (id no schema neon_auth)
+  // Vira NULL quando a conta é encerrada: o questionário é anonimizado junto com
+  // o cadastro (só sobram as métricas estruturadas). A linha inteira some depois
+  // de 24 meses — ver EncerramentoMaintService.
+  usuarioId    String?  @db.Uuid // quem respondeu (id no schema neon_auth)
   lanchoneteId String? @db.VarChar(30) // snapshot — a loja pode sumir depois
   lanchoneteNome String? @db.VarChar(80)
   lanchoneteSlug String? @db.VarChar(80)

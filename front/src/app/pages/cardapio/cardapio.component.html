@@ -630,6 +630,13 @@
       Total <strong>{{ totalComTaxa() | currency: 'BRL' }}</strong>
     </div>
 
+    <p class="checkout__legal">
+      Ao confirmar, você aceita os
+      <a routerLink="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a
+      <a routerLink="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a> do
+      Peditto. O pedido é feito diretamente com a lanchonete.
+    </p>
+
     @if (erroPedido(); as erro) {
       <p class="erro">{{ erro }}</p>
     }

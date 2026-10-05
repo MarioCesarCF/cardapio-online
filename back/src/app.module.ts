@@ -20,6 +20,7 @@ import { PlataformaModule } from './plataforma/plataforma.module.js';
 import { EncerramentoModule } from './encerramento/encerramento.module.js';
 import { AssetsController } from './assets/assets.controller.js';
 import { criarTracker } from './common/limite-taxa.js';
+import { LogAcessoService } from './common/log-acesso.service.js';
 
 @Module({
   imports: [
@@ -58,6 +59,10 @@ import { criarTracker } from './common/limite-taxa.js';
   controllers: [AppController, HealthController, AssetsController],
   providers: [
     AppService,
+    // Buffer do registro de acesso (art. 15 do Marco Civil). O middleware que
+    // escreve nele é registrado em `main.ts` — precisa ser `app.use`, porque
+    // interceptor não vê request sem rota casada.
+    LogAcessoService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

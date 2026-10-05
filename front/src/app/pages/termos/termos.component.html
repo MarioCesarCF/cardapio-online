@@ -29,6 +29,12 @@
       PIX) e não fabrica, prepara nem comercializa alimentos.
     </p>
     <p>
+      O Peditto é um <strong>marketplace</strong>: o contrato de compra e venda é entre você e a
+      lanchonete. O Peditto é <strong>operador</strong> dos dados que a lanchonete usa para atender
+      você e <strong>fornecedor</strong> do software, respondendo por conta própria pelos seus
+      deveres perante a lanchonete e perante você (ver item 8).
+    </p>
+    <p>
       Ao usar a plataforma, você declara que leu e concorda com estes Termos e com a
       <a routerLink="/privacidade">Política de Privacidade</a>. Se não concordar com algum ponto,
       não crie conta nem use o serviço.
@@ -36,7 +42,23 @@
   </section>
 
   <section>
-    <h2>2. Cadastro e conta</h2>
+    <h2>2. Quem pode usar o Peditto</h2>
+    <p>
+      O Peditto é destinado a <strong>pessoas com 18 anos ou mais</strong>. Ao criar a conta, você
+      declara essa condição, e ela é exigida também no aceite dos Termos.
+    </p>
+    <p>
+      O uso por pessoas abaixo dessa idade é <strong>proibido</strong>. Não firmamos contrato com
+      crianças e adolescentes, não coletamos conscientemente dados delas e, se identificarmos uma
+      conta fora da faixa, ela é encerrada e os dados tratados são apagados conforme a seção 14.
+      Para o tratamento de dados de crianças e adolescentes, a Lei 15.211/2025 (Estatuto da Criança
+      e do Adolescente Digital) só admite coleta com o consentimento específico e destaque de pelo
+      menos um dos pais ou responsável legal — condição que não atendemos.
+    </p>
+  </section>
+
+  <section>
+    <h2>3. Cadastro e conta</h2>
     <p>
       Para fazer pedidos ou anunciar uma lanchonete você precisa de uma conta, criada com e-mail e,
       opcionalmente, com Google. Você é responsável por:
@@ -51,16 +73,20 @@
       favoritas. Não é permitido criar conta para uso fraudulento, para burlar promoções ou para
       finalidade diversa do uso da plataforma.
     </p>
+    <p>
+      A lanchonete cadastra nome, endereço, telefone, tipo, logotipo, cor, horários e chave PIX. A
+      chave PIX é informação bancária da lanchonete e nunca aparece para o cliente no aplicativo.
+    </p>
   </section>
 
   <section>
-    <h2>3. Uso como lanchonete</h2>
+    <h2>4. Uso como lanchonete</h2>
     <p>Enquanto a conta estiver ativa, a lanchonete pode:</p>
     <ul>
       <li>montar o cardápio (categorias, produtos, grupos de opções e preços);</li>
       <li>
         informar endereço, telefone, chave PIX, horário de funcionamento e condição de entrega. A
-        chave PIX é opcional: sem ela, o checkout não oferece pagamento por PIX (ver item 4.2);
+        chave PIX é opcional: sem ela, o checkout não oferece pagamento por PIX (ver item 5.2);
       </li>
       <li>
         receber pedidos em tempo real e mudar o status de cada um (recebido, em preparo, enviado);
@@ -70,23 +96,47 @@
       </li>
       <li>editar a configuração da lanchonete e a rota de acesso (slug) da página pública.</li>
     </ul>
+    <p>A lanchonete responde por:</p>
+    <ul>
+      <li>
+        a veracidade das informações publicadas, pela disponibilidade real dos itens e por avisar
+        sobre indisponibilidades;
+      </li>
+      <li>
+        <strong>higiene, boas práticas de manipulação e segurança alimentar</strong> dos produtos
+        que prepara e entrega;
+      </li>
+      <li>
+        <strong>informar de forma legível e completa</strong> a composição de cada item, os
+        alérgenos, a presença de glúten/lactose/soja e qualquer restrição relevante, no próprio
+        campo de descrição do produto — a plataforma não tem como adivinhar o que está no prato;
+      </li>
+      <li>
+        <strong>não vender</strong> produtos proibidos ou restritos (itens vencidos, sem rotulagem,
+        bebidas alcoólicas para menores, produtos de tabaco, entre outros) nem produtos sem
+        regularização na esfera sanitária;
+      </li>
+      <li>pelo preparo, pela entrega e pelo atendimento.</li>
+    </ul>
     <p>
-      A lanchonete responde pela veracidade das informações publicadas, pela disponibilidade dos
-      itens, pelo preparo, pela entrega e por avisar sobre indisponibilidades.
+      A lanchonete <strong>não pode</strong> usar o cardápio para descrever de forma enganosa o que
+      vende: foto que não corresponde ao produto, preço exibido diferente do cobrado no balcão ou
+      descrição que omite ingrediente ou alérgeno. Conteúdo que induza o cliente ao erro pode ser
+      removido da plataforma (ver item 10).
     </p>
   </section>
 
   <section>
-    <h2>4. Pedidos, pagamento por PIX e outras formas de pagamento</h2>
+    <h2>5. Pedidos, pagamento por PIX e outras formas de pagamento</h2>
 
-    <h3>4.1 Como o pedido é feito</h3>
+    <h3>5.1 Como o pedido é feito</h3>
     <p>
       O cliente monta o pedido no cardápio, escolhe como quer receber (entrega, retirada ou consumo
       no local), informa a forma de pagamento e confirma. O pedido entra na fila da lanchonete em
       tempo real, com data e hora registradas.
     </p>
 
-    <h3>4.2 PIX</h3>
+    <h3>5.2 PIX</h3>
     <p>
       No PIX, o aplicativo gera um código de cobrança (QR Code) com a chave cadastrada pela
       lanchonete. Enquanto o pagamento não é confirmado, o cliente continua vendo o QR Code. A
@@ -111,13 +161,13 @@
     <p>
       <strong>Se a lanchonete não tiver chave PIX cadastrada, o PIX fica indisponível</strong> no
       checkout: o aplicativo não oferece essa forma de pagamento e o pedido só pode ser feito por
-      cartão ou dinheiro, diretamente com a lanchonete. O mesmo vale para a lanchonete quecadastrar
+      cartão ou dinheiro, diretamente com a lanchonete. O mesmo vale para a lanchonete que cadastrar
       a chave depois: o PIX volta a aparecer para os novos pedidos, e os pedidos já feitos continuam
       com o código que foi gerado na época. A chave cadastrada é de responsabilidade da lanchonete:
       erro na chave é erro no recebimento, e o Peditto não pode corrigir a titularidade do PIX.
     </p>
 
-    <h3>4.3 Cartão e dinheiro</h3>
+    <h3>5.3 Cartão e dinheiro</h3>
     <p>
       Quando o pedido é marcado como <strong>cartão</strong> ou <strong>dinheiro</strong>, não há
       cobrança pela plataforma: o pagamento é feito diretamente à lanchonete no momento da entrega,
@@ -125,7 +175,7 @@
       e essa informação fica registrada na observação do pedido.
     </p>
 
-    <h3>4.4 Taxa de entrega</h3>
+    <h3>5.4 Taxa de entrega</h3>
     <p>
       Cada lanchonete define se cobra taxa de entrega e o seu valor. Esses valores aparecem no
       pedido antes da confirmação.
@@ -133,7 +183,7 @@
   </section>
 
   <section>
-    <h2>5. Cancelamento, reembolso e não entrega</h2>
+    <h2>6. Cancelamento, reembolso e não entrega</h2>
     <p>
       A lanchonete pode cancelar um pedido enquanto ele ainda não saiu para entrega e é obrigada a
       informar o motivo, que fica visível para o cliente. Pagamentos, reembolsos, devolução de
@@ -141,16 +191,87 @@
       canais que ela informar. O Peditto não movimenta esses valores: no PIX, o pagamento sai da
       conta do cliente direto para a chave da lanchonete.
     </p>
+    <p>
+      Se a lanchonete cancelar o pedido depois do pagamento, ou se o pedido não for entregue, o
+      <strong>reembolso é responsabilidade da lanchonete</strong>, que deve devolvê-lo pelo mesmo
+      meio pelo qual o cliente pagou. O Peditto não pode suspender nem estornar esse valor, porque
+      nunca foi o destinatário.
+    </p>
   </section>
 
   <section>
-    <h2>6. Responsabilidades</h2>
+    <h2>7. Preço, assinatura e arrependimento</h2>
+    <p>
+      O uso da plataforma por lanchonetes é gratuito durante um <strong>período de teste</strong> de
+      30 dias contados da criação da lanchonete. Depois disso, a lanchonete pode contratar o plano
+      pago, no valor de <strong>R$ 99,90 por mês</strong> (ou o valor vigente no momento da
+      contratação, caso o preço seja alterado conforme o item 7.6).
+    </p>
+    <ul>
+      <li>
+        <strong>7.1 Como a contratação acontece hoje:</strong> a adesão é presencial, com contrato
+        assinado entre a plataforma e a lanchonete e pagamento por PIX. Ainda
+        <strong>não existe cobrança automática</strong> nem checkout online.
+      </li>
+      <li>
+        <strong>7.2 Arrependimento:</strong> como a contratação é feita por contratação presencial e
+        pagamento por PIX, a questão do direito de arrependimento em contratação fora do
+        estabelecimento não se aplica neste fluxo.
+        <strong>Se a contratação passar a ser feita integralmente online</strong>, a lanchonete
+        poderá desistir em até <strong>7 dias</strong>
+        contados da contratação, com devolução integral do valor, bastando um pedido pelo canal de
+        contato.
+      </li>
+      <li>
+        <strong>7.3 Cancelamento:</strong> a lanchonete pode encerrar a assinatura a qualquer tempo,
+        sem fidelidade e sem multa, bastando comunicar pelo canal de contato. O acesso ao painel
+        continua até o fim do período já pago.
+      </li>
+      <li>
+        <strong>7.4 Cobrança:</strong> o plano é mensal e vence em data fixa. Para consultar o
+        vencimento, a lanchonete consulta a aba de assinatura no próprio painel.
+      </li>
+      <li>
+        <strong>7.5 Destino dos dados após o cancelamento:</strong> a conta e o cardápio ficam
+        disponíveis para consulta por até 90 dias. Depois disso, os dados da lanchonete são
+        excluídos, exceto os registros que a lei determinar manter. Os dados de clientes da
+        lanchonete devem ser exportados por ela durante esse período, porque a retenção de pedidos
+        no Peditto é curta (veja a seção 10 da
+        <a routerLink="/privacidade">Política de Privacidade</a>).
+      </li>
+      <li>
+        <strong>7.6 Mudança de preço:</strong> qualquer alteração de valor é comunicada com pelo
+        menos 30 dias de antecedência, por e-mail ou por aviso na própria tela da conta.
+      </li>
+    </ul>
+    <p>
+      Com o período de teste expirado, a lanchonete continua podendo editar cardápio e configuração,
+      mas não recebe novos pedidos até regularizar a assinatura. O
+      <strong>cardápio público continua visível</strong> nesse período.
+    </p>
+  </section>
+
+  <section>
+    <h2>8. Responsabilidades</h2>
     <p>
       A relação de consumo dos produtos é entre o cliente e a lanchonete, que responde pelo produto,
       pelo prazo, pelo atendimento e pela entrega. Nessa relação, o Peditto atua como
       <strong>operador</strong> dos dados tratados por conta da lanchonete e como fornecedor do
       software, e responde pelos seus próprios deveres: segurança da conta, funcionamento da
       plataforma, proteção de dados e correção de falhas técnicas.
+    </p>
+    <p>
+      Como plataforma, o Peditto responde por: manter o serviço em funcionamento, exibir o cardápio
+      e o preço exatamente como a lanchonete cadastrou, entregar o pedido à lanchonete em tempo
+      real, proteger os dados conforme a <a routerLink="/privacidade">Política de Privacidade</a> e
+      comunicar falhas relevantes. O Peditto <strong>não</strong> é responsável por erro de
+      digitação no cardápio, por falta de insumo na lanchonete, por arquivo que venceu no balcão ou
+      por entrega fora do prazo combinada entre as partes.
+    </p>
+    <p>
+      Nada nestes Termos exclui ou limita a responsabilidade do Peditto por dolo, por culpa grave ou
+      por violação de direito do consumidor, nem impede você de reclamar ou de acionar os órgãos de
+      defesa do consumidor.
     </p>
     <p>O cliente se compromete a:</p>
     <ul>
@@ -161,74 +282,81 @@
   </section>
 
   <section>
-    <h2>7. Assinatura do Peditto (plano)</h2>
-    <p>
-      O uso da plataforma por lanchonetes é gratuito durante um <strong>período de teste</strong> de
-      30 dias contados da criação da lanchonete. Depois disso, a lanchonete pode contratar o plano
-      pago, no valor de <strong>R$ 99,90 por mês</strong> (ou o valor vigente no momento da
-      contratação, caso o preço seja alterado conforme a seção 9).
-    </p>
+    <h2>9. Uso proibido e propriedade intelectual</h2>
+    <p>É proibido usar o Peditto para:</p>
     <ul>
+      <li>praticar fraude, estelionato, lavagem de dinheiro ou qualquer atividade clandestina;</li>
+      <li>criar conta para burlar promoções, avaliações ou o período de teste;</li>
+      <li>vender produtos proibidos ou sem regularização sanitária;</li>
       <li>
-        <strong>Como a contratação acontece hoje:</strong> a adesão é presencial, com contrato
-        assinado entre a plataforma e a lanchonete e pagamento por PIX. Ainda
-        <strong>não existe cobrança automática</strong> nem checkout online.
+        copiar, capturar, raspar ou realizar engenharia reversa do aplicativo, da API ou do código;
       </li>
       <li>
-        <strong>Cancelamento:</strong> a lanchonete pode encerrar a assinatura a qualquer tempo, sem
-        fidelidade e sem multa, bastando comunicar pelo canal de contato. O acesso ao painel
-        continua até o fim do período já pago.
+        usar robôs, scrapers ou carga automatizada para deixar o serviço indisponível para outros;
       </li>
-      <li>
-        <strong>Cobrança:</strong> o plano é mensal e vence em data fixa. Para consultar o
-        vencimento, a lanchonete consulta a aba de assinatura no próprio painel.
-      </li>
-      <li>
-        <strong>Destino dos dados após o cancelamento:</strong> a conta e o cardápio ficam
-        disponíveis para consulta por até 90 dias. Depois disso, os dados da lanchonete são
-        excluídos, exceto os registros que a lei determinar manter. Os dados de clientes da
-        lanchonete devem ser exportados por ela durante esse período, porque a retenção de pedidos
-        no Peditto é curta (veja a seção 8 da
-        <a routerLink="/privacidade">Política de Privacidade</a>).
-      </li>
-      <li>
-        <strong>Mudança de preço:</strong> qualquer alteração de valor é comunicada com pelo menos
-        30 dias de antecedência, por e-mail ou por aviso na própria tela da conta.
-      </li>
+      <li>revender, sublicenciar ou dar acesso a terceiros não autorizados.</li>
     </ul>
     <p>
-      Com o período de teste expirado, a lanchonete continua podendo editar cardápio e configuração,
-      mas não recebe novos pedidos até regularizar a assinatura.
+      A marca, o logotipo, o código, o layout e o restante da plataforma pertencem ao Peditto. Os
+      textos, fotos e marcas da lanchonete pertencem à lanchonete, que
+      <strong>nos dá permissão</strong>
+      para exibir esse conteúdo na página da lanchonete, no cardápio e no pedido, pelo tempo em que
+      a conta estiver ativa. Nada aqui transfere titularidade: a lanchonete garante que possui a
+      autorização para usar o conteúdo que publica e responde por isso.
     </p>
   </section>
 
   <section>
-    <h2>8. Disponibilidade, manutenção e serviços de terceiros</h2>
+    <h2>10. Moderação e suspensão</h2>
+    <p>
+      Podemos remover conteúdo, suspender ou encerrar conta quando houver indício de violação destes
+      Termos, fraude, risco sanitário, reclamação fundamentada de cliente ou determinação legal. A
+      conta suspensa pode ser notificada por e-mail e tem 5 dias para se manifestar.
+    </p>
+    <p>
+      Uma decisão de suspensão vem sempre com o motivo e o canal para resposta. Antes de encerrar
+      uma conta de forma definitiva, o Peditto tenta entrar em contato pelo e-mail cadastrado.
+    </p>
+  </section>
+
+  <section>
+    <h2>11. Disponibilidade, manutenção e serviços de terceiros</h2>
     <p>
       O Peditto busca manter o serviço disponível, mas não garante disponibilidade ininterrupta.
       Podem existir indisponibilidades por manutenção (com aviso prévio, quando possível), por falha
       de internet ou de energia no aparelho do usuário, por ataques ou por serviços de terceiros dos
-      quais dependemos — autenticação, banco de dados, hospedagem e mensageria. Nenhuma dessas
-      situações gera obrigação de reembolso ao cliente final de um pedido.
+      quais dependemos — autenticação, banco de dados, hospedagem, mensageria e armazenamento de
+      imagens. Nenhuma dessas situações gera obrigação de reembolso ao cliente final de um pedido.
     </p>
     <p>
       Funcionalidades que dependem de serviço externo, como o login com Google e as notificações por
       WhatsApp, também seguem as regras e a disponibilidade desse terceiro.
     </p>
+    <p>
+      A lista de fornecedores e operadores está na seção 6 da
+      <a routerLink="/privacidade">Política de Privacidade</a>. Um novo fornecedor que passe a
+      tratar dados pessoais é informado nessa política.
+    </p>
   </section>
 
   <section>
-    <h2>9. Alterações destes Termos</h2>
+    <h2>12. Alterações destes Termos</h2>
     <p>
       Podemos atualizar estes Termos para refletir mudanças no produto, na legislação ou nos
       parceiros. A versão vigente fica sempre nesta página, com número e data. Quando a mudança for
       relevante, pedimos novo aceite no seu próximo acesso — o aceite anterior continua registrado
       com a data original.
     </p>
+    <p>
+      Se houver conflito entre estes Termos e a
+      <a routerLink="/privacidade">Política de Privacidade</a> quanto ao tratamento de dados, a
+      Política de Privacidade prevalece. Se houver conflito entre estes Termos e um contrato
+      assinado com a lanchonete, o contrato prevalece quanto ao que tratar.
+    </p>
   </section>
 
   <section>
-    <h2>10. Segurança e incidentes</h2>
+    <h2>13. Segurança e incidentes</h2>
     <p>
       Adotamos medidas técnicas e administrativas proporcionais ao risco: senha e sessão protegidas,
       tokens de curta duração, limite de requisições, criptografia do canal de acesso, registro de
@@ -236,32 +364,53 @@
       riscos residuais.
     </p>
     <p>
-      Em caso de incidente de segurança com risco relevante, o Peditto avisa os usuários afetados e
-      as autoridades competentes pelo canal de contato, informando o que aconteceu, quais dados
-      foram afetados e quais medidas foram tomadas.
+      Em caso de incidente de segurança com risco relevante, o Peditto
+      <strong>comunica a ANPD e aos titulares afetados em até 3 dias úteis</strong>, contando da
+      ciência do incidente, e informa o que aconteceu, quais dados foram afetados, o número de
+      pessoas envolvidas e quais medidas foram tomadas. Os registros de cada incidente são mantidos
+      por 5 anos, mesmo que o incidente não seja comunicado.
     </p>
   </section>
 
   <section>
-    <h2>11. Encerramento de conta</h2>
+    <h2>14. Encerramento de conta e portabilidade</h2>
     <p>
-      Você pode encerrar sua conta a qualquer momento, pedindo pelo canal de contato; o pedido é
-      atendido em até 15 dias. Nesta versão o encerramento é feito por atendimento: ainda não existe
-      botão de exclusão de conta no aplicativo, nem sistema de portabilidade de dados nem
-      consentimento granular por finalidade.
+      Você pode encerrar sua conta a qualquer momento pelo próprio aplicativo, no atalho de exclusão
+      da página principal, e o pedido é concluído na hora, sem precisar de atendimento. Depois de
+      encerrada:
     </p>
-  </section>
-
-  <section>
-    <h2>12. Foro e lei aplicável</h2>
+    <ul>
+      <li>
+        <strong>Cliente:</strong> cadastro, endereços, lanchonetes favoritas e aceite dos Termos são
+        apagados na hora; o questionário de encerramento perde o vínculo com você e vira estatística
+        anônima; os pedidos que você fez continuam com a lanchonete, mas sem nome, telefone e
+        endereço;
+      </li>
+      <li>
+        <strong>Lanchonete:</strong> a conta só pode ser encerrada depois que a lanchonete for
+        excluída. Encerrar a assinatura sem excluir a loja mantém a conta e o cardápio disponíveis
+        por até 90 dias.
+      </li>
+    </ul>
     <p>
-      Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro do domicílio do consumidor
-      para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor.
+      A portabilidade dos seus dados ainda não existe em formato aberto no aplicativo. Hoje você
+      consegue obter o que é prático pelo canal de contato (seção 16) e a lanchonete consegue
+      exportar o histórico de pedidos em planilha pelo painel.
     </p>
   </section>
 
   <section>
-    <h2>13. Contato</h2>
+    <h2>15. Foro e lei aplicável</h2>
+    <p>
+      Estes Termos são regidos pelas leis brasileiras. Para <strong>consumidores</strong>, fica
+      eleito o foro do domicílio do consumidor, conforme o Código de Defesa do Consumidor, e nenhum
+      destes Termos afasta esse direito. Para <strong>lanchonetes</strong> (pessoa jurídica), fica
+      eleito o foro da sede da lanchonete.
+    </p>
+  </section>
+
+  <section>
+    <h2>16. Contato</h2>
     <app-contato-lgpd />
   </section>
 

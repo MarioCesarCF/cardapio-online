@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { ErroLogFilter } from './common/erro-log.filter.js';
+import { registraAcesso } from './common/log-acesso.middleware.js';
+import { LogAcessoService } from './common/log-acesso.service.js';
 
 const SECRET_MIN_BYTES = 32;
 
@@ -72,6 +74,17 @@ async function bootstrap() {
   }
 
   app.useGlobalFilters(new ErroLogFilter(app.get(PrismaService)));
+
+  // Sem isto o Render mata o processo no SIGTERM e nenhum hook roda: o
+  // `beforeApplicationShutdown` do LogAcessoService (gravar o resto do buffer
+  // no deploy) e o fechamento limpo das conexões dependem disto.
+  app.enableShutdownHooks();
+
+  // Registro de acesso (art. 15 do Marco Civil da Internet): IP, data/hora,
+  // método, rota em template e status, por 180 dias. Vai como middleware para
+  // pegar também o que não casa com rota (404 de scanner).
+  app.use(registraAcesso(app.get(LogAcessoService)));
+
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();

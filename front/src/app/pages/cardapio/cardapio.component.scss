@@ -553,6 +553,17 @@
   font-size: 0.88rem;
 }
 
+.checkout__legal {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--app-texto-suave);
+
+  a {
+    color: var(--p-primary-color);
+  }
+}
+
 .pix-corpo {
   display: flex;
   flex-direction: column;

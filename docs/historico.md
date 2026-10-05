@@ -284,7 +284,7 @@ abaixo mantem o diagnostico original.
 ## Handoff — encerramento de conta/lanchonete + questionário (concluído, 2026-09-27)
 
 - **Back — schema**: `RespostaEncerramento` (migração **`20260927161029_m19_encerramento`**, já aplicada na Neon): motivo estruturado (`motivoPrincipal` + `motivosSecundarios[]`), contexto (`pedidosRecebidos`, `diasAtivo`), `ajudouPedidos`/`precoAdequado`/`funcionalidadeFaltante`/`satisfacao`/`voltaria` (1..5) e o **contato liberado** (`contatoLiberado` + `contato`, só da lanchonete). Chave lógica: **1 resposta por usuário + versão** (`@@unique([usuarioId, versao])`) — reenviar/atualizar faz `upsert`. **Nunca** logar contato/WhatsApp nos `logs_sistema`.
-- **Back — rotas** (`src/encerramento/`, `EncerramentoModule` no `AppModule`): `POST /me/encerramento` (cliente), `POST /admin/lanchonetes/:slug/encerramento` (dono, `AuthGuard` + dono-check), `GET /admin-sistema/encerramentos?dias=90` (`AuthGuard` + `AdminSistemaGuard`; dias 1..365 default 90). Catálogos/labels/validação em `encerramento.types.ts` (fonte única: **espelhar no `front/src/app/services/encerramento.ts` ao mudar** — motivo, secundários máx 3, fatores, 만족 = `satisfacao` 1..5). Rótulos de sim/talvez/não: `sim|talvez|nao` (back e front). `satisfacao` é **obrigatória para cliente** e opcional para lanchonete; `precoAdequado` exigida quando `motivoPrincipal = preco`; `contato` só quando `contatoLiberado` (normalizado para E.164; inválido → 400).
+- **Back — rotas** (`src/encerramento/`, `EncerramentoModule` no `AppModule`): `POST /me/encerramento` (cliente), `POST /admin/lanchonetes/:slug/encerramento` (dono, `AuthGuard` + dono-check), `GET /admin-sistema/encerramentos?dias=90` (`AuthGuard` + `AdminSistemaGuard`; dias 1..365 default 90). Catálogos/labels/validação em `encerramento.types.ts` (fonte única: **espelhar no `front/src/app/services/encerramento.ts` ao mudar** — motivo, secundários máx 3, fator = `satisfacao` 1..5). Rótulos de sim/talvez/não: `sim|talvez|nao` (back e front). `satisfacao` é **obrigatória para cliente** e opcional para lanchonete; `precoAdequado` exigida quando `motivoPrincipal = preco`; `contato` só quando `contatoLiberado` (normalizado para E.164; inválido → 400).
 - **Contato no painel**: `AdminSistemaService.resumoEncerramento` devolve `contato: null` para admin **humano** e o contato real só para `funcao: super` (mesma regra da `chavePix`).
 - **Back — `DELETE /me/conta`** (`MeService.excluirConta`): recusa 400 com `openOrders > 0` se o cliente tiver pedido em `recebido|em_preparo|enviado|saiu_para_entrega` (legado incluído); recusa admin-sistema e dono de lanchonete; conta é `cliente` da plataforma (nunca lanchonete). Ordem: favoritos → pedidos (**anonimiza** `clienteId`/`clienteTelefone`/`enderecoEntrega` para `NULL`, preserva o histórico do pedido) → termo de aceite → `clientes` → **conta Neon Auth** (`apagarContaNeon` best-effort, 1 retry). Log final só com id/quantidade, sem PII.
 - **Front — página `/encerrar`** (`front/src/app/pages/encerramento/encerramento.component.ts`, lazy + `perfilGuard(['cliente','dono'])`): 3 etapas — `confirmar` → `questionario` → `final`. Botões: **"Encerrar conta sem responder"** / **"Enviar e encerrar conta"** (ou lanchonete). Serviço `front/src/app/services/encerramento.ts` (contratos + `encerrar(dono)`, questionário opcional no back). Entradas: home do cliente ("Encerrar conta", link no header) e `admin-config` ("Encerrar lanchonete", abre `/encerrar?perfil=lanchonete&slug=…`).
@@ -426,3 +426,90 @@ abaixo mantem o diagnostico original.
 - **Regra para código novo**: dentro de `$transaction(async tx => …)` **nunca** depende de muitas queries em sequência — ou lote com `createMany` (pegando os ids com uma leitura), ou passe `timeout` alto. Transação com **1–3 queries** (como as de `me.service.ts` e do `criaPedido`, que é um `create` aninhado só) não tem o problema. `$transaction([...])` (forma de array) também é seguro: vai em uma transação só, sem interatividade.
 - **Diagnóstico**: quando um 500 "impossível" acontecer **só no deploy**, ler o `logs_sistema` (aba **Logs** do painel da plataforma ou `SELECT * FROM logs_sistema ORDER BY "createdAt" DESC WHERE nivel = 'erro'`) — o `detalhes.stack` tem o arquivo/linha do `dist`.
 - **Verificação**: back `npm run lint` 0, `npm test` **197** (19 arquivos; +3 do batch), `npm run build`; smoke de integração com Prisma real (`lanchonete` temporária, 3 modelos, limpeza por cascade): lanches 1.038 ms / pizzaria 659 ms / açaí 581 ms, categorias na ordem, 34/61/25 vínculos com `ordem` 0..n-1, 22/23/18 fotos, 2ª tentativa recusada, nenhuma lanchonete de teste sobrando. Front não mudou. **Precisa de `npm run build` + deploy do back para valer em produção.**
+
+## LGPD/CDC — registro de acesso, retenção, anonimização e textos legais (2026-10-05)
+
+Sessão de adequação guiada por apoiador jurídico externo. Nenhum **placeholder** foi tocado
+(razão social/CNPJ/endereço continuam para o dono) e a `TERMO_VERSAO_ATUAL` continua `1.0`:
+ajuste de texto pré-produção não bumpa versão, só a data (`5 de outubro de 2026`).
+
+### 1) Registro de acesso — art. 15 do Marco Civil (Lei 12.965/2014)
+
+- **`LogAcesso`** no `schema.prisma` (tabela `logs_acesso`): `ip`, `metodo`, `rota`, `status`,
+  `usuarioId` (uuid do `neon_auth`, opcional) e `createdAt`. Migração
+  `20261005220515_log_acesso` **aplicada no Neon** (o `prisma generate` falhou com EPERM até
+  parar o `node dist/main`, como sempre).
+- **`common/log-acesso.service.ts`**: buffer em memória + `createMany` a cada 30s (200/lote).
+  Motivo: uma linha por requisição custaria uma ida ao Postgres serverless em **toda** leitura
+  de cardápio. `expurgar()` (180 dias, o MCI pede 6) roda **no boot e de hora em hora** — sem
+  isso a tabela cresceria para sempre. Lote que falha volta ao **começo** do buffer (é o mais
+  antigo e é o que a retenção exige guardar), com uma advertência por sequência de falhas.
+  `beforeApplicationShutdown` grava o resto no deploy.
+- **`common/log-acesso.middleware.ts`** (não é interceptor — ver abaixo): `res.once('finish')`,
+  rota em **template** (`/pedidos/:id`), query string fora, UUID e qualquer id opaco longo
+  virados para `:id`/`:ref`, `/health` ignorado (sonda do Render), `usuarioId` lido do JWT sem
+  ir ao banco, e `try/catch` para nunca derrubar a requisição.
+- **Por que `app.use` e não `APP_INTERCEPTOR`**: interceptor do Nest **só roda quando existe
+  handler** — o 404 de scanner de internet (o caso mais comum de ataque/varredura) passava
+  batido. Trocado depois de ver no banco: com o interceptor, `/wp-admin/setup.php` gerava
+  **zero** linhas. `main.ts` ganhou `app.enableShutdownHooks()` no mesmo movimento.
+- **Regra**: o que **nunca** entra no log — corpo, query string, cabeçalhos, senha, chave PIX,
+  nome/e-mail/telefone. E a **rota vai em template**: `/pedidos/<uuid>` viraria um banco de tudo
+  que os usuários compraram se fosse o caminho cru.
+
+### 2) Questionário de encerramento e exclusão de conta
+
+- `redigeDadoPessoal` (`encerramento.types.ts`) mascara e-mail, documento, telefone e qualquer
+  sequência de 8+ dígitos nos campos de texto livre. **Bug corrigido**: telefone/documento casavam
+  por *prefixo* e deixavam a cauda viva (`protocolo 99887[dado removido]`) — agora `RE_DIGITOS`
+  roda **primeiro** e os outros dois ganharam `(?<!\d)`/`(?!\d)`.
+- `EncerramentoMaintService` expurga a resposta inteira depois de 24 meses (registrado no
+  `encerramento.module`).
+- `DELETE /me/conta` passou a anonimizar a resposta do questionário na mesma transação que já
+  desvinculava pedido/`termo_aceite`: `usuarioId`, `lanchoneteId`, `lanchoneteSlug`,
+  `contatoLiberado`, `contato`, `melhorar`, `paraContinuar`, `experiencia` e
+  `funcionalidadeFaltante` vão a `NULL`. Motivo/nota/notas continuam como estatística anônima.
+
+### 3) Front
+
+- E-mail **saiu do `localStorage`**: `auth.email-salvo`/`auth.senha-salva` são apagadas no boot e
+  nunca regravadas; o JWT continua só em memória. "Lembrar de mim" → **"Manter conectado"**.
+- Checkbox **"Declaro que tenho 18 anos ou mais"** no cadastro **e** na tela de aceite
+  (Lei 15.211/2025) — o fluxo Google passa pela tela de aceite, o cadastro direto não.
+- Termos (16 seções) e Política (13 seções) reescritos: marketplace, 18 anos,
+  sanitation/alérgenos, retenção por tabela, direitos (declarando o que ainda não existe),
+  transferência internacional, incidente em 3 dias úteis, link oficial da ANPD, encarregado (DPO)
+  como placeholder. Aviso de aceite no checkout.
+
+### 4) Verificação (tudo no ar local, back + front)
+
+- Back: `npm run lint` 0, `npm run build` OK, `npm test` **241** (24 arquivos). Front:
+  `npm run verificar` OK (só o aviso **pré-existente** de bundle inicial, 1.68 MB > 1.60 MB —
+  `debitos_tecnicos.md` já documenta que ele é de 2026-10-03).
+- **Middleware vs 404 no banco**: `/health` fora, `/l` 200, `/wp-admin/setup.php` **404 logged**,
+  rotas com `:id` e `usuarioId` preenchido pelo JWT.
+- **E2E de UI** (Chrome headless + CDP, clique real): cadastro → erro "Você precisa aceitar os
+  Termos..." sem marcar → cria a conta → `GET /me` com `termoAceite: null` → tela de aceite →
+  marcar os dois → `/home`. Consentimento medido em **375×667, 768×1024 e 1280×800**: sem estouro
+  horizontal e alvos de toque de 49px/40px (o `min-height: 2.5rem` no `.termos-check` entrou
+  porque a linha da maioridade ficava com 22px no 375; o `.senha__olho` foi de 28px para 38px).
+- **Checkout** (o outro arquivo que mudou): login real, produto na sacola e "Finalizar pedido"
+  **sem confirmar** (nenhum pedido criado). Dialog 353×600 no 375, 512×792 no 768, 512×720 no
+  1280; o aviso legal aparece nas três, nada vaza para fora da largura.
+- **`npm run smoke:lgpd`** (novo, `back/scripts/smoke/lgpd-e2e.mjs`): cria conta descartável,
+  responde o questionário com PII, `DELETE /me/conta`, `GET /me` 401 — e agora **lê o banco**
+  para conferir a redação e a anonimização, e **apaga a própria linha** no final (Prisma, mesmo
+  caminho de `limparPedidosTeste`). Isso pagou caro: na primeira execução ele reprovou
+  (`protocolo 99887[dado removido]`) porque o `node dist/main` no ar era o build **antigo** ao
+  regex. Ou seja: **smoke verde com processo velho não prova nada** — `npm run build` + restart
+  antes de confiar. Depois do restart: `protocolo [dado removido]`, anonimização ok, linha removida.
+- Banco varrido no fim: **zero** conta `lgpd.smoke.*`, **zero** linha de hoje. As 6 respostas que
+  restam são de 27-28/09 (dados do dono, anteriores a esta sessão) — a expurgação de 24 meses
+  passa a pegá-las sozinha.
+
+### Pendências que sobraram (o dono)
+
+1. **Placeholders** de razão social/CNPJ/endereço (não tocaram) e **nome/e-mail do encarregado**.
+2. **Revisão de advogado** — o texto foi redigido por assistente.
+3. As promessas comerciais da seção "Confirmar as promessas comerciais" do `debitos_tecnicos.md`.
+4. Na virada para produção: subir a versão do termo de verdade (1.1) e avisar os logados.

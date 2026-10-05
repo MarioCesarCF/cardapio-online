@@ -109,6 +109,10 @@ const SAIR_EM_MS = 1800;
                 <strong>opcional</strong> e leva menos de
                 {{ ehLanchonete() ? '2 minutos' : '1 minuto' }}.
               </p>
+              <p class="enc__dica enc__dica--aviso">
+                Não escreva telefone, e-mail, documento ou nome de terceiros nos campos abertos:
+                e-mails e números são apagados automaticamente da resposta.
+              </p>
             </div>
 
             <fieldset class="enc__pergunta">
@@ -425,6 +429,10 @@ const SAIR_EM_MS = 1800;
     }
     .enc__dica strong {
       color: var(--app-texto);
+    }
+    .enc__dica--aviso {
+      margin-top: 6px;
+      color: var(--app-texto-suave);
     }
     .enc__bloco {
       display: grid;

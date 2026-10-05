@@ -42,6 +42,9 @@ function prismaParaExcluir(
     },
     lanchoneteFavorita: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
     termoAceite: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    respostaEncerramento: {
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
     cliente: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
     logSistema: { create: vi.fn().mockResolvedValue({}) },
     $executeRaw: overrides.neonFalha
@@ -76,6 +79,16 @@ describe('MeService.excluirConta', () => {
     expect(prisma.termoAceite.deleteMany).toHaveBeenCalledWith({
       where: { usuarioId: USUARIO.id },
     });
+    // O questionário de encerramento continua utilizável como estatística, mas
+    // sem vínculo com a pessoa e sem texto/contato.
+    const resposta = prisma.respostaEncerramento.updateMany.mock.calls[0][0];
+    expect(resposta.where).toEqual({ usuarioId: USUARIO.id });
+    expect(resposta.data.usuarioId).toBeNull();
+    expect(resposta.data.contato).toBeNull();
+    expect(resposta.data.contatoLiberado).toBe(false);
+    for (const campo of ['melhorar', 'paraContinuar', 'experiencia', 'funcionalidadeFaltante']) {
+      expect(resposta.data[campo]).toBeNull();
+    }
     expect(prisma.cliente.deleteMany).toHaveBeenCalledWith({
       where: { id: USUARIO.id },
     });

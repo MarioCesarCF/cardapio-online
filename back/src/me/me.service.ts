@@ -412,6 +412,25 @@ export class MeService {
         },
       });
       await tx.termoAceite.deleteMany({ where: { usuarioId: user.id } });
+      // Questionário de encerramento: o motivo/avaliação continuam servindo para
+      // a leitura de conjunto, mas o vínculo com a pessoa e tudo que é texto ou
+      // contato saem agora (o id vira NULL). O que sobrou vira estatística
+      // anônima e a linha inteira é expurgada em 24 meses
+      // (`EncerramentoMaintService`).
+      await tx.respostaEncerramento.updateMany({
+        where: { usuarioId: user.id },
+        data: {
+          usuarioId: null,
+          lanchoneteId: null,
+          lanchoneteSlug: null,
+          contatoLiberado: false,
+          contato: null,
+          melhorar: null,
+          paraContinuar: null,
+          experiencia: null,
+          funcionalidadeFaltante: null,
+        },
+      });
       // `enderecos` cai por cascade.
       await tx.cliente.deleteMany({ where: { id: user.id } });
     });

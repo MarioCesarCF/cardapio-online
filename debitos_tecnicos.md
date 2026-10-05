@@ -375,27 +375,40 @@ pediu para **remover** e o front foi ajustado:
 
 ## Termos/Privacidade — dados reais + revisão jurídica + promessas comerciais (pendente)
 
-**Status**: `pendente` (bloqueia o lançamento comercial, **não** o desenvolvimento)
+**Status**: `parcial` (revisão técnica de LGPD feita em 2026-10-05; falta o dono e o advogado)
 **Quem resolve**: dono (dados e decisão comercial) + advogado (revisão) + assistente (aplicar)
 
-### O que já está pronto (versão 1.0, 2026-09-27)
+### O que já está pronto (versão 1.0, texto revisado em 2026-10-05)
 
 - `/termos` e `/privacidade` públicas (`front/src/app/pages/termos/`, lazy, sem guard), com
   `legal.scss` compartilhado e o bloco `ContatoLgpdComponent` (e-mail de `GET /plataforma/email-lojista`).
-- Termos (13 seções) cobre: papel do Peditto (plataforma ≠ relação de consumo), cadastro, uso como
-  lanchonete, **PIX (confirmação manual hoje / provedores e automática só no futuro; e que o PIX fica
-  indisponível no checkout enquanto a loja não tiver chave)**, cartão e dinheiro, cancelamento,
-  responsabilidades, assinatura (**R$ 99,90/mês**, adesão presencial, sem
-  cobrança automática), disponibilidade, alterações, segurança, encerramento, foro.
-- Política (11 seções) cobre: papéis (controlador/operador), dados tratados, **finalidades por base
-  legal** (execução de contrato / obrigação legal / legítimo interesse), **matriz de tratamento**
-  (Dado | Quem fornece | Finalidade | Quem acessa | Retenção | Base legal), compartilhamentos
-  (Neon, Vercel, Render, Meta/WhatsApp, Google, autoridades), transferência internacional (art. 33),
-  segurança, **retenção** (conta/90 dias, pedidos ~24h atual + ~30d histórico, logs, fiscais),
-  **dereitos do titular** (resposta em 15 dias; registramos também o que ainda **não** existe: exclusão de conta
-  automática, download do cadastro, consentimento granular), alterações e contato.
+- Termos (16 seções) e Política (13 seções) reescritos em 2026-10-05 com o **papel de marketplace**
+  (o contrato de compra e venda é entre o cliente e a lanchonete, o Peditto é intermediário),
+  **idade mínima de 18 anos** (Lei 15.211/2025), sanitation/alérgenos, aceite da versão vigente,
+  retenção por tabela, **direitos do titular com o que ainda não existe declarando**,
+ transferência internacional (Res. CD/ANPD nº 19/2024 e nº 32/2026), incidente de segurança em
+  3 dias úteis (Res. CD/ANPD nº 15/2024) e link oficial da ANPD.
+- **Matriz de tratamento** com 3 blocos (dados do cliente / da lanchonete / do questionário de
+  encerramento) e coluna de "Base legal" preenchida — a tabela é o que a ANPD pede e o que o
+  dono precisa conseguir defender.
+- **Registro de acesso (art. 15 do Marco Civil, Lei 12.965/2014)** — `back/src/common/log-acesso.middleware.ts`
+  + `LogAcessoService`: IP, data/hora, método, **rota em template** e status, por **180 dias**.
+  Sem corpo, query string, cabeçalho ou id de pedido/usuário no texto da rota. Vai como
+  `app.use` (middleware) e **não** como interceptor de propósito: interceptor não roda quando
+  não há rota casada, e é justamente no 404 que o scanner de internet bate.
+  Buffer em memória + `createMany` a cada 30s (200 linhas/lote) porque escrever uma linha por
+  requisição custaria uma ida ao Postgres (Neon serverless em outra região) em **toda** leitura
+  de cardápio. `enableShutdownHooks()` para o SIGTERM do Render não jogar o buffer fora.
+- **Questionário de encerramento**: redação de e-mail/telefone/documento/sequência longa nos campos
+  de texto livre (`redigeDadoPessoal`, `encerramento.types.ts`) + expurgo automático em 24 meses
+  (`EncerramentoMaintService`) + aviso no front para não digitar dado pessoal.
+- **`DELETE /me/conta`**: além de apagar a conta no Neon Auth, desvincula `clienteId`/telefone/
+  endereço dos pedidos, apaga o `termo_aceite` e **anonimiza** a resposta do questionário
+  (id, contato e textos livres vão a `NULL`; motivo/nota continuam como estatística).
+- **E-mail fora do `localStorage`**: `auth.email-salvo`/`auth.senha-salva` são apagadas na
+  inicialização e nunca regravadas. O JWT da app continua **só em memória**.
 - `TERMO_VERSAO_ATUAL = '1.0'` em `back/src/me/termo.ts` **e** `front/src/app/services/termos.ts`
-  (manter em sincronia).
+  (manter em sincronia). `TERMO_ATUALIZADO_EM` = "5 de outubro de 2026" (ajuste dentro da 1.0).
 - **Decisão de 2026-09-27 (dono)**: o Peditto **ainda não está em produção**, então o texto é
   revisado **dentro da 1.0** — não há mais bump de versão por ajuste de redação. Ficou um registro
   `1.1` no banco de uma conta que aceitou na janela do bump (2026-09-27 13:05); o `termos_aceite` é
@@ -410,31 +423,46 @@ pediu para **remover** e o front foi ajustado:
   versão vigente interessa). **Regra: nunca voltar a "ler o mais recente"** — no bump de versão, quem
   já aceitou a antiga **precisa** ver a tela de aceite de novo, e quem já aceitou a nova **não** pode
   ver por causa de um registro antigo.
-- Smoke validado: 13/11 seções, matriz 6 col × 9 linhas, aceite gravado no banco
-  (`termos_aceite`) e tela de aceite aparecendo para quem não tem a versão vigente.
+- **Idade mínima também no produto** (não só no texto): checkbox "Declaro que tenho 18 anos ou mais"
+  no cadastro **e** na tela de aceite (o fluxo Google passa pela tela de aceite, o cadastro direto
+  não). Sem isso a Lei 15.211/2025 ficava só decorativa.
 
 ### Pendências
 
-1. **Placeholders** — substituir em `termos.component.html` (seções 1 e 13) e `privacidade.component.html`
-   (seção 1): `[RAZÃO SOCIAL — preencher antes do lançamento]`, `[CNPJ — preencher]`,
-   `[ENDEREÇO — preencher]`. Buscar por `termos__pendente`.
-2. **Revisão jurídica** — todo o texto é redigido por assistente, **sem** advogado. Pedir revisão de
+1. **Placeholders de identificação** — substituir em `termos.component.html` (seções 1 e 13) e
+   `privacidade.component.html` (seção 1): `[RAZÃO SOCIAL — preencher antes do lançamento]`,
+   `[CNPJ — preencher]`, `[ENDEREÇO — preencher]`. Buscar por `termos__pendente`.
+2. **Encarregado (DPO)** — a Política tem placeholder de nome/e-mail do encarregado
+   (`ContatoLgpdComponent`, lido de `GET /plataforma/email-lojista`). O dono precisa definir
+   quem é e cadastrar o e-mail; sem isso a Política não fecha.
+3. **Revisão jurídica** — todo o texto é redigido por assistente, **sem** advogado. Pedir revisão de
    LGPD + CDC antes de divulgar os links.
-3. **Confirmar as promessas comerciais** escritas no texto (o dono precisa validar cada uma):
+4. **Confirmar as promessas comerciais** escritas no texto (o dono precisa validar cada uma):
    - período de teste de **30 dias**;
    - "sem fidelidade e sem multa" no cancelamento + acesso até o fim do período pago;
    - exclusão dos dados da lanchonete em até **90 dias** após o encerramento;
    - resposta a pedidos de titular em até **15 dias**;
    - aviso de mudança de preço com **30 dias** de antecedência;
    - **trial expirado bloqueia novos pedidos** (o back bloqueia — `pedidos.service.ts`);
-   - **loja sem chave PIX não recebe pedido por PIX** (o back bloqueia — `geraPix`).
-4. **Se mudar a versão**: subir `TERMO_VERSAO_ATUAL` nos **dois** arquivos e a data em
+   - **loja sem chave PIX não recebe pedido por PIX** (o back bloqueia — `geraPix`);
+   - retenção do questionário em **24 meses** e do registro de acesso em **180 dias** (o back
+     expurga sozinho — conferido).
+5. **Se mudar a versão**: subir `TERMO_VERSAO_ATUAL` nos **dois** arquivos e a data em
    `TERMO_ATUALIZADO_EM`; avisar o dono que todos logados verão a tela de aceite de novo.
 
 ### Verificação
 
-- `/termos` e `/privacidade` abrem sem sessão, com versão 1.0 e sem `termos__pendente` aparecendo.
-- `GET /me` traz `termoAceite.versao === '1.0'` depois do aceite; a data do 1º aceite não muda.
+- `/termos` e `/privacidade` abrem sem sessão, com versão 1.0 e sem `termos__pendente` aparecendo;
+  sem overflow horizontal em 375/768/1280 e com a tabela de retenção em `overflow-x: auto` no 375.
+- `GET /me` traz `termoAceite.versao === '1.0'` depois do aceite; a data do 1º aceite não muda;
+  e devolve `termoAceite: null` para quem nunca aceitou (é o que abre a tela de aceite).
+- `npm run smoke:lgpd` (back no ar): cria uma conta descartável, responde o questionário com PII,
+  confere `DELETE /me/conta` e `GET /me` 401, **lê o banco** para ver a redação e a anonimização,
+  e apaga a própria linha. Rodar **depois de `npm run build` + restart**: ele reprovou quando o
+  `node dist/main` no ar ainda era o build antigo ao regex da redação. O resto está em
+  `src/encerramento/encerramento-redacao.spec.ts` e `src/me/me-excluir-conta.spec.ts`.
+- Consentimento (cadastro e tela de aceite) e o **aviso legal do checkout** medidos em **375×667,
+  768×1024 e 1280×800**: sem estouro horizontal, tabela de retenção com rolagem própria no 375.
 
 ---
 
